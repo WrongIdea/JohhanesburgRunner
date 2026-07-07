@@ -947,6 +947,8 @@ namespace JoburgRunner.Editor
             Building(parent, new Vector3(12.5f, 0f, 13f), new Vector3(5.8f, 14f, 6f), Mat("GlassDark"), BuildingStyle.GlassTower, "TOWER");
             Building(parent, new Vector3(12.1f, 0f, 24f), new Vector3(5f, 11f, 5f), Mat("SkyscraperConcrete"), BuildingStyle.Office, "CITY");
             JohannesburgRoadSign(parent, new Vector3(-8.0f, 0f, 17f), 0f, "JOHANNESBURG", "M1 City", "M2 Newtown");
+            RoadsideBillboard(parent, new Vector3(7.0f, 0f, 15f), -20f, "HF_Taxi");
+            RoadsideBillboard(parent, new Vector3(-7.0f, 0f, 11f), 20f, "HF_Skyline");
         }
 
         static void BuildVendorMarketStreet(Transform parent)
@@ -960,6 +962,7 @@ namespace JoburgRunner.Editor
             VendorStall(parent, new Vector3(-7.1f, 0f, 22f));
             VendorStall(parent, new Vector3(7.1f, 0f, 10f));
             BusStop(parent, new Vector3(7.2f, 0.1f, 20f), 180f);
+            RoadsideBillboard(parent, new Vector3(-7.0f, 0f, 12f), 20f, "HF_Street");
         }
 
         static void BuildTaxiStreet(Transform parent)
@@ -972,6 +975,7 @@ namespace JoburgRunner.Editor
             ZebraCrossing(parent, 6f);
             PedestrianCrossingSign(parent, new Vector3(-5.9f, 0f, 4f));
             PedestrianCrossingSign(parent, new Vector3(5.9f, 0f, 8f));
+            RoadsideBillboard(parent, new Vector3(7.0f, 0f, 22f), -20f, "HF_Runner");
         }
 
         static void BuildMixedCommercialStreet(Transform parent)
@@ -3518,8 +3522,10 @@ namespace JoburgRunner.Editor
 
             Image coinIcon = new GameObject("CoinIcon").AddComponent<Image>();
             coinIcon.transform.SetParent(coinPill.transform, false);
-            coinIcon.sprite = knob;
-            coinIcon.color = gold;
+            Sprite coinSprite = LoadHiggsfieldSprite("PU_Coin");
+            coinIcon.sprite = coinSprite != null ? coinSprite : knob;
+            coinIcon.color = coinSprite != null ? Color.white : gold;
+            coinIcon.preserveAspect = true;
             Anchor(coinIcon.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(28f, 0f), new Vector2(52f, 52f));
             coinIcon.rectTransform.pivot = new Vector2(0f, 0.5f);
 
@@ -3572,17 +3578,18 @@ namespace JoburgRunner.Editor
             Color buttonOrange = new Color(1f, 0.6f, 0.05f, 1f);
             Color buttonGrey = new Color(0.25f, 0.28f, 0.35f, 1f);
 
-            // Real pictures of the pickups, rendered from their prefabs.
+            // Higgsfield-authored pickup art, falling back to a live render of the
+            // prefab when a sprite is missing so the HUD is never blank.
             Vector3 pickupEuler = new Vector3(-16f, 28f, 0f);
             Sprite[] pickupIcons =
             {
-                RenderPrefabIcon("Assets/Prefabs/PowerUpTaxiMagnet.prefab", "IconTaxiMagnet", pickupEuler),
-                RenderPrefabIcon("Assets/Prefabs/PowerUpJoziSneakers.prefab", "IconJoziSneakers", pickupEuler),
-                RenderPrefabIcon("Assets/Prefabs/PowerUpDroneBoost.prefab", "IconDroneBoost", new Vector3(-35f, 30f, 0f)),
-                RenderPrefabIcon("Assets/Prefabs/PowerUpUbuntuMultiplier.prefab", "IconUbuntuMultiplier", pickupEuler),
-                RenderPrefabIcon("Assets/Prefabs/PowerUpHoverboard.prefab", "IconHoverboard", new Vector3(-28f, 24f, 0f)),
+                LoadHiggsfieldSprite("PU_Magnet") ?? RenderPrefabIcon("Assets/Prefabs/PowerUpTaxiMagnet.prefab", "IconTaxiMagnet", pickupEuler),
+                LoadHiggsfieldSprite("PU_Sneaker") ?? RenderPrefabIcon("Assets/Prefabs/PowerUpJoziSneakers.prefab", "IconJoziSneakers", pickupEuler),
+                LoadHiggsfieldSprite("PU_TaxiBoost") ?? RenderPrefabIcon("Assets/Prefabs/PowerUpDroneBoost.prefab", "IconDroneBoost", new Vector3(-35f, 30f, 0f)),
+                LoadHiggsfieldSprite("PU_Multiplier2x") ?? RenderPrefabIcon("Assets/Prefabs/PowerUpUbuntuMultiplier.prefab", "IconUbuntuMultiplier", pickupEuler),
+                LoadHiggsfieldSprite("PU_Shield") ?? RenderPrefabIcon("Assets/Prefabs/PowerUpHoverboard.prefab", "IconHoverboard", new Vector3(-28f, 24f, 0f)),
             };
-            Sprite r5Icon = RenderPrefabIcon(RareCoinPrefabPath, "IconRareCoinR5", new Vector3(0f, 25f, 0f));
+            Sprite r5Icon = LoadHiggsfieldSprite("PU_Coin") ?? RenderPrefabIcon(RareCoinPrefabPath, "IconRareCoinR5", new Vector3(0f, 25f, 0f));
 
             // ---------------- Main menu ----------------
             GameObject menuPanel = Panel(canvasObject.transform, "MenuPanel", new Color(0f, 0f, 0f, 0.55f));
@@ -3837,6 +3844,37 @@ namespace JoburgRunner.Editor
             }
 
             return AssetDatabase.LoadAssetAtPath<Sprite>(pngPath);
+        }
+
+        /// <summary>
+        /// Loads a hand-authored Higgsfield pickup sprite from
+        /// Assets/Textures/Higgsfield/, forcing the importer to Sprite/transparent
+        /// so it can drop straight into a UI Image. Returns null when the art is
+        /// absent so callers can fall back to the rendered-prefab icon.
+        /// </summary>
+        static Sprite LoadHiggsfieldSprite(string name)
+        {
+            string path = $"Assets/Textures/Higgsfield/{name}.png";
+            if (AssetDatabase.LoadAssetAtPath<Texture2D>(path) == null)
+            {
+                return null;
+            }
+
+            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer != null &&
+                (importer.textureType != TextureImporterType.Sprite ||
+                 importer.spriteImportMode != SpriteImportMode.Single ||
+                 !importer.alphaIsTransparency ||
+                 importer.mipmapEnabled))
+            {
+                importer.textureType = TextureImporterType.Sprite;
+                importer.spriteImportMode = SpriteImportMode.Single;
+                importer.alphaIsTransparency = true;
+                importer.mipmapEnabled = false;
+                importer.SaveAndReimport();
+            }
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
 
         static Image IconImage(Transform parent, string name, Sprite sprite, Vector2 anchor, Vector2 position, Vector2 size)
