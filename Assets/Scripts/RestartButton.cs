@@ -1,0 +1,29 @@
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace JoburgRunner
+{
+    [RequireComponent(typeof(Button))]
+    public class RestartButton : MonoBehaviour
+    {
+        [SerializeField] GameManager gameManager;
+
+        void Awake()
+        {
+            if (gameManager == null)
+            {
+                gameManager = FindAnyObjectByType<GameManager>();
+            }
+
+            GetComponent<Button>().onClick.AddListener(Restart);
+        }
+
+        void Restart()
+        {
+            if (gameManager != null)
+            {
+                gameManager.RestartGame();
+            }
+        }
+    }
+}
