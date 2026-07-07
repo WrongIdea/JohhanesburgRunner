@@ -138,7 +138,8 @@ namespace JoburgRunner
 
             if (coinText != null)
             {
-                coinText.text = $"Coins: {Coins}";
+                // The Higgsfield coin icon sits beside this, so show just the count.
+                coinText.text = $"{Coins}";
             }
         }
     }

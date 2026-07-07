@@ -219,23 +219,23 @@ namespace JoburgRunner
             float easy, medium, hard, special;
             if (distance < 500f)
             {
-                easy = 78f; medium = 16f; hard = 0f; special = 6f;
+                easy = 69f; medium = 15f; hard = 0f; special = 16f;
             }
             else if (distance < 1500f)
             {
-                easy = 52f; medium = 36f; hard = 6f; special = 6f;
+                easy = 46f; medium = 32f; hard = 6f; special = 16f;
             }
             else if (distance < 3000f)
             {
-                easy = 28f; medium = 50f; hard = 15f; special = 7f;
+                easy = 24f; medium = 46f; hard = 14f; special = 16f;
             }
             else if (distance < 6000f)
             {
-                easy = 16f; medium = 42f; hard = 34f; special = 8f;
+                easy = 14f; medium = 38f; hard = 32f; special = 16f;
             }
             else
             {
-                easy = 10f; medium = 33f; hard = 45f; special = 12f;
+                easy = 10f; medium = 30f; hard = 42f; special = 18f;
             }
 
             float pick = Random.value * (easy + medium + hard + special);

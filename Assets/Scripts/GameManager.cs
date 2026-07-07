@@ -29,6 +29,10 @@ namespace JoburgRunner
         /// <summary>False while the main menu is up and after a crash.</summary>
         public bool IsRunning { get; private set; }
 
+        /// <summary>True once the first run has begun; the pre-run idle showcase
+        /// (dancing runner, centered camera) shows only while this is false.</summary>
+        public bool HasStarted { get; private set; }
+
         bool canRestart;
 
         void Start()
@@ -49,6 +53,7 @@ namespace JoburgRunner
             if (!IsGameOver)
             {
                 IsRunning = true;
+                HasStarted = true;
             }
         }
 

@@ -40,7 +40,11 @@ namespace JoburgRunner.Editor
         const string RunnerRollClipPath = "Assets/Animations/RunnerRoll.anim";
         const string RunnerIdleClipPath = "Assets/Animations/RunnerIdle.anim";
         const string RunnerJumpClipPath = "Assets/Animations/RunnerJump.anim";
-        const string PlayableRunnerModelPath = "Assets/Running.fbx";
+        const string PlayableRunnerModelPath = "Assets/Characters/Meshy_AI_Beaded_Warrior_biped/Meshy_AI_Beaded_Warrior_biped_Animation_Running_withSkin.fbx";
+        // Extra clips on the same rig: retargeted onto the runner's avatar.
+        const string RunnerJumpModelPath = "Assets/Characters/Meshy_AI_Beaded_Warrior_biped/Meshy_AI_Beaded_Warrior_biped_Animation_Jump_Over_Obstacle_2_withSkin.fbx";
+        const string RunnerAirRollModelPath = "Assets/Characters/Meshy_AI_Beaded_Warrior_biped/Meshy_AI_Beaded_Warrior_biped_Animation_Run_Jump_and_Roll_withSkin.fbx";
+        const string RunnerIdleModelPath = "Assets/Characters/Meshy_AI_Beaded_Warrior_biped/Meshy_AI_Beaded_Warrior_biped_Animation_Hip_Hop_Dance_2_withSkin.fbx";
         const string VideoSkylineTexturePath = "Assets/Textures/VideoSkyline.png";
         const string VideoSkylineMaterialPath = "Assets/Materials/VideoSkylinePhoto.mat";
         const string TelkomTowerModelPath = "Assets/Environment/TelkomTower/Meshy_AI_Telkom_Tower_Skyline_0705203244_texture_fbx/Meshy_AI_Telkom_Tower_Skyline_0705203244_texture.fbx";
@@ -49,7 +53,12 @@ namespace JoburgRunner.Editor
         const string TelkomTowerMaterialPath = "Assets/Environment/TelkomTower/TelkomTower_URP.mat";
         const string ApkPath = "Builds/JoburgEndlessRunner.apk";
         const string PreviewPath = "Builds/preview.png";
-        const float RunnerVisualTargetHeight = 6.0f;
+        const string RunnerPbrMaterialPath = "Assets/Materials/RunnerExternalPbr.mat";
+        // Runner is measured at its real extents now, so this is a true world
+        // height: ~1.8 units reads as human next to the 2.3-unit taxis and
+        // 2.7-unit lane spacing. (It was 6.0 to counter the old inflated-bounds
+        // measurement, which never produced a 6-unit runner on screen.)
+        const float RunnerVisualTargetHeight = 1.85f;
         const float RunnerGroundSink = 0.35f;
         const float CoinTrailHeight = 1.25f;
         const float CoinArcHeight = 1.7f;
@@ -70,9 +79,9 @@ namespace JoburgRunner.Editor
 
             GameObject roadPrefab = CreateRoadSegmentPrefab();
             GameObject taxiPrefab = CreateTaxiObstaclePrefab();
-            GameObject coinParticlePrefab = CreateCoinParticlePrefab();
-            GameObject coinPrefab = CreateCoinPrefab(coinParticlePrefab);
-            GameObject rareCoinPrefab = CreateRareCoinPrefab(coinParticlePrefab);
+            GameObject coinPopPrefab = CreateCoinPopPrefab();
+            GameObject coinPrefab = CreateCoinPrefab(coinPopPrefab);
+            GameObject rareCoinPrefab = CreateRareCoinPrefab(coinPopPrefab);
             GameObject[] powerUpPrefabs = CreatePowerUpPrefabs();
             TrackChunk[] chunkPrefabs = CreateTrackChunkPrefabs(taxiPrefab, coinPrefab, rareCoinPrefab, powerUpPrefabs);
 
@@ -2043,19 +2052,74 @@ namespace JoburgRunner.Editor
             return SavePrefab(root, CoinParticlePrefabPath);
         }
 
-        static GameObject CreateCoinPrefab(GameObject coinParticlePrefab)
+        // Coin-collect animation prefab: the Higgsfield coin sprite that pops
+        // at the pickup point (billboarded, rises and fades). Null when the art
+        // is missing so coins simply collect without a pop.
+        static GameObject CreateCoinPopPrefab()
+        {
+            Sprite sprite = LoadHiggsfieldSprite("PU_Coin");
+            if (sprite == null)
+            {
+                return null;
+            }
+
+            GameObject root = new GameObject("CoinCollectPop");
+            SpriteRenderer renderer = root.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+
+            float spriteHeight = sprite.bounds.size.y;
+            if (spriteHeight > 0.01f)
+            {
+                root.transform.localScale = Vector3.one * (0.5f / spriteHeight);
+            }
+
+            root.AddComponent<Billboard>();
+            root.AddComponent<CoinCollectPop>();
+            return SavePrefab(root, "Assets/Prefabs/CoinCollectPop.prefab");
+        }
+
+        // Higgsfield coin art on a billboarded child, matching the menu/store
+        // and the collect pop. Returns false when the sprite is missing.
+        static bool AddSpriteCoinArt(Transform root, float heightUnits)
+        {
+            Sprite sprite = LoadHiggsfieldSprite("PU_Coin");
+            if (sprite == null)
+            {
+                return false;
+            }
+
+            GameObject art = new GameObject("Art");
+            art.transform.SetParent(root, false);
+            SpriteRenderer renderer = art.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+
+            float spriteHeight = sprite.bounds.size.y;
+            if (spriteHeight > 0.01f)
+            {
+                art.transform.localScale = Vector3.one * (heightUnits / spriteHeight);
+            }
+
+            art.AddComponent<Billboard>();
+            return true;
+        }
+
+        static GameObject CreateCoinPrefab(GameObject coinPopPrefab)
         {
             GameObject root = new GameObject("GoldCoin");
-            if (!TryCreateR1CoinVisual(root.transform))
+            bool spriteCoin = AddSpriteCoinArt(root.transform, 0.95f);
+            if (!spriteCoin)
             {
-                GameObject coin = Cylinder("CoinVisual", root.transform, Vector3.zero, new Vector3(0.52f, 0.09f, 0.52f), Mat("CoinGold"));
-                coin.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                if (!TryCreateR1CoinVisual(root.transform))
+                {
+                    GameObject coin = Cylinder("CoinVisual", root.transform, Vector3.zero, new Vector3(0.52f, 0.09f, 0.52f), Mat("CoinGold"));
+                    coin.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
 
-                GameObject rim = Cylinder("CoinInnerFace", root.transform, Vector3.zero, new Vector3(0.4f, 0.095f, 0.4f), Mat("PaintYellow"));
-                rim.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-                Sphere("CoinSparkle", root.transform, new Vector3(0.22f, 0.22f, -0.02f), new Vector3(0.1f, 0.1f, 0.1f), Mat("CoinGold"));
+                    GameObject rim = Cylinder("CoinInnerFace", root.transform, Vector3.zero, new Vector3(0.4f, 0.095f, 0.4f), Mat("PaintYellow"));
+                    rim.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                    Sphere("CoinSparkle", root.transform, new Vector3(0.22f, 0.22f, -0.02f), new Vector3(0.1f, 0.1f, 0.1f), Mat("CoinGold"));
+                }
+                root.transform.localScale = Vector3.one * CoinPrefabScale;
             }
-            root.transform.localScale = Vector3.one * CoinPrefabScale;
 
             foreach (Collider visualCollider in root.GetComponentsInChildren<Collider>())
             {
@@ -2071,26 +2135,32 @@ namespace JoburgRunner.Editor
             rigidbody.useGravity = false;
 
             Coin coinScript = root.AddComponent<Coin>();
-            // The placeholder particle material renders as large square sprites on Android.
-            // Leave collection clean until a proper mobile-friendly sparkle texture exists.
-            SetField<GameObject>(coinScript, "collectParticlePrefab", null);
+            SetField(coinScript, "collectParticlePrefab", coinPopPrefab);
+            if (spriteCoin)
+            {
+                SetField(coinScript, "rotationSpeed", 0f); // flat billboard must not spin edge-on
+            }
 
             return SavePrefab(root, CoinPrefabPath);
         }
 
         // Rare R5: the R1 visual scaled up with a golden rim, worth five coins.
-        static GameObject CreateRareCoinPrefab(GameObject coinParticlePrefab)
+        static GameObject CreateRareCoinPrefab(GameObject coinPopPrefab)
         {
             GameObject root = new GameObject("RareCoinR5");
-            if (!TryCreateR1CoinVisual(root.transform))
+            bool spriteCoin = AddSpriteCoinArt(root.transform, 1.4f);
+            if (!spriteCoin)
             {
-                GameObject fallback = Cylinder("CoinVisual", root.transform, Vector3.zero, new Vector3(0.6f, 0.1f, 0.6f), Mat("CoinGold"));
-                fallback.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            }
+                if (!TryCreateR1CoinVisual(root.transform))
+                {
+                    GameObject fallback = Cylinder("CoinVisual", root.transform, Vector3.zero, new Vector3(0.6f, 0.1f, 0.6f), Mat("CoinGold"));
+                    fallback.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                }
 
-            GameObject rim = Cylinder("R5GoldRim", root.transform, Vector3.zero, new Vector3(1.04f, 0.035f, 1.04f), Mat("CoinGold"));
-            rim.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            root.transform.localScale = Vector3.one * RareCoinPrefabScale;
+                GameObject rim = Cylinder("R5GoldRim", root.transform, Vector3.zero, new Vector3(1.04f, 0.035f, 1.04f), Mat("CoinGold"));
+                rim.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                root.transform.localScale = Vector3.one * RareCoinPrefabScale;
+            }
 
             foreach (Collider visualCollider in root.GetComponentsInChildren<Collider>())
             {
@@ -2099,17 +2169,17 @@ namespace JoburgRunner.Editor
 
             SphereCollider collider = root.AddComponent<SphereCollider>();
             collider.isTrigger = true;
-            collider.radius = CoinTriggerRadius;
+            collider.radius = spriteCoin ? CoinTriggerRadius * RareCoinPrefabScale : CoinTriggerRadius;
 
             Rigidbody rigidbody = root.AddComponent<Rigidbody>();
             rigidbody.isKinematic = true;
             rigidbody.useGravity = false;
 
             Coin coinScript = root.AddComponent<Coin>();
-            SetField<GameObject>(coinScript, "collectParticlePrefab", null);
+            SetField(coinScript, "collectParticlePrefab", coinPopPrefab);
             SetField(coinScript, "coinValue", 5);
             SetField(coinScript, "isRare", true);
-            SetField(coinScript, "rotationSpeed", 180f);
+            SetField(coinScript, "rotationSpeed", spriteCoin ? 0f : 180f);
 
             return SavePrefab(root, RareCoinPrefabPath);
         }
@@ -2209,7 +2279,7 @@ namespace JoburgRunner.Editor
                     ChunkCoinLine(t, coin, 1, 2f, 6);
                     ChunkCoinLine(t, coin, 2, 2f, 6);
                 }),
-                NewChunkPrefab("Chunk_PowerUp", ChunkDifficulty.Special, 12f, 0b111, 0b111, 12f, t =>
+                NewChunkPrefab("Chunk_PowerUp", ChunkDifficulty.Special, 20f, 0b111, 0b111, 12f, t =>
                 {
                     ChunkCoinLine(t, coin, 1, 2f, 3);
                     ChunkRandomPickOne(t, powerUps, 1, 9f, CoinTrailHeight);
@@ -2295,14 +2365,47 @@ namespace JoburgRunner.Editor
 
         static GameObject[] CreatePowerUpPrefabs()
         {
+            // Show the same Higgsfield pickup art the menu and store use, as a
+            // camera-facing billboard in the world. Falls back to the built
+            // primitive pickup if a sprite is missing.
             return new[]
             {
-                CreateMagnetPrefab(),
-                CreateSneakersPrefab(),
-                CreateDronePrefab(),
-                CreateUbuntuStarPrefab(),
-                CreateHoverboardPrefab(),
+                SpritePickupOrPrimitive(PowerUpType.TaxiMagnet, "PU_Magnet", CreateMagnetPrefab),
+                SpritePickupOrPrimitive(PowerUpType.JoziSneakers, "PU_Sneaker", CreateSneakersPrefab),
+                SpritePickupOrPrimitive(PowerUpType.DroneBoost, "PU_TaxiBoost", CreateDronePrefab),
+                SpritePickupOrPrimitive(PowerUpType.UbuntuMultiplier, "PU_Multiplier2x", CreateUbuntuStarPrefab),
+                SpritePickupOrPrimitive(PowerUpType.Hoverboard, "PU_Shield", CreateHoverboardPrefab),
             };
+        }
+
+        static GameObject SpritePickupOrPrimitive(PowerUpType type, string spriteName, System.Func<GameObject> primitiveFallback)
+        {
+            Sprite sprite = LoadHiggsfieldSprite(spriteName);
+            return sprite != null ? CreateSpritePickupPrefab(type, sprite) : primitiveFallback();
+        }
+
+        // Higgsfield art on a billboarded child; the root keeps the full-size
+        // trigger so scaling the art never shrinks the pickup's reach.
+        static GameObject CreateSpritePickupPrefab(PowerUpType type, Sprite sprite)
+        {
+            GameObject root = new GameObject($"PowerUp{type}");
+
+            GameObject art = new GameObject("Art");
+            art.transform.SetParent(root.transform, false);
+            SpriteRenderer renderer = art.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+
+            float spriteHeight = sprite.bounds.size.y;
+            if (spriteHeight > 0.01f)
+            {
+                art.transform.localScale = Vector3.one * (1.2f / spriteHeight);
+            }
+
+            art.AddComponent<Billboard>();
+
+            // A flat sprite must not spin about Y (it would turn edge-on); the
+            // billboard keeps it facing the camera and PowerUp still bobs it.
+            return FinishPowerUpPrefab(root, type, 0f);
         }
 
         // 🧲 Taxi Magnet: red horseshoe with white tips.
@@ -2368,7 +2471,7 @@ namespace JoburgRunner.Editor
             return FinishPowerUpPrefab(root, PowerUpType.Hoverboard);
         }
 
-        static GameObject FinishPowerUpPrefab(GameObject root, PowerUpType type)
+        static GameObject FinishPowerUpPrefab(GameObject root, PowerUpType type, float rotationSpeed = 90f)
         {
             StripColliders(root);
             SphereCollider collider = root.AddComponent<SphereCollider>();
@@ -2381,6 +2484,7 @@ namespace JoburgRunner.Editor
 
             PowerUp powerUp = root.AddComponent<PowerUp>();
             SetField(powerUp, "type", type);
+            SetField(powerUp, "rotationSpeed", rotationSpeed);
 
             return SavePrefab(root, $"Assets/Prefabs/{root.name}.prefab");
         }
@@ -3108,20 +3212,23 @@ namespace JoburgRunner.Editor
             animator.applyRootMotion = false;
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 
-            // In portrait the horizontal frustum is so narrow that the side
-            // lanes sit at its edge, and the tight skinned bounds get frustum
-            // culled there — the runner vanished on lane changes. Oversized
-            // explicit bounds keep the renderer alive from every lane.
+            // Recompute skinned bounds from the live pose every frame. This
+            // keeps the mesh measured at its real extents — so scale and
+            // grounding fit any rig — and culled only when genuinely off
+            // screen. (The old lane-change vanishing came from stale tight
+            // bounds under updateWhenOffscreen=false, not from tight bounds
+            // as such; a fixed oversized box fixed culling but broke scale
+            // and grounding for models sized differently from the first one.)
             foreach (SkinnedMeshRenderer renderer in visual.GetComponentsInChildren<SkinnedMeshRenderer>())
             {
-                renderer.updateWhenOffscreen = false;
-                renderer.localBounds = new Bounds(Vector3.up * 0.9f, new Vector3(12f, 8f, 12f));
+                renderer.updateWhenOffscreen = true;
             }
 
             NormalizeRunnerScale(visual, playerRoot);
             SimplifyMeshes(visual, 50000);
 
-            if (!hasTextures && !TryApplyExtractedTextures(visual, modelPath))
+            if (!hasTextures && !TryApplyExtractedTextures(visual, modelPath)
+                && !TryApplyExternalPbrTextures(visual, modelPath))
             {
                 RemapUntexturedRunnerMaterials(visual);
             }
@@ -3147,6 +3254,10 @@ namespace JoburgRunner.Editor
             SetField(grounder, "visualRoot", visual.transform);
             SetField(grounder, "groundRoot", visual.transform.root);
             SetField(grounder, "groundSink", RunnerGroundSink);
+
+            // Faces the camera while idling/dancing; gameManager wired in CreateSystems.
+            IdleFacing idleFacing = visual.AddComponent<IdleFacing>();
+            SetField(idleFacing, "visual", visual.transform);
         }
 
         /// <summary>
@@ -3269,6 +3380,125 @@ namespace JoburgRunner.Editor
             }
         }
 
+        /// <summary>
+        /// Builds a URP/Lit material from PBR maps that ship beside a Meshy-style
+        /// FBX (a base-colour "..texture_0.png" plus optional _normal/_metallic
+        /// maps) and assigns it to every skinned mesh. Returns false when no
+        /// base-colour map sits next to the model so callers fall back to the
+        /// flat-colour remap. Unity does not reliably auto-bind these external
+        /// maps through the FBX material import, which left the runner untextured.
+        /// </summary>
+        static bool TryApplyExternalPbrTextures(GameObject visual, string modelPath)
+        {
+            string folder = Path.GetDirectoryName(modelPath).Replace("\\", "/");
+            string baseColorPath = null, normalPath = null, metallicPath = null;
+            foreach (string guid in AssetDatabase.FindAssets("t:Texture2D", new[] { folder }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (Path.GetDirectoryName(path).Replace("\\", "/") != folder)
+                {
+                    continue; // sibling maps only, not textures in nested folders
+                }
+
+                string name = Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
+                if (name.Contains("normal"))
+                {
+                    normalPath = path;
+                }
+                else if (name.Contains("metallic"))
+                {
+                    metallicPath = path;
+                }
+                else if (name.Contains("roughness"))
+                {
+                    // URP/Lit has no roughness slot; ignore so it is not mistaken for base colour.
+                }
+                else if (name.Contains("basecolor") || name.Contains("albedo")
+                    || name.Contains("diffuse") || name.Contains("texture_0"))
+                {
+                    baseColorPath = path;
+                }
+            }
+
+            if (baseColorPath == null)
+            {
+                return false;
+            }
+
+            SetTextureSrgb(baseColorPath, true);
+            if (metallicPath != null)
+            {
+                SetTextureSrgb(metallicPath, false);
+            }
+            if (normalPath != null)
+            {
+                SetTextureNormalMap(normalPath);
+            }
+
+            Material material = AssetDatabase.LoadAssetAtPath<Material>(RunnerPbrMaterialPath);
+            if (material == null)
+            {
+                material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                AssetDatabase.CreateAsset(material, RunnerPbrMaterialPath);
+            }
+
+            Texture2D baseColor = AssetDatabase.LoadAssetAtPath<Texture2D>(baseColorPath);
+            material.SetTexture("_BaseMap", baseColor);
+            material.mainTexture = baseColor;
+            material.SetColor("_BaseColor", Color.white);
+            material.SetFloat("_Smoothness", 0.3f);
+
+            if (normalPath != null)
+            {
+                material.SetTexture("_BumpMap", AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath));
+                material.EnableKeyword("_NORMALMAP");
+                material.SetFloat("_BumpScale", 1f);
+            }
+
+            if (metallicPath != null)
+            {
+                material.SetTexture("_MetallicGlossMap", AssetDatabase.LoadAssetAtPath<Texture2D>(metallicPath));
+                material.EnableKeyword("_METALLICSPECGLOSSMAP");
+                material.SetFloat("_Metallic", 1f);
+            }
+
+            EditorUtility.SetDirty(material);
+
+            foreach (SkinnedMeshRenderer renderer in visual.GetComponentsInChildren<SkinnedMeshRenderer>())
+            {
+                Material[] materials = renderer.sharedMaterials;
+                for (int i = 0; i < materials.Length; i++)
+                {
+                    materials[i] = material;
+                }
+
+                renderer.sharedMaterials = materials;
+            }
+
+            Debug.Log($"Applied external PBR runner material from '{baseColorPath}' " +
+                $"(normal: {normalPath != null}, metallic: {metallicPath != null}).");
+            return true;
+        }
+
+        static void SetTextureSrgb(string path, bool sRGB)
+        {
+            if (AssetImporter.GetAtPath(path) is TextureImporter importer && importer.sRGBTexture != sRGB)
+            {
+                importer.sRGBTexture = sRGB;
+                importer.SaveAndReimport();
+            }
+        }
+
+        static void SetTextureNormalMap(string path)
+        {
+            if (AssetImporter.GetAtPath(path) is TextureImporter importer
+                && importer.textureType != TextureImporterType.NormalMap)
+            {
+                importer.textureType = TextureImporterType.NormalMap;
+                importer.SaveAndReimport();
+            }
+        }
+
         static string FindRunnerModelPath()
         {
             if (AssetDatabase.LoadAssetAtPath<GameObject>(PlayableRunnerModelPath) != null)
@@ -3318,14 +3548,22 @@ namespace JoburgRunner.Editor
         {
             Directory.CreateDirectory("Assets/Animations");
             AssetDatabase.DeleteAsset(RunnerAnimatorPath);
-            AnimationClip idleClip = CreateGeneratedClip(RunnerIdleClipPath, 1f);
-            AnimationClip jumpClip = CreateGeneratedClip(RunnerJumpClipPath, 0.45f);
+            // Idle plays the real Meshy dance clip (looping) as the pre-run showcase.
+            AnimationClip idleClip = LoadRunnerClipFromModel(RunnerIdleModelPath, loop: true)
+                ?? CreateGeneratedClip(RunnerIdleClipPath, 1f);
+            // Jump and air-roll play the real Meshy clips (same rig, retargeted);
+            // the generated stubs remain as a fallback if a model goes missing.
+            AnimationClip jumpClip = LoadRunnerClipFromModel(RunnerJumpModelPath, loop: false)
+                ?? CreateGeneratedClip(RunnerJumpClipPath, 0.45f);
+            AnimationClip airRollClip = LoadRunnerClipFromModel(RunnerAirRollModelPath, loop: false)
+                ?? CreateGeneratedClip(RunnerRollClipPath, 0.7f);
             AnimationClip rollClip = CreateGeneratedClip(RunnerRollClipPath, 0.7f);
 
             AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(RunnerAnimatorPath);
             controller.AddParameter("isRunning", AnimatorControllerParameterType.Bool);
             controller.AddParameter("isJumping", AnimatorControllerParameterType.Bool);
             controller.AddParameter("Roll", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("AirRoll", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Grounded", AnimatorControllerParameterType.Bool);
 
             AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
@@ -3333,12 +3571,16 @@ namespace JoburgRunner.Editor
             AnimatorState runState = stateMachine.AddState("Run", new Vector3(260f, 150f, 0f));
             AnimatorState jumpState = stateMachine.AddState("Jump", new Vector3(520f, 150f, 0f));
             AnimatorState rollState = stateMachine.AddState("Roll", new Vector3(260f, 300f, 0f));
+            AnimatorState airRollState = stateMachine.AddState("AirRoll", new Vector3(520f, 300f, 0f));
 
             idleState.motion = idleClip;
             runState.motion = runClip;
             jumpState.motion = jumpClip;
             rollState.motion = rollClip;
-            stateMachine.defaultState = runState;
+            airRollState.motion = airRollClip;
+            // Start in Idle (the dance) before the run; Idle→Run fires when the
+            // player controller sets isRunning true on the first PLAY.
+            stateMachine.defaultState = idleState;
 
             AddBoolTransition(idleState, runState, "isRunning", true, 0.05f);
             AddBoolTransition(runState, idleState, "isRunning", false, 0.08f);
@@ -3347,12 +3589,66 @@ namespace JoburgRunner.Editor
             AddTriggerTransition(runState, rollState, "Roll", 0.05f);
             AddTriggerTransition(idleState, rollState, "Roll", 0.05f);
 
+            // Swipe down while airborne: dive-roll. Reachable from the jump
+            // apex or from run (coyote window before the jump pose settles).
+            AddTriggerTransition(jumpState, airRollState, "AirRoll", 0.05f);
+            AddTriggerTransition(runState, airRollState, "AirRoll", 0.05f);
+
             AnimatorStateTransition rollToRun = rollState.AddTransition(runState);
             rollToRun.hasExitTime = true;
             rollToRun.exitTime = 0.95f;
             rollToRun.duration = 0.05f;
 
+            AnimatorStateTransition airRollToRun = airRollState.AddTransition(runState);
+            airRollToRun.hasExitTime = true;
+            airRollToRun.exitTime = 0.9f;
+            airRollToRun.duration = 0.08f;
+
+            Debug.Log($"Runner animator clips — idle: '{idleClip.name}' ({idleClip.length:0.00}s), " +
+                $"jump: '{jumpClip.name}' ({jumpClip.length:0.00}s), " +
+                $"airRoll: '{airRollClip.name}' ({airRollClip.length:0.00}s).");
             return controller;
+        }
+
+        /// <summary>
+        /// Imports an FBX's bundled animation as a Humanoid clip (so it retargets
+        /// onto the runner's avatar) and returns the first real clip, or null when
+        /// the model or a clip is missing.
+        /// </summary>
+        static AnimationClip LoadRunnerClipFromModel(string modelPath, bool loop)
+        {
+            ModelImporter importer = AssetImporter.GetAtPath(modelPath) as ModelImporter;
+            if (importer == null)
+            {
+                Debug.LogWarning($"Runner clip model not found at {modelPath}; using generated fallback.");
+                return null;
+            }
+
+            ModelImporterClipAnimation[] clips = importer.clipAnimations;
+            if (clips == null || clips.Length == 0)
+            {
+                clips = importer.defaultClipAnimations;
+            }
+
+            foreach (ModelImporterClipAnimation clip in clips)
+            {
+                clip.loopTime = loop;
+            }
+
+            importer.animationType = ModelImporterAnimationType.Human;
+            importer.clipAnimations = clips;
+            importer.SaveAndReimport();
+
+            foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(modelPath))
+            {
+                if (asset is AnimationClip clip && !clip.name.StartsWith("__preview"))
+                {
+                    return clip;
+                }
+            }
+
+            Debug.LogWarning($"No animation clip found in {modelPath}; using generated fallback.");
+            return null;
         }
 
         static AnimationClip CreateGeneratedClip(string path, float length)
@@ -3405,11 +3701,15 @@ namespace JoburgRunner.Editor
         {
             Vector3 offset = new Vector3(0f, 2.05f, -4.35f);
             const float lookHeight = 1.05f;
+            Vector3 idleOffset = new Vector3(0f, 1.2f, -5.2f);
+            const float idleLookHeight = 0.95f;
 
             GameObject cameraObject = new GameObject("Main Camera");
             cameraObject.tag = "MainCamera";
-            cameraObject.transform.position = player.position + offset;
-            cameraObject.transform.rotation = Quaternion.LookRotation(player.position + Vector3.up * lookHeight - cameraObject.transform.position);
+            // Author at the idle framing: that is the initial (menu) state, so
+            // the scene opens on the centered dance shot with no first-frame pop.
+            cameraObject.transform.position = player.position + idleOffset;
+            cameraObject.transform.rotation = Quaternion.LookRotation(player.position + Vector3.up * idleLookHeight - cameraObject.transform.position);
             Camera camera = cameraObject.AddComponent<Camera>();
             camera.fieldOfView = 50f;
             camera.farClipPlane = 400f;
@@ -3418,6 +3718,8 @@ namespace JoburgRunner.Editor
             SetField(follow, "target", player);
             SetField(follow, "offset", offset);
             SetField(follow, "lookHeight", lookHeight);
+            SetField(follow, "idleOffset", idleOffset);
+            SetField(follow, "idleLookHeight", idleLookHeight);
             SetField(follow, "lateralFollowFraction", 1f);
             SetField(follow, "lateralFollowSpeed", 18f);
             return camera;
@@ -3459,6 +3761,18 @@ namespace JoburgRunner.Editor
             SetField(chunkManager, "player", player);
             SetField(chunkManager, "gameManager", gameManager);
             SetField(chunkManager, "chunkPrefabs", chunkPrefabs);
+
+            CameraFollow cameraFollow = Object.FindAnyObjectByType<CameraFollow>();
+            if (cameraFollow != null)
+            {
+                SetField(cameraFollow, "gameManager", gameManager);
+            }
+
+            IdleFacing idleFacing = player.GetComponentInChildren<IdleFacing>();
+            if (idleFacing != null)
+            {
+                SetField(idleFacing, "gameManager", gameManager);
+            }
 
             PlayerController controller = player.GetComponent<PlayerController>();
             SetField(controller, "gameManager", gameManager);
@@ -3529,7 +3843,7 @@ namespace JoburgRunner.Editor
             Anchor(coinIcon.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(28f, 0f), new Vector2(52f, 52f));
             coinIcon.rectTransform.pivot = new Vector2(0f, 0.5f);
 
-            TextMeshProUGUI coinText = Text(coinPill.transform, "CoinText", "Coins: 0", 48, TextAlignmentOptions.Right);
+            TextMeshProUGUI coinText = Text(coinPill.transform, "CoinText", "0", 48, TextAlignmentOptions.Right);
             coinText.fontStyle = FontStyles.Bold;
             coinText.color = gold;
             Anchor(coinText.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);

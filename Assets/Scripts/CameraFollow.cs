@@ -13,6 +13,11 @@ namespace JoburgRunner
         [SerializeField] Transform target;
         [SerializeField] Vector3 offset = new Vector3(0f, 2.05f, -4.35f);
         [SerializeField] float followSpeed = 8f;
+        [Header("Pre-run idle showcase")]
+        [SerializeField] GameManager gameManager;
+        [Tooltip("Camera offset before the first run, framing the idle/dance runner in the middle of the screen.")]
+        [SerializeField] Vector3 idleOffset = new Vector3(0f, 1.2f, -5.2f);
+        [SerializeField] float idleLookHeight = 0.95f;
         [Tooltip("How much of the player's X the camera adopts. High enough to keep side lanes visible on portrait screens while still showing the lane switch.")]
         [Range(0f, 1f)]
         [SerializeField] float lateralFollowFraction = 1f;
@@ -22,6 +27,7 @@ namespace JoburgRunner
         [SerializeField] float maxTargetViewportX = 0.68f;
 
         Camera followCamera;
+        bool runFramingLocked;
 
         void Awake()
         {
@@ -35,12 +41,39 @@ namespace JoburgRunner
                 return;
             }
 
-            // Fixed framing, locked for the whole run: pitch only, zero yaw,
-            // zero roll. Follow is position-only from here on.
+            if (IsPreRun())
+            {
+                ApplyIdleFraming();
+            }
+            else
+            {
+                LockRunFraming();
+            }
+        }
+
+        bool IsPreRun() => gameManager != null && !gameManager.HasStarted;
+
+        // Before the run: centre the dancing runner in frame. The player is
+        // stationary here, so re-aiming each frame is safe (the no-LookAt rule
+        // exists only to stop lane changes swinging the world during a run).
+        void ApplyIdleFraming()
+        {
+            Vector3 anchoredPosition = target.position + idleOffset;
+            transform.position = anchoredPosition;
+            transform.rotation = Quaternion.LookRotation(
+                target.position + Vector3.up * idleLookHeight - anchoredPosition);
+            runFramingLocked = false;
+        }
+
+        // Fixed framing, locked for the whole run: pitch only, zero yaw, zero
+        // roll. Follow is position-only from here on.
+        void LockRunFraming()
+        {
             Vector3 anchoredPosition = target.position + offset;
             transform.position = anchoredPosition;
             transform.rotation = Quaternion.LookRotation(
                 target.position + Vector3.up * lookHeight - anchoredPosition);
+            runFramingLocked = true;
         }
 
         void LateUpdate()
@@ -48,6 +81,18 @@ namespace JoburgRunner
             if (target == null)
             {
                 return;
+            }
+
+            if (IsPreRun())
+            {
+                ApplyIdleFraming();
+                return;
+            }
+
+            // Snap to the locked run framing on the first frame after PLAY.
+            if (!runFramingLocked)
+            {
+                LockRunFraming();
             }
 
             Vector3 desired = target.position + offset;

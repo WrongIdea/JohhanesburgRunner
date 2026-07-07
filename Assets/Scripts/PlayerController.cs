@@ -25,6 +25,8 @@ namespace JoburgRunner
         [Header("Jumping")]
         [SerializeField] float jumpHeight = 2.2f;
         [SerializeField] float gravity = -28f;
+        [Tooltip("Downward speed forced when the player swipes down while airborne (dive-roll).")]
+        [SerializeField] float diveSpeed = 22f;
 
         [Header("Swipe Input")]
         [SerializeField] float minimumSwipeDistance = 80f;
@@ -109,6 +111,18 @@ namespace JoburgRunner
 
         public void Slide()
         {
+            bool groundedStable = controller.isGrounded || Time.time - lastGroundedTime < 0.15f;
+            bool droneActive = powerUpManager != null && powerUpManager.DroneActive;
+
+            // Swipe down while high (airborne, not on the drone): dive straight
+            // down into the jump-and-roll animation instead of a ground slide.
+            if (!groundedStable && !droneActive && (rollController == null || !rollController.IsRolling))
+            {
+                verticalVelocity = -Mathf.Abs(diveSpeed);
+                playerAnimator?.PlayAirRoll();
+                return;
+            }
+
             rollController?.TryStartRoll();
         }
 
