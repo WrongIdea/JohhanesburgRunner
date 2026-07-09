@@ -12,8 +12,7 @@ namespace JoburgRunner
     /// </summary>
     public class PowerUpManager : MonoBehaviour
     {
-        public const int MaxUpgradeLevel = 5;
-        public const float SecondsPerUpgradeLevel = 2f;
+        public const int MaxUpgradeLevel = BoosterUpgradeConfig.MaxLevel;
 
         [Header("References")]
         [SerializeField] Transform player;
@@ -38,8 +37,6 @@ namespace JoburgRunner
             PowerUpType.UbuntuMultiplier,
             PowerUpType.Hoverboard,
         };
-
-        static readonly float[] BaseDurations = { 8f, 10f, 6f, 10f, 15f };
 
         readonly float[] remaining = new float[AllTypes.Length];
 
@@ -71,18 +68,32 @@ namespace JoburgRunner
         static string PickupCountKey(PowerUpType type) => $"JoburgRunner.Pickups.{type}";
 
         public static int UpgradeLevel(PowerUpType type) =>
-            Mathf.Clamp(PlayerPrefs.GetInt(UpgradeLevelKey(type), 0), 0, MaxUpgradeLevel);
+            Mathf.Clamp(
+                PlayerPrefs.GetInt(UpgradeLevelKey(type), BoosterUpgradeConfig.MinLevel),
+                BoosterUpgradeConfig.MinLevel,
+                MaxUpgradeLevel);
 
         public static void SetUpgradeLevel(PowerUpType type, int level)
         {
-            PlayerPrefs.SetInt(UpgradeLevelKey(type), Mathf.Clamp(level, 0, MaxUpgradeLevel));
+            PlayerPrefs.SetInt(
+                UpgradeLevelKey(type),
+                Mathf.Clamp(level, BoosterUpgradeConfig.MinLevel, MaxUpgradeLevel));
             PlayerPrefs.Save();
         }
 
         public static int PickupCount(PowerUpType type) => PlayerPrefs.GetInt(PickupCountKey(type), 0);
 
         public static float Duration(PowerUpType type) =>
-            BaseDurations[(int)type] + UpgradeLevel(type) * SecondsPerUpgradeLevel;
+            BoosterUpgradeConfig.Duration(type, UpgradeLevel(type));
+
+        public static float Duration(PowerUpType type, int level) =>
+            BoosterUpgradeConfig.Duration(type, level);
+
+        public static int UpgradeCost(PowerUpType type) =>
+            BoosterUpgradeConfig.UpgradeCost(type, UpgradeLevel(type));
+
+        public static bool IsMaxLevel(PowerUpType type) =>
+            BoosterUpgradeConfig.IsMaxLevel(UpgradeLevel(type));
 
         public bool IsActive(PowerUpType type) => remaining[(int)type] > 0f;
 

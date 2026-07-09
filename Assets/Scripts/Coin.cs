@@ -30,7 +30,13 @@ namespace JoburgRunner
 
         void Update()
         {
-            transform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime, Space.World);
+            // Billboard coins (Higgsfield art) set rotationSpeed to 0 and face the
+            // camera via the Billboard component, so skip the per-frame transform
+            // write for every active coin on the track.
+            if (rotationSpeed != 0f)
+            {
+                transform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime, Space.World);
+            }
         }
 
         void OnTriggerEnter(Collider other)

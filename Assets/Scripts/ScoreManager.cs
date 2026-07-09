@@ -34,6 +34,9 @@ namespace JoburgRunner
         bool initialised;
         int committedCoins;
         int committedRareCoins;
+        int shownScore = -1;
+        int shownMultiplier = -1;
+        int shownCoins = -1;
 
         public float Score { get; private set; }
         public float Distance => initialised && player != null ? Mathf.Max(0f, player.position.z - startZ) : 0f;
@@ -131,15 +134,22 @@ namespace JoburgRunner
 
         void UpdateHud()
         {
-            if (scoreText != null)
+            // Only rebuild the label strings when a displayed integer actually
+            // changes, so the every-frame score tick does not allocate a new
+            // string (and re-mesh the TMP text) each frame.
+            int score = Mathf.FloorToInt(Score);
+            if (scoreText != null && (score != shownScore || Multiplier != shownMultiplier))
             {
-                scoreText.text = $"Score: {Mathf.FloorToInt(Score)}  x{Multiplier}";
+                scoreText.text = $"Score: {score}  x{Multiplier}";
+                shownScore = score;
+                shownMultiplier = Multiplier;
             }
 
-            if (coinText != null)
+            if (coinText != null && Coins != shownCoins)
             {
                 // The Higgsfield coin icon sits beside this, so show just the count.
                 coinText.text = $"{Coins}";
+                shownCoins = Coins;
             }
         }
     }

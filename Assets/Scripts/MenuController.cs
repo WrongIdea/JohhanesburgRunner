@@ -173,9 +173,9 @@ namespace JoburgRunner
         {
             PowerUpType type = StoreOrder[index];
             int level = PowerUpManager.UpgradeLevel(type);
-            int cost = UpgradeCost(level);
+            int cost = PowerUpManager.UpgradeCost(type);
             int balance = scoreManager != null ? scoreManager.TotalCoins : 0;
-            if (level >= PowerUpManager.MaxUpgradeLevel || balance < cost)
+            if (PowerUpManager.IsMaxLevel(type) || balance < cost)
             {
                 return;
             }
@@ -184,8 +184,6 @@ namespace JoburgRunner
             PowerUpManager.SetUpgradeLevel(type, level + 1);
             RefreshStore();
         }
-
-        static int UpgradeCost(int currentLevel) => (currentLevel + 1) * 150;
 
         void RefreshStore()
         {
@@ -215,19 +213,38 @@ namespace JoburgRunner
             {
                 PowerUpType type = StoreOrder[i];
                 int level = PowerUpManager.UpgradeLevel(type);
+                bool isMaxLevel = PowerUpManager.IsMaxLevel(type);
+                float currentDuration = PowerUpManager.Duration(type, level);
 
                 if (storeItemLabels != null && i < storeItemLabels.Length && storeItemLabels[i] != null)
                 {
-                    storeItemLabels[i].text =
-                        $"<b>{PowerUpManager.DisplayName(type)}</b>  <color=#FFC845>Lv {level}/{PowerUpManager.MaxUpgradeLevel}</color>\n" +
-                        $"<size=30><color=#AEB4C2>{PowerUpManager.Description(type)} · {PowerUpManager.Duration(type):0}s</color></size>";
+                    if (isMaxLevel)
+                    {
+                        storeItemLabels[i].text =
+                            $"<b>{PowerUpManager.DisplayName(type)}</b>  <color=#FFC845>Lv {level}/{PowerUpManager.MaxUpgradeLevel}</color>\n" +
+                            $"<size=30><color=#AEB4C2>{PowerUpManager.Description(type)} · Active {currentDuration:0}s · MAX LEVEL</color></size>";
+                    }
+                    else
+                    {
+                        float nextDuration = PowerUpManager.Duration(type, level + 1);
+                        int cost = PowerUpManager.UpgradeCost(type);
+                        storeItemLabels[i].text =
+                            $"<b>{PowerUpManager.DisplayName(type)}</b>  <color=#FFC845>Lv {level}/{PowerUpManager.MaxUpgradeLevel}</color>\n" +
+                            $"<size=30><color=#AEB4C2>Active {currentDuration:0}s -> {nextDuration:0}s · Upgrade {cost} coins</color></size>";
+                    }
                 }
 
                 if (storeUpgradeLabels != null && i < storeUpgradeLabels.Length && storeUpgradeLabels[i] != null)
                 {
-                    storeUpgradeLabels[i].text = level >= PowerUpManager.MaxUpgradeLevel
+                    storeUpgradeLabels[i].text = isMaxLevel
                         ? "MAX"
-                        : $"{UpgradeCost(level)}";
+                        : $"{PowerUpManager.UpgradeCost(type)}";
+                }
+
+                if (storeUpgradeButtons != null && i < storeUpgradeButtons.Length && storeUpgradeButtons[i] != null)
+                {
+                    storeUpgradeButtons[i].interactable =
+                        !isMaxLevel && (scoreManager == null || scoreManager.TotalCoins >= PowerUpManager.UpgradeCost(type));
                 }
             }
         }

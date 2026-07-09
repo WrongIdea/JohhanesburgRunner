@@ -202,15 +202,23 @@ namespace JoburgRunner.Editor
             }
 
             CreatePalette();
+            // Rebuild and render the real obstacle prefab (with its spinning
+            // wheels) so the closeup shows the taxi exactly as it appears in play,
+            // not a bare model.
+            CreateTaxiObstaclePrefab();
             GameObject holder = new GameObject("TaxiCloseupHolder");
-            GameObject taxi = FbxVehicleInstance("taxi", holder.transform, new Vector3(0f, 0f, 7f), 180f, 2.3f);
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TaxiPrefabPath);
+            GameObject taxi = prefab != null
+                ? (GameObject)PrefabUtility.InstantiatePrefab(prefab, holder.transform)
+                : FbxVehicleInstance("taxi", holder.transform, new Vector3(0f, 0f, 7f), 180f, 2.3f);
             if (taxi == null)
             {
-                Debug.LogError("taxi.fbx not found for closeup.");
+                Debug.LogError("taxi model not found for closeup.");
                 Object.DestroyImmediate(holder);
                 return;
             }
 
+            taxi.transform.position = new Vector3(0f, 0f, 7f);
             CapturePreviewScreenshot();
             Object.DestroyImmediate(holder);
         }
@@ -429,14 +437,35 @@ namespace JoburgRunner.Editor
             }
         }
 
+        // Every folder whose textures actually ship in the build. The player
+        // character and environment props (2048² albedo/normal maps) live outside
+        // Assets/Textures, so compressing only that folder left the biggest VRAM
+        // and APK costs untouched.
+        static readonly string[] ShippedTextureFolders =
+        {
+            "Assets/Textures",
+            "Assets/Characters",
+            "Assets/Environment",
+            "Assets/Materials",
+        };
+
         static void CompressTextures()
         {
-            if (!AssetDatabase.IsValidFolder("Assets/Textures"))
+            var folders = new List<string>();
+            foreach (string folder in ShippedTextureFolders)
+            {
+                if (AssetDatabase.IsValidFolder(folder))
+                {
+                    folders.Add(folder);
+                }
+            }
+
+            if (folders.Count == 0)
             {
                 return;
             }
 
-            foreach (string guid in AssetDatabase.FindAssets("t:Texture2D", new[] { "Assets/Textures" }))
+            foreach (string guid in AssetDatabase.FindAssets("t:Texture2D", folders.ToArray()))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 TextureImporter textureImporter = AssetImporter.GetAtPath(path) as TextureImporter;
@@ -455,6 +484,18 @@ namespace JoburgRunner.Editor
                 if (textureImporter.textureCompression != TextureImporterCompression.Compressed)
                 {
                     textureImporter.textureCompression = TextureImporterCompression.Compressed;
+                    dirty = true;
+                }
+
+                // Force ASTC on Android so a texture can't fall back to a bulky
+                // uncompressed format at build time.
+                TextureImporterPlatformSettings android = textureImporter.GetPlatformTextureSettings("Android");
+                if (!android.overridden || android.format != TextureImporterFormat.ASTC_6x6 || android.maxTextureSize > 1024)
+                {
+                    android.overridden = true;
+                    android.format = TextureImporterFormat.ASTC_6x6;
+                    android.maxTextureSize = 1024;
+                    textureImporter.SetPlatformTextureSettings(android);
                     dirty = true;
                 }
 
@@ -1407,19 +1448,43 @@ namespace JoburgRunner.Editor
                 playerRoot.position.z - bounds.center.z);
         }
 
+        static readonly string[] VehicleModelExtensions = { ".glb", ".gltf", ".fbx", ".obj" };
+
         static string FindModelPathByName(string modelName)
         {
-            foreach (string guid in AssetDatabase.FindAssets("t:Model"))
+            // Search by name across all assets (not just t:Model) so glTF/GLB
+            // imported by glTFast — which are GameObject assets, not ModelImporter
+            // assets — are found too. Preference order favours .glb/.gltf so a new
+            // Higgsfield-generated taxi wins over an older FBX of the same name.
+            string lower = modelName.ToLowerInvariant();
+            string bestPath = null;
+            int bestRank = int.MaxValue;
+            foreach (string guid in AssetDatabase.FindAssets(modelName))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
-                if (path.StartsWith("Assets/") && Path.GetFileNameWithoutExtension(path).ToLowerInvariant() == modelName)
+                if (!path.StartsWith("Assets/") ||
+                    Path.GetFileNameWithoutExtension(path).ToLowerInvariant() != lower)
                 {
-                    return path;
+                    continue;
+                }
+
+                int rank = System.Array.IndexOf(VehicleModelExtensions, Path.GetExtension(path).ToLowerInvariant());
+                if (rank >= 0 && rank < bestRank)
+                {
+                    bestRank = rank;
+                    bestPath = path;
                 }
             }
 
-            return null;
+            return bestPath;
         }
+
+        static bool IsGltfModel(string path) =>
+            !string.IsNullOrEmpty(path) &&
+            (path.EndsWith(".glb", System.StringComparison.OrdinalIgnoreCase) ||
+             path.EndsWith(".gltf", System.StringComparison.OrdinalIgnoreCase));
+
+        static bool TaxiModelIsGltf() => IsGltfModel(FindModelPathByName("taxi"));
 
         /// <summary>
         /// Instantiates a dropped-in FBX vehicle model, normalized to a sensible
@@ -1518,9 +1583,13 @@ namespace JoburgRunner.Editor
                 return null;
             }
 
-            bool hasTextures = false;
+            // glTFast imports GLB/glTF with its embedded textures and materials
+            // already applied, so treat those as textured and skip the FBX-only
+            // texture-extraction/override path below.
+            bool isGltf = IsGltfModel(modelPath);
+            bool hasTextures = isGltf;
             ModelImporter importer = AssetImporter.GetAtPath(modelPath) as ModelImporter;
-            if (importer != null)
+            if (!isGltf && importer != null)
             {
                 if (importer.animationType != ModelImporterAnimationType.None ||
                     importer.materialImportMode != ModelImporterMaterialImportMode.ImportStandard)
@@ -1551,8 +1620,10 @@ namespace JoburgRunner.Editor
             // Re-orient exports with non-standard axes so the vehicle stands upright
             // (up = Y) with its length along Z. Detected from the raw bounds: the
             // longest axis is the length; when height sits in Z the model is Z-up.
+            // glTFast already imports glTF/GLB upright (Y-up), so skip this FBX-only
+            // heuristic for them — it would tip the vehicle onto its side.
             Renderer[] rawRenderers = visual.GetComponentsInChildren<Renderer>();
-            if (rawRenderers.Length > 0)
+            if (!isGltf && rawRenderers.Length > 0)
             {
                 Bounds rawBounds = rawRenderers[0].bounds;
                 foreach (Renderer renderer in rawRenderers)
@@ -1572,6 +1643,15 @@ namespace JoburgRunner.Editor
                     // Length already along Z but Z-up (height in X): roll upright.
                     visual.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
                 }
+            }
+
+            // glTFast imports this taxi upright but with its length along X; add a
+            // base -90° yaw so the length runs down the road (Z) with the front
+            // pointing the same way the FBX heuristic produced for the old taxi
+            // (so an oncoming obstacle shows its front to the approaching player).
+            if (isGltf)
+            {
+                visual.transform.localRotation = Quaternion.Euler(0f, -90f, 0f);
             }
 
             // Bake the facing into the visual, not the root: spawners often
@@ -1895,6 +1975,96 @@ namespace JoburgRunner.Editor
             SetField(motion, "wiperPivots", wipers.ToArray());
         }
 
+        /// <summary>
+        /// Lays four spinning wheels over the GLB taxi's static, baked-in wheels
+        /// (a single mesh can't rotate its own wheels). Positions are measured
+        /// from the mesh so they align with the modelled wheels; a silver rim with
+        /// lug bolts makes the rotation read, and VehicleMotion spins them by the
+        /// distance driven. The black tyres sit slightly proud of the modelled
+        /// wheels so any small misalignment reads as black-on-black.
+        /// </summary>
+        static void AddSpinningWheels(GameObject root)
+        {
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0)
+            {
+                return;
+            }
+
+            Bounds bounds = renderers[0].bounds;
+            foreach (Renderer renderer in renderers)
+            {
+                bounds.Encapsulate(renderer.bounds);
+            }
+
+            float length = bounds.size.z;
+            float width = bounds.size.x;
+            float height = bounds.size.y;
+
+            float frontAxleZ = bounds.center.z + length * 0.30f;
+            float rearAxleZ = bounds.center.z - length * 0.30f;
+            float hubX = width * 0.5f - 0.06f;
+            if (TryMeasureWheels(root, bounds, out float measuredFrontZ, out float measuredRearZ, out float measuredHalfTrack))
+            {
+                frontAxleZ = measuredFrontZ;
+                rearAxleZ = measuredRearZ;
+                hubX = measuredHalfTrack;
+                Debug.Log($"{root.name}: spinning wheels aligned to measured axles z {rearAxleZ:F2}/{frontAxleZ:F2}, half-track {hubX:F2}");
+            }
+
+            float wheelRadius = height * 0.185f;
+            float wheelY = bounds.min.y + wheelRadius;
+            float tyreWidth = 0.24f;
+
+            Material tyre = Mat("WheelBlack");
+            Material rim = Mat("PoleGrey");
+
+            var wheels = new List<Transform>();
+            foreach (Vector2 corner in new[] { new Vector2(-1f, 1f), new Vector2(1f, 1f), new Vector2(-1f, -1f), new Vector2(1f, -1f) })
+            {
+                GameObject hub = new GameObject("WheelHub");
+                hub.transform.SetParent(root.transform);
+                hub.transform.localPosition = new Vector3(
+                    bounds.center.x + corner.x * hubX,
+                    wheelY,
+                    corner.y > 0f ? frontAxleZ : rearAxleZ);
+                hub.transform.localRotation = Quaternion.identity;
+
+                // Tyre: cylinder laid on its side so its axle runs along X and it
+                // rolls when the hub spins about X.
+                Cylinder("Tyre", hub.transform, Vector3.zero,
+                    new Vector3(wheelRadius * 2f, tyreWidth * 0.5f, wheelRadius * 2f), tyre, new Vector3(0f, 0f, 90f));
+
+                // Silver rim + centre cap + lug bolts on the outward face so the
+                // spin is clearly visible as the taxi passes.
+                float outerX = corner.x * (tyreWidth * 0.5f + 0.015f);
+                Cylinder("Rim", hub.transform, new Vector3(outerX, 0f, 0f),
+                    new Vector3(wheelRadius * 1.2f, 0.02f, wheelRadius * 1.2f), rim, new Vector3(0f, 0f, 90f));
+                Cylinder("HubCap", hub.transform, new Vector3(outerX * 1.25f, 0f, 0f),
+                    new Vector3(wheelRadius * 0.4f, 0.02f, wheelRadius * 0.4f), tyre, new Vector3(0f, 0f, 90f));
+                for (int b = 0; b < 5; b++)
+                {
+                    float angle = b * Mathf.PI * 2f / 5f;
+                    Cube("Lug", hub.transform, new Vector3(
+                        outerX * 1.25f,
+                        Mathf.Sin(angle) * wheelRadius * 0.6f,
+                        Mathf.Cos(angle) * wheelRadius * 0.6f),
+                        new Vector3(0.05f, 0.07f, 0.07f), tyre);
+                }
+
+                wheels.Add(hub.transform);
+            }
+
+            foreach (Transform wheel in wheels)
+            {
+                StripColliders(wheel.gameObject);
+            }
+
+            VehicleMotion motion = root.AddComponent<VehicleMotion>();
+            SetField(motion, "wheels", wheels.ToArray());
+            SetField(motion, "wheelRadius", wheelRadius);
+        }
+
         static GameObject MinibusTaxiVisual(Transform parent, Vector3 position, float yRotation, bool photoRear = false)
         {
             GameObject root = new GameObject("MinibusTaxi");
@@ -1974,11 +2144,23 @@ namespace JoburgRunner.Editor
             AddObstacleCollider(root, bounds.center - root.transform.position, bounds.size * 0.9f);
 
             // Obstacle taxis face the player, so their nose points down local -Z.
-            AddVehicleRunningGear(root, -1f);
+            // The GLB taxi already models its lights/windows, so it only needs
+            // spinning wheels laid over its (static, baked-in) modelled wheels;
+            // the old primitive/FBX taxi gets the full primitive running gear.
+            if (TaxiModelIsGltf())
+            {
+                AddSpinningWheels(root);
+            }
+            else
+            {
+                AddVehicleRunningGear(root, -1f);
+            }
 
-            // Oncoming traffic: taxi obstacles drive toward the player.
+            // Oncoming traffic: taxi obstacles drive toward the player, each with
+            // its own cruising speed, an occasional pull-over, and a gentle sway.
             MovingObstacle mover = root.AddComponent<MovingObstacle>();
-            SetField(mover, "moveSpeed", 5f);
+            SetField(mover, "minSpeed", 4f);
+            SetField(mover, "maxSpeed", 7.5f);
 
             Debug.Log($"Taxi obstacle triangle count: {CountTriangles(root)}");
             return SavePrefab(root, TaxiPrefabPath);
@@ -1998,8 +2180,16 @@ namespace JoburgRunner.Editor
                 Object.DestroyImmediate(collider);
             }
 
-            // Scenery taxis are built facing +Z (rear toward the camera).
-            AddVehicleRunningGear(root, 1f);
+            // Scenery taxis are built facing +Z (rear toward the camera). The GLB
+            // taxi only needs spinning wheels; the primitive taxi gets full gear.
+            if (TaxiModelIsGltf())
+            {
+                AddSpinningWheels(root);
+            }
+            else
+            {
+                AddVehicleRunningGear(root, 1f);
+            }
 
             root.AddComponent<SceneryVehicle>();
             return SavePrefab(root, "Assets/Prefabs/SceneryTaxi.prefab");
@@ -2106,7 +2296,7 @@ namespace JoburgRunner.Editor
         static GameObject CreateCoinPrefab(GameObject coinPopPrefab)
         {
             GameObject root = new GameObject("GoldCoin");
-            bool spriteCoin = AddSpriteCoinArt(root.transform, 0.95f);
+            bool spriteCoin = AddSpriteCoinArt(root.transform, 0.6f);
             if (!spriteCoin)
             {
                 if (!TryCreateR1CoinVisual(root.transform))
@@ -2148,7 +2338,7 @@ namespace JoburgRunner.Editor
         static GameObject CreateRareCoinPrefab(GameObject coinPopPrefab)
         {
             GameObject root = new GameObject("RareCoinR5");
-            bool spriteCoin = AddSpriteCoinArt(root.transform, 1.4f);
+            bool spriteCoin = AddSpriteCoinArt(root.transform, 0.9f);
             if (!spriteCoin)
             {
                 if (!TryCreateR1CoinVisual(root.transform))
@@ -3970,8 +4160,8 @@ namespace JoburgRunner.Editor
                 IconImage(row.transform, "ItemIcon", pickupIcons[i], new Vector2(0f, 0.5f), new Vector2(24f, 0f), new Vector2(132f, 132f));
 
                 TextMeshProUGUI itemLabel = Text(row.transform, "ItemLabel",
-                    $"<b>{PowerUpManager.DisplayName(storeOrder[i])}</b>  <color=#FFC845>Lv 0/{PowerUpManager.MaxUpgradeLevel}</color>\n" +
-                    $"<size=30><color=#AEB4C2>{PowerUpManager.Description(storeOrder[i])} · {PowerUpManager.Duration(storeOrder[i]):0}s</color></size>",
+                    $"<b>{PowerUpManager.DisplayName(storeOrder[i])}</b>  <color=#FFC845>Lv 1/{PowerUpManager.MaxUpgradeLevel}</color>\n" +
+                    $"<size=30><color=#AEB4C2>Active {PowerUpManager.Duration(storeOrder[i], 1):0}s -> {PowerUpManager.Duration(storeOrder[i], 2):0}s · Upgrade {BoosterUpgradeConfig.UpgradeCost(storeOrder[i], 1)} coins</color></size>",
                     40, TextAlignmentOptions.Left);
                 Anchor(itemLabel.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
                 itemLabel.rectTransform.offsetMin = new Vector2(180f, 0f);
