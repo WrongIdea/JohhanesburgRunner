@@ -16,14 +16,14 @@ namespace JoburgRunner
     [RequireComponent(typeof(RectTransform))]
     public class CoinCounterSparkle : MonoBehaviour
     {
-        [SerializeField] float duration = 0.42f;
+        [SerializeField] float duration = 0.44f;
         [Tooltip("Pixels each star travels out from the coin icon centre.")]
-        [SerializeField] float starTravel = 34f;
-        [SerializeField] float starSize = 26f;
-        [SerializeField] float glowSize = 92f;
+        [SerializeField] float starTravel = 46f;
+        [SerializeField] float starSize = 34f;
+        [SerializeField] float glowSize = 122f;
         [SerializeField] int starCount = 6;
         [Tooltip("Extra scale added to the coin icon at the peak of the pop.")]
-        [SerializeField] float iconPunch = 0.32f;
+        [SerializeField] float iconPunch = 0.4f;
 
         static readonly Color GlowColor = new Color(1f, 0.82f, 0.4f, 1f);
         static readonly Color StarColor = new Color(1f, 0.92f, 0.62f, 1f);

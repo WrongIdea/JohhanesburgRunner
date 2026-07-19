@@ -5,8 +5,9 @@ namespace JoburgRunner
     /// <summary>
     /// Coin-collect animation. The Higgsfield coin sprite pops in and rises at
     /// the pickup point while the prefab's gold sparkle burst plays, then flies
-    /// up into the HUD coin counter (see CoinHudAnchor), shrinking and fading as
-    /// it arrives, so the pickup reads as feeding the score. Without a HUD
+    /// up into the HUD coin counter (see CoinHudAnchor), shrinking and fading out
+    /// as it travels, so the pickup reads as feeding the score without the coin
+    /// covering upcoming obstacles. Without a HUD
     /// anchor in the scene it falls back to rising and fading in place. The
     /// object destroys itself once both the flight and the sparkles finish, and
     /// the Billboard component keeps the sprite facing the camera throughout.
@@ -29,8 +30,9 @@ namespace JoburgRunner
         [SerializeField, Range(0f, 0.3f)] float flyArcFraction = 0.07f;
         [Tooltip("Scale on arrival, tuned so the coin lands at roughly the size of the HUD coin icon.")]
         [SerializeField] float flyEndScale = 0.15f;
-        [Tooltip("Fraction of the flight spent fading out at the end.")]
-        [SerializeField, Range(0.05f, 1f)] float flyFadeTail = 0.18f;
+        [Tooltip("Coin opacity as the flight begins; it fades from here to fully transparent " +
+                 "on arrival so it dissolves toward the counter instead of hiding obstacles.")]
+        [SerializeField, Range(0.1f, 1f)] float flyStartAlpha = 0.6f;
 
         [SerializeField] float sparkleLinger = 0.5f;
 
@@ -153,18 +155,20 @@ namespace JoburgRunner
                 2f * inverse * t * control +
                 t * t * hudPoint;
 
-            // Shrink early (ease-out) rather than late: the coin is closing on the
-            // camera the whole way, and perspective magnifies it as it goes. A
-            // late shrink cancels out to a near-constant screen size that fills a
-            // third of the width, then snaps small; shrinking early reads as the
-            // coin tightening into the counter.
-            float shrink = 1f - (1f - t) * (1f - t);
+            // Shrink fast (cubic ease-out) so the coin stops covering the track
+            // almost immediately: it is closing on the camera the whole way and
+            // perspective magnifies it, so an early, aggressive shrink keeps it
+            // from ballooning over obstacles.
+            float shrink = 1f - Mathf.Pow(1f - t, 3f);
             transform.localScale = baseScale * Mathf.Lerp(endScale, flyEndScale, shrink);
 
             if (sprite != null)
             {
+                // Fade from a partial alpha to nothing across the whole flight so
+                // the coin reads as dissolving toward the counter rather than
+                // obscuring what is coming; the counter sparkle marks its arrival.
                 Color color = baseColor;
-                color.a = Mathf.Clamp01((1f - t) / flyFadeTail);
+                color.a = flyStartAlpha * (1f - t);
                 sprite.color = color;
             }
 
