@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: DailyRewardCycle
+  m_EditorClassIdentifier: Assembly-CSharp:JoburgRunner.Progression:DailyRewardCycle
+  days:
+  - coins: 100
+    rareCoins: 0
+    icon: {fileID: 0}
+    label: Day 1
+  - coins: 200
+    rareCoins: 0
+    icon: {fileID: 0}
+    label: Day 2
+  - coins: 350
+    rareCoins: 0
+    icon: {fileID: 0}
+    label: Day 3
+  - coins: 500
+    rareCoins: 1
+    icon: {fileID: 0}
+    label: Day 4
+  - coins: 700
+    rareCoins: 0
+    icon: {fileID: 0}
+    label: Day 5
+  - coins: 1000
+    rareCoins: 2
+    icon: {fileID: 0}
+    label: Day 6
+  - coins: 2000
+    rareCoins: 5
+    icon: {fileID: 0}
+    label: Day 7
+  missedDayPolicy: 0

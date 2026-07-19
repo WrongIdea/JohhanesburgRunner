@@ -25,12 +25,39 @@ namespace JoburgRunner.Editor
     {
         const string ScenePath = "Assets/Scenes/JoburgEndlessRunner.unity";
         const string RoadPrefabPath = "Assets/Prefabs/RoadSegment.prefab";
-        const string TaxiPrefabPath = "Assets/Prefabs/MinibusTaxiObstacle.prefab";
+        const string TaxiPrefabPath = "Assets/Prefabs/SouthAfricanTaxiObstacle.prefab";
+        // Higgsfield-generated taxi: a wheel-less body GLB plus a separate wheel
+        // GLB, assembled into one prefab so the wheels are real spinning children.
+        const string TaxiBodyModelPath = "Assets/Models/Higgsfield/Taxi/TaxiBody.glb";
+        const string TaxiWheelModelPath = "Assets/Models/Higgsfield/Taxi/TaxiWheel.glb";
         const string PotholePrefabPath = "Assets/Prefabs/PotholeObstacle.prefab";
         const string BarrierPrefabPath = "Assets/Prefabs/ConstructionBarrier.prefab";
         const string CoinPrefabPath = "Assets/Prefabs/GoldCoin.prefab";
         const string RareCoinPrefabPath = "Assets/Prefabs/RareCoinR5.prefab";
         const string CoinParticlePrefabPath = "Assets/Prefabs/CoinCollectParticles.prefab";
+        const string CoinCollectClipPath = "Assets/Audio/CoinCollect.wav";
+        const string BackgroundMusicClipPath = "Assets/Audio/Remix.mp3";
+        const string LaneSwitchClipPath = "Assets/Audio/LaneSwitch.mp3";
+        // Ubuntu Pulse: the glowing collectible orb (Meshy static prop, has an
+        // emission map) plus its own pickup/impact/power-down one-shots.
+        const string UbuntuOrbModelPath = "Assets/Meshy_AI_Create_a_game_ready_3_0711063038_texture_fbx/Meshy_AI_Create_a_game_ready_3_0711063038_texture.fbx";
+        const string UbuntuOrbMaterialPath = "Assets/Materials/UbuntuOrb_URP.mat";
+        const string UbuntuPulsePickupClipPath = "Assets/Audio/UbuntuPulsePickup.wav";
+        const string UbuntuPulseImpactClipPath = "Assets/Audio/UbuntuPulseImpact.wav";
+        const string UbuntuPulsePowerDownClipPath = "Assets/Audio/UbuntuPulsePowerDown.wav";
+        const string UbuntuPulseHumClipPath = "Assets/Audio/UbuntuPulseHum.wav";
+        const string UbuntuPulseCoinAttractionClipPath = "Assets/Audio/UbuntuPulseCoinAttraction.wav";
+        const string UbuntuPulsePrefabPath = "Assets/Prefabs/PowerUpUbuntuPulse.prefab";
+        const string UbuntuDissolveParticlePrefabPath = "Assets/Prefabs/UbuntuDissolveParticles.prefab";
+        // Hoverboard boosters: the Meshy anti-grav deck the runner rides while
+        // the Hoverboard shield is active. To add a new board later: append to
+        // BoardNames/BoardTaglines and create one more visual in
+        // CreateHoverboardVisuals — the Boards page and HoverboardVisual are
+        // both length-generic.
+        const string HoverboardModelPath = "Assets/Meshy_AI_Extract_the_futuristi_0714130802_texture_fbx/Meshy_AI_Extract_the_futuristi_0714130802_texture.fbx";
+        const string HoverboardMaterialPath = "Assets/Materials/HoverboardIon_URP.mat";
+        static readonly string[] BoardNames = { "Ion Cruiser" };
+        static readonly string[] BoardTaglines = { "Anti-grav deck from the future of Jozi" };
         const string CoinTailsModelPath = "Assets/Models/R1Tails/R1Tails.fbx";
         const string CoinHeadsModelPath = "Assets/Models/R1Heads/R1Heads.fbx";
         const string CoinTailsMaterialPath = "Assets/Models/R1Tails/R1Tails_URP.mat";
@@ -45,6 +72,16 @@ namespace JoburgRunner.Editor
         const string RunnerJumpModelPath = "Assets/Characters/Meshy_AI_Beaded_Warrior_biped/Meshy_AI_Beaded_Warrior_biped_Animation_Jump_Over_Obstacle_2_withSkin.fbx";
         const string RunnerAirRollModelPath = "Assets/Characters/Meshy_AI_Beaded_Warrior_biped/Meshy_AI_Beaded_Warrior_biped_Animation_Run_Jump_and_Roll_withSkin.fbx";
         const string RunnerIdleModelPath = "Assets/Characters/Meshy_AI_Beaded_Warrior_biped/Meshy_AI_Beaded_Warrior_biped_Animation_Hip_Hop_Dance_2_withSkin.fbx";
+        // Second selectable character on the ME page ("Jabu"); Mgijimi above
+        // stays the default. Each character gets its own animator controller
+        // (same states, its own run clip) and its own PBR material asset.
+        const string SecondRunnerModelPath = "Assets/Meshy_AI_Here_s_a_version_opti_biped/Meshy_AI_Here_s_a_version_opti_biped_Animation_RunFast_withSkin.fbx";
+        const string SecondRunnerAnimatorPath = "Assets/Animations/RunnerAnimator2.controller";
+        const string SecondRunnerPbrMaterialPath = "Assets/Materials/Runner2ExternalPbr.mat";
+        // JRPD traffic officer who chases the runner after a taxi side-swipe.
+        const string OfficerModelPath = "Assets/Meshy_AI_JRPD_Traffic_Officer_biped/Meshy_AI_JRPD_Traffic_Officer_biped_Animation_Male_Run_Forward_Pick_Up_Left_withSkin.fbx";
+        const string OfficerAnimatorPath = "Assets/Animations/OfficerAnimator.controller";
+        const string OfficerPbrMaterialPath = "Assets/Materials/OfficerExternalPbr.mat";
         const string VideoSkylineTexturePath = "Assets/Textures/VideoSkyline.png";
         const string VideoSkylineMaterialPath = "Assets/Materials/VideoSkylinePhoto.mat";
         const string TelkomTowerModelPath = "Assets/Environment/TelkomTower/Meshy_AI_Telkom_Tower_Skyline_0705203244_texture_fbx/Meshy_AI_Telkom_Tower_Skyline_0705203244_texture.fbx";
@@ -82,8 +119,13 @@ namespace JoburgRunner.Editor
             GameObject coinPopPrefab = CreateCoinPopPrefab();
             GameObject coinPrefab = CreateCoinPrefab(coinPopPrefab);
             GameObject rareCoinPrefab = CreateRareCoinPrefab(coinPopPrefab);
-            GameObject[] powerUpPrefabs = CreatePowerUpPrefabs();
-            TrackChunk[] chunkPrefabs = CreateTrackChunkPrefabs(taxiPrefab, coinPrefab, rareCoinPrefab, powerUpPrefabs);
+            GameObject ubuntuDissolvePrefab = CreateUbuntuDissolveParticlePrefab();
+            GameObject barrierPrefab = CreateBarrierObstaclePrefab();
+            GameObject potholePrefab = CreatePotholeObstaclePrefab();
+            SetField(barrierPrefab.GetComponent<ObstacleDissolveEffect>(), "dissolveParticlePrefab", ubuntuDissolvePrefab);
+            SetField(potholePrefab.GetComponent<ObstacleDissolveEffect>(), "dissolveParticlePrefab", ubuntuDissolvePrefab);
+            GameObject[] powerUpPrefabs = CreatePowerUpPrefabs(ubuntuDissolvePrefab);
+            TrackChunk[] chunkPrefabs = CreateTrackChunkPrefabs(taxiPrefab, coinPrefab, rareCoinPrefab, powerUpPrefabs, barrierPrefab, potholePrefab);
 
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             scene.name = "JoburgEndlessRunner";
@@ -95,6 +137,7 @@ namespace JoburgRunner.Editor
             // Taxis are the only obstacle: they come head-on across the three lanes.
             CreateSystems(player.transform, roadPrefab, chunkPrefabs);
             CreateUi(player.GetComponent<PlayerController>());
+            CreateGameSystems(player);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
@@ -223,7 +266,277 @@ namespace JoburgRunner.Editor
             Object.DestroyImmediate(holder);
         }
 
+        /// <summary>
+        /// Same as the closeup but turned side-on, to judge wheel-arch fit,
+        /// wheel track, and which way the rims face.
+        /// </summary>
+        [MenuItem("Joburg Runner/Capture Taxi Side View")]
+        public static void CaptureTaxiSideView()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            CreatePalette();
+            CreateTaxiObstaclePrefab();
+            GameObject holder = new GameObject("TaxiSideViewHolder");
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TaxiPrefabPath);
+            if (prefab == null)
+            {
+                Debug.LogError("taxi prefab not found for side view.");
+                Object.DestroyImmediate(holder);
+                return;
+            }
+
+            GameObject taxi = (GameObject)PrefabUtility.InstantiatePrefab(prefab, holder.transform);
+            taxi.transform.position = new Vector3(0f, 0f, 6f);
+            taxi.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+            CapturePreviewScreenshot();
+            Object.DestroyImmediate(holder);
+        }
+
+        [MenuItem("Joburg Runner/Capture Officer Closeup")]
+        public static void CaptureOfficerCloseup()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            CreatePalette();
+            TrafficOfficerChase chase = CreateTrafficOfficer(null, null);
+            if (chase == null)
+            {
+                Debug.LogError("Traffic officer could not be built for closeup.");
+                return;
+            }
+
+            // In edit mode Awake has not run, so the visual is still active.
+            // Off to the side so the idle runner does not hide him.
+            chase.transform.position = new Vector3(-1.9f, 0f, 5f);
+            CapturePreviewScreenshot();
+            Object.DestroyImmediate(chase.gameObject);
+        }
+
         [MenuItem("Joburg Runner/Capture Coin Closeup")]
+        [MenuItem("Joburg Runner/Capture Ubuntu Pulse Closeup")]
+        public static void CaptureUbuntuPulseCloseup()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(UbuntuPulsePrefabPath);
+            if (prefab == null)
+            {
+                Debug.LogError($"Ubuntu Pulse prefab not found at {UbuntuPulsePrefabPath}.");
+                return;
+            }
+
+            GameObject holder = new GameObject("UbuntuPulseCloseupHolder");
+            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, holder.transform);
+            instance.transform.position = new Vector3(0f, 1.2f, 5f);
+            CapturePreviewScreenshot();
+            Object.DestroyImmediate(holder);
+        }
+
+        /// <summary>
+        /// Screenshots the running-dust rig mid-simulation: continuous foot
+        /// dust plus a landing burst. Awake doesn't run in edit mode, so the
+        /// runtime dust material and colour are applied manually here for a
+        /// faithful preview. The scene is not saved afterwards.
+        /// </summary>
+        public static void CaptureRunningDustPreview()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            GameObject player = GameObject.Find("Player");
+            Transform anchor = player != null ? player.transform.Find("RunningDustAnchor") : null;
+            if (anchor == null)
+            {
+                Debug.LogError("RunningDustAnchor not found on the player.");
+                return;
+            }
+
+            Color dustColour = new Color(0.62f, 0.55f, 0.47f, 0.6f);
+            Material previewDust = new Material(UnlitTransparentMaterial("RunningDust", dustColour));
+            previewDust.SetTexture("_BaseMap", UbuntuPulseVisual.SoftGlowTexture());
+            previewDust.SetTexture("_MainTex", UbuntuPulseVisual.SoftGlowTexture());
+            foreach (ParticleSystemRenderer dustRenderer in anchor.GetComponentsInChildren<ParticleSystemRenderer>(true))
+            {
+                dustRenderer.sharedMaterial = previewDust;
+            }
+
+            foreach (ParticleSystem system in anchor.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                ParticleSystem.MainModule main = system.main;
+                main.startColor = dustColour;
+                if (system.name == "LandingDustBurst")
+                {
+                    system.Emit(12);
+                    system.Simulate(0.15f, true, false);
+                }
+                else
+                {
+                    system.Simulate(0.6f, true, true);
+                }
+
+            }
+
+            CapturePreviewScreenshot();
+        }
+
+        /// <summary>
+        /// Screenshots the Perfect Dodge feedback forced on: the pooled
+        /// streak burst simulated mid-flight around the player plus the
+        /// "PERFECT DODGE!" label. Verifies the visual package without
+        /// needing a live near miss. The scene is not saved afterwards.
+        /// </summary>
+        public static void CapturePerfectDodgePreview()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            GameObject player = GameObject.Find("Player");
+            PerfectDodge dodge = player != null ? player.GetComponent<PerfectDodge>() : null;
+            if (dodge == null)
+            {
+                Debug.LogError("Player with PerfectDodge not found in the scene.");
+                return;
+            }
+
+            GameObject vfxPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/PerfectDodgeVFX.prefab");
+            if (vfxPrefab != null)
+            {
+                GameObject vfx = (GameObject)PrefabUtility.InstantiatePrefab(vfxPrefab);
+                vfx.transform.SetPositionAndRotation(player.transform.position + Vector3.up * 0.9f, Quaternion.identity);
+                vfx.SetActive(true);
+                // Awake (and its glow-material swap) doesn't run in edit
+                // mode, so apply the runtime material here for a faithful
+                // preview of what the device renders.
+                Material previewGlow = UbuntuPulseVisual.MakeAdditiveGlowMaterial(
+                    UnlitColorMaterial("PerfectDodgeStreak", Color.white), UbuntuPulseVisual.SoftGlowTexture());
+                foreach (ParticleSystemRenderer previewRenderer in vfx.GetComponentsInChildren<ParticleSystemRenderer>(true))
+                {
+                    previewRenderer.sharedMaterial = previewGlow;
+                }
+
+                foreach (ParticleSystem system in vfx.GetComponentsInChildren<ParticleSystem>(true))
+                {
+                    system.Simulate(0.07f, true, true);
+                }
+            }
+
+            SerializedObject serializedDodge = new SerializedObject(dodge);
+            SerializedProperty labelProperty = serializedDodge.FindProperty("dodgeLabel");
+            TextMeshProUGUI label = labelProperty != null ? labelProperty.objectReferenceValue as TextMeshProUGUI : null;
+            if (label != null)
+            {
+                label.gameObject.SetActive(true);
+                label.rectTransform.localScale = new Vector3(1.12f, 1.12f, 1f);
+            }
+
+            CapturePreviewScreenshot();
+        }
+
+        /// <summary>
+        /// Screenshots the Ubuntu Pulse Lane Shift mid-dash. A TrailRenderer
+        /// only lays vertices from real movement in play mode, so both
+        /// ribbons are laid manually with AddPosition along the arc a dash
+        /// from the left lane would trace, and the spark/ground systems are
+        /// emitted and simulated a few frames in. The scene is not saved.
+        /// </summary>
+        public static void CaptureUbuntuLaneShiftPreview()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            GameObject player = GameObject.Find("Player");
+            UbuntuLaneShift shift = player != null ? player.GetComponentInChildren<UbuntuLaneShift>() : null;
+            if (shift == null)
+            {
+                Debug.LogError("Player with UbuntuLaneShift not found in the scene.");
+                return;
+            }
+
+            // Awake (and its glow-material swap) doesn't run in edit mode,
+            // so apply the runtime materials here for a faithful preview.
+            UbuntuLaneShift.ApplyRuntimeMaterials(shift.gameObject);
+
+            foreach (TrailRenderer ribbon in shift.GetComponentsInChildren<TrailRenderer>(true))
+            {
+                ribbon.emitting = true;
+                ribbon.widthMultiplier = ribbon.name.Contains("Glow") ? 0.26f : 0.16f;
+                Vector3 head = ribbon.transform.position;
+                // Behind and to the left: the runner races forward while
+                // sliding right, so the ribbon sweeps back toward the
+                // departed lane.
+                Vector3 tail = head + new Vector3(-2.4f, 0.1f, -2f);
+                const int points = 12;
+                for (int i = 0; i <= points; i++)
+                {
+                    float t = i / (float)points;
+                    Vector3 position = Vector3.Lerp(tail, head, t);
+                    // Ease the sideways component so the ribbon curves into
+                    // the new lane instead of cutting a straight diagonal.
+                    position.x = head.x + (tail.x - head.x) * (1f - t) * (1f - t);
+                    ribbon.AddPosition(position);
+                }
+            }
+
+            foreach (ParticleSystem system in shift.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                system.Emit(system.name.Contains("Ground") ? 6 : 10);
+                // restart:false — the bursts are Emit()-driven; restarting
+                // would clear the emitted particles.
+                system.Simulate(0.08f, true, false);
+            }
+
+            CapturePreviewScreenshot();
+        }
+
+        public static void BuildSceneAndCaptureUbuntuLaneShiftPreview()
+        {
+            BuildMinimumPlayableScene();
+            CapturePreviewScreenshot();
+            File.Copy(PreviewPath, "Builds/preview_scene.png", true);
+            CaptureUbuntuLaneShiftPreview();
+        }
+
+        /// <summary>
+        /// Screenshots the Ubuntu Pulse effect rig forced active on the
+        /// player — shield shader, rings, particles, shockwave, ground glow —
+        /// so the active-effect VFX can be verified without playing a run.
+        /// The scene is not saved afterwards.
+        /// </summary>
+        public static void CaptureUbuntuPulseActiveEffect()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            GameObject player = GameObject.Find("Player");
+            UbuntuPulseVisual visual = player != null ? player.GetComponent<UbuntuPulseVisual>() : null;
+            if (visual == null)
+            {
+                Debug.LogError("Player with UbuntuPulseVisual not found in the scene.");
+                return;
+            }
+
+            visual.ForcePreview();
+            CapturePreviewScreenshot();
+        }
+
         public static void CaptureCoinCloseup()
         {
             if (SceneManager.GetActiveScene().path != ScenePath)
@@ -265,6 +578,52 @@ namespace JoburgRunner.Editor
             CapturePreviewScreenshot();
             File.Copy(PreviewPath, "Builds/preview_scene.png", true);
             CaptureCoinCloseup();
+        }
+
+        [MenuItem("Joburg Runner/Capture Double Coin Stack")]
+        public static void CaptureDoubleCoinStack()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CoinPrefabPath);
+            if (prefab == null)
+            {
+                Debug.LogError($"Coin prefab not found at {CoinPrefabPath}.");
+                return;
+            }
+
+            Camera camera = Camera.main;
+            if (camera == null)
+            {
+                Debug.LogError("No main camera found for double coin stack capture.");
+                return;
+            }
+
+            GameObject holder = new GameObject("DoubleCoinStackHolder");
+            // Left coin stays normal for comparison; the right one is staged
+            // with the Double Coins pair sprite manually — Awake doesn't run
+            // in edit mode, so Coin can't do its own swap here. Mirrors the
+            // sprite/scale math in Coin.ApplyDoubleStack.
+            GameObject single = (GameObject)PrefabUtility.InstantiatePrefab(prefab, holder.transform);
+            GameObject doubled = (GameObject)PrefabUtility.InstantiatePrefab(prefab, holder.transform);
+            Vector3 anchor = camera.transform.position + camera.transform.forward * 3.4f;
+            single.transform.position = anchor + camera.transform.right * -0.75f;
+            doubled.transform.position = anchor + camera.transform.right * 0.75f;
+
+            SpriteRenderer doubledArt = doubled.GetComponentInChildren<SpriteRenderer>();
+            Sprite pairSprite = LoadHiggsfieldSprite("CoinDoubleStack");
+            if (doubledArt != null && pairSprite != null && doubledArt.sprite != null)
+            {
+                float sizeRatio = doubledArt.sprite.bounds.size.y / pairSprite.bounds.size.y;
+                doubledArt.sprite = pairSprite;
+                doubledArt.transform.localScale *= sizeRatio * 1.4f;
+            }
+
+            CapturePreviewScreenshot();
+            Object.DestroyImmediate(holder);
         }
 
         [MenuItem("Joburg Runner/Capture Game Over Preview")]
@@ -321,6 +680,198 @@ namespace JoburgRunner.Editor
         [MenuItem("Joburg Runner/Capture Collectables Preview")]
         public static void CaptureCollectablesPreview() => CaptureCanvasPanel("CollectablesPanel");
 
+        [MenuItem("Joburg Runner/Capture Me Preview")]
+        public static void CaptureMePreview() => CaptureCanvasPanel("MePanel");
+
+        [MenuItem("Joburg Runner/Capture Boards Preview")]
+        public static void CaptureBoardsPreview() => CaptureCanvasPanel("BoardsPanel");
+
+        // Logs every renderer inside the hoverboard FBX with its local bounds,
+        // to tell the deck apart from any extra geometry Meshy shipped with it.
+        public static void DebugHoverboardModel()
+        {
+            GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(HoverboardModelPath);
+            if (model == null)
+            {
+                Debug.LogError($"No model at {HoverboardModelPath}");
+                return;
+            }
+
+            GameObject instance = Object.Instantiate(model);
+            foreach (MeshFilter filter in instance.GetComponentsInChildren<MeshFilter>())
+            {
+                Bounds b = filter.sharedMesh != null ? filter.sharedMesh.bounds : new Bounds();
+                Debug.Log($"BOARDMESH '{filter.gameObject.name}' verts={filter.sharedMesh?.vertexCount ?? 0} " +
+                    $"center=({b.center.x:0.####},{b.center.y:0.####},{b.center.z:0.####}) " +
+                    $"size=({b.size.x:0.####},{b.size.y:0.####},{b.size.z:0.####}) scale={filter.transform.lossyScale}");
+
+                if (filter.sharedMesh == null)
+                {
+                    continue;
+                }
+
+                // Vertex deciles along each axis, to find where the deck slab
+                // sits versus the frame/kickstand appendages.
+                Vector3[] vertices = filter.sharedMesh.vertices;
+                for (int axis = 0; axis < 3; axis++)
+                {
+                    float[] values = new float[vertices.Length];
+                    for (int i = 0; i < vertices.Length; i++)
+                    {
+                        values[i] = vertices[i][axis];
+                    }
+
+                    System.Array.Sort(values);
+                    string deciles = "";
+                    for (int d = 0; d <= 10; d++)
+                    {
+                        int at = Mathf.Clamp(d * (values.Length - 1) / 10, 0, values.Length - 1);
+                        deciles += $"{values[at]:0.####} ";
+                    }
+
+                    Debug.Log($"BOARDMESH axis {"XYZ"[axis]} deciles: {deciles}");
+                }
+            }
+
+            Object.DestroyImmediate(instance);
+        }
+
+        // Renders the raw hoverboard FBX from the three canonical axes into
+        // Assets/Textures/Icons/BoardAxis*.png so its real layout can be seen
+        // before deciding on an orientation correction.
+        public static void CaptureBoardAxes()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(HoverboardModelPath);
+            if (model == null)
+            {
+                Debug.LogError($"No model at {HoverboardModelPath}");
+                return;
+            }
+
+            Material material = GetHoverboardMaterial();
+            Vector3[] eulers = { new Vector3(0f, 0f, 0f), new Vector3(0f, 90f, 0f), new Vector3(90f, 0f, 0f) };
+            string[] names = { "BoardAxisFront", "BoardAxisSide", "BoardAxisTop" };
+            for (int i = 0; i < eulers.Length; i++)
+            {
+                GameObject instance = Object.Instantiate(model);
+                AssignMaterial(instance, material);
+                RenderInstanceIcon(instance, names[i], eulers[i]);
+            }
+        }
+
+        // Fast iteration view for board art: rebuilds only the board visual in
+        // front of the camera (fresh from the FBX, no scene rebuild) from two
+        // angles so orientation and scale can be judged against the road.
+        [MenuItem("Joburg Runner/Capture Board Closeup")]
+        public static void CaptureBoardCloseup()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            Camera camera = Camera.main;
+            if (camera == null)
+            {
+                Debug.LogError("No main camera found for board closeup.");
+                return;
+            }
+
+            GameObject holder = new GameObject("BoardCloseupHolder");
+            GameObject side = CreateIonCruiserBoard(holder.transform, 0);
+            GameObject front = CreateIonCruiserBoard(holder.transform, 1);
+            side.SetActive(true);
+            front.SetActive(true);
+
+            Vector3 anchor = camera.transform.position + camera.transform.forward * 5f;
+            side.transform.position = anchor + camera.transform.right * -1.1f;
+            side.transform.rotation = Quaternion.Euler(0f, 90f, 0f); // length across the frame
+            front.transform.position = anchor + camera.transform.right * 1.1f;
+
+            CapturePreviewScreenshot();
+            Object.DestroyImmediate(holder);
+        }
+
+        // Shows the runner riding the selected board: enables Board_0 and
+        // stages the runtime ride result manually — the character standing on
+        // the board, both lifted off the road — since edit mode runs no
+        // Updates (so HoverboardVisual/RunnerVisualGrounder never tick).
+        [MenuItem("Joburg Runner/Capture Hoverboard Ride Preview")]
+        public static void CaptureHoverboardRidePreview()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            PlayerController player = Object.FindAnyObjectByType<PlayerController>();
+            Transform leanPivot = null;
+            Transform board = null;
+            Transform activeCharacter = null;
+            if (player != null)
+            {
+                foreach (Transform child in player.GetComponentsInChildren<Transform>(true))
+                {
+                    if (child.name == "ModelLeanPivot")
+                    {
+                        leanPivot = child;
+                    }
+                    else if (child.name == "Board_0")
+                    {
+                        board = child;
+                    }
+                    else if (child.name == "RunnerVisual_Fbx")
+                    {
+                        activeCharacter = child;
+                    }
+                }
+            }
+
+            if (leanPivot == null || board == null || activeCharacter == null)
+            {
+                Debug.LogError("Hoverboard rig not found for ride preview.");
+                return;
+            }
+
+            Vector3 leanRest = leanPivot.localPosition;
+            Vector3 boardRest = board.localPosition;
+
+            board.gameObject.SetActive(true);
+
+            // Pose the character on the same frozen run frame HoverboardVisual
+            // holds at runtime, so the preview shows the true standing stance
+            // (edit mode never ticks the animator). SampleAnimation writes the
+            // clip's pose straight onto the transforms.
+            AnimationClip runClip = LoadRunnerClipFromModel(PlayableRunnerModelPath, loop: true);
+            if (runClip != null)
+            {
+                const float standPoseFrame = 0.02f;
+                runClip.SampleAnimation(activeCharacter.gameObject, standPoseFrame * runClip.length);
+            }
+
+            // Drop the board so its top surface meets the character's feet,
+            // then lift the whole pair off the road (runtime does this via the
+            // grounder + mount; in edit mode moving the lean pivot carries both
+            // together since neither system is ticking).
+            float feetY = CombinedRendererBounds(activeCharacter.gameObject).min.y;
+            Bounds boardBounds = CombinedRendererBounds(board.gameObject);
+            board.position += new Vector3(0f, feetY - boardBounds.max.y, 0f);
+
+            const float rideHeight = 0.5f;
+            leanPivot.localPosition = leanRest + Vector3.up * rideHeight;
+
+            CapturePreviewScreenshot();
+
+            board.localPosition = boardRest;
+            board.gameObject.SetActive(false);
+            leanPivot.localPosition = leanRest;
+        }
+
         static void CaptureCanvasPanel(string panelName)
         {
             if (SceneManager.GetActiveScene().path != ScenePath)
@@ -363,6 +914,7 @@ namespace JoburgRunner.Editor
                 "Assets/Prefabs/PowerUpDroneBoost.prefab",
                 "Assets/Prefabs/PowerUpUbuntuMultiplier.prefab",
                 "Assets/Prefabs/PowerUpHoverboard.prefab",
+                UbuntuPulsePrefabPath,
                 RareCoinPrefabPath,
             };
 
@@ -399,12 +951,34 @@ namespace JoburgRunner.Editor
             File.Copy(PreviewPath, "Builds/preview_store.png", true);
             CaptureCollectablesPreview();
             File.Copy(PreviewPath, "Builds/preview_collectables.png", true);
+            CaptureMePreview();
+            File.Copy(PreviewPath, "Builds/preview_me.png", true);
+            CaptureBoardsPreview();
+            File.Copy(PreviewPath, "Builds/preview_boards.png", true);
+            CaptureHoverboardRidePreview();
+            File.Copy(PreviewPath, "Builds/preview_hoverboard.png", true);
             CapturePickupsCloseup();
             File.Copy(PreviewPath, "Builds/preview_pickups.png", true);
         }
 
         [MenuItem("Joburg Runner/Build Android APK")]
         public static void BuildAndroidApk()
+        {
+            BuildAndroidApk(BuildOptions.None);
+        }
+
+        /// <summary>
+        /// Development build: enables DebugOverlay's cheat buttons (power-ups,
+        /// coin grants, time scale), which are compiled out of release. Use it
+        /// to drive a specific effect on device instead of playing for it.
+        /// </summary>
+        [MenuItem("Joburg Runner/Build Android APK (Development)")]
+        public static void BuildAndroidApkDevelopment()
+        {
+            BuildAndroidApk(BuildOptions.Development);
+        }
+
+        static void BuildAndroidApk(BuildOptions options)
         {
             BuildMinimumPlayableScene();
             Directory.CreateDirectory("Builds");
@@ -415,7 +989,7 @@ namespace JoburgRunner.Editor
                 scenes = new[] { ScenePath },
                 locationPathName = ApkPath,
                 target = BuildTarget.Android,
-                options = BuildOptions.None
+                options = options
             });
         }
 
@@ -557,6 +1131,12 @@ namespace JoburgRunner.Editor
             }
 
             var simplifier = new UnityMeshSimplifier.MeshSimplifier();
+            // Heavy decimation smears textures unless edges along UV seams and
+            // mesh borders are kept intact.
+            UnityMeshSimplifier.SimplificationOptions options = UnityMeshSimplifier.SimplificationOptions.Default;
+            options.PreserveBorderEdges = true;
+            options.PreserveUVSeamEdges = true;
+            simplifier.SimplificationOptions = options;
             simplifier.Initialize(source);
             simplifier.SimplifyMesh(Mathf.Clamp01(ratio));
             Mesh simplified = simplifier.ToMesh();
@@ -1484,8 +2064,6 @@ namespace JoburgRunner.Editor
             (path.EndsWith(".glb", System.StringComparison.OrdinalIgnoreCase) ||
              path.EndsWith(".gltf", System.StringComparison.OrdinalIgnoreCase));
 
-        static bool TaxiModelIsGltf() => IsGltfModel(FindModelPathByName("taxi"));
-
         /// <summary>
         /// Instantiates a dropped-in FBX vehicle model, normalized to a sensible
         /// size, grounded, centered on its root, and textured (using textures
@@ -1623,7 +2201,15 @@ namespace JoburgRunner.Editor
             // glTFast already imports glTF/GLB upright (Y-up), so skip this FBX-only
             // heuristic for them — it would tip the vehicle onto its side.
             Renderer[] rawRenderers = visual.GetComponentsInChildren<Renderer>();
-            if (!isGltf && rawRenderers.Length > 0)
+            if (!isGltf && modelPath.Contains("/HiAce/"))
+            {
+                // The Meshy HiAce taxi exports Z-up with its length along X and
+                // nose at +X, but its near-square cross-section (height ~= width)
+                // makes the bounds heuristic below guess Y-up and leave it rolled
+                // onto its side; state the correction explicitly.
+                visual.transform.localRotation = Quaternion.Euler(0f, -90f, 0f) * Quaternion.Euler(-90f, 0f, 0f);
+            }
+            else if (!isGltf && rawRenderers.Length > 0)
             {
                 Bounds rawBounds = rawRenderers[0].bounds;
                 foreach (Renderer renderer in rawRenderers)
@@ -1663,6 +2249,11 @@ namespace JoburgRunner.Editor
 
             if (!hasTextures)
             {
+                hasTextures = TryApplyVehicleSiblingTextures(visual, modelPath);
+            }
+
+            if (!hasTextures)
+            {
                 ApplyBestExtractedTexture(visual, modelPath);
             }
 
@@ -1670,6 +2261,301 @@ namespace JoburgRunner.Editor
             {
                 CombineVehicleMeshes(root, combineCacheKey);
             }
+
+            foreach (Collider collider in root.GetComponentsInChildren<Collider>())
+            {
+                Object.DestroyImmediate(collider);
+            }
+
+            return root;
+        }
+
+        static Bounds WorldRendererBounds(GameObject root)
+        {
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>();
+            Bounds bounds = renderers[0].bounds;
+            foreach (Renderer renderer in renderers)
+            {
+                bounds.Encapsulate(renderer.bounds);
+            }
+
+            return bounds;
+        }
+
+        /// <summary>
+        /// glTF materials default to metallicFactor 1, so a SAM/Higgsfield export
+        /// with no metal-roughness map renders near-black under the scene's simple
+        /// lighting. Rebuild a plain URP Lit material around the GLB's base-colour
+        /// texture instead and apply it to every renderer.
+        /// </summary>
+        static void ApplyGltfLitMaterial(GameObject visual, string materialName, float smoothness)
+        {
+            Texture baseMap = null;
+            foreach (Renderer renderer in visual.GetComponentsInChildren<Renderer>())
+            {
+                Material source = renderer.sharedMaterial;
+                if (source == null)
+                {
+                    continue;
+                }
+
+                foreach (string property in new[] { "baseColorTexture", "_BaseMap", "_BaseColorTexture", "_MainTex" })
+                {
+                    if (source.HasProperty(property) && source.GetTexture(property) != null)
+                    {
+                        baseMap = source.GetTexture(property);
+                        break;
+                    }
+                }
+
+                if (baseMap == null)
+                {
+                    baseMap = source.mainTexture;
+                }
+
+                if (baseMap != null)
+                {
+                    break;
+                }
+            }
+
+            Material material = CreateMaterial(materialName, Color.white);
+            material.SetFloat("_Metallic", 0f);
+            material.SetFloat("_Smoothness", smoothness);
+            if (baseMap != null)
+            {
+                material.SetTexture("_BaseMap", baseMap);
+                material.mainTexture = baseMap;
+            }
+
+            foreach (Renderer renderer in visual.GetComponentsInChildren<Renderer>())
+            {
+                renderer.sharedMaterial = material;
+            }
+        }
+
+        /// <summary>
+        /// Finds the two wheel-arch openings of a wheel-less vehicle body. Along
+        /// the body's bottom edge the rocker/bumper vertices form a dense line of
+        /// z samples, and each arch is a wide gap in that line; the axles sit at
+        /// the centres of the two widest gaps. Returned nose-agnostically as
+        /// (higher z, lower z) — the caller maps them to front/rear. Also reports
+        /// the narrower arch opening (to size the wheels) and how far the rocker
+        /// panels sit from the centreline (to inset the wheels past the mirrors,
+        /// which inflate the full body bounds).
+        /// </summary>
+        static bool TryMeasureArchCentres(GameObject body, Transform root, out float zHigh, out float zLow, out float archSpan, out float sideHalfWidth)
+        {
+            zHigh = zLow = 0f;
+            archSpan = sideHalfWidth = 0f;
+            Bounds bounds = WorldRendererBounds(body);
+            Vector3 min = root.InverseTransformPoint(bounds.min);
+            Vector3 max = root.InverseTransformPoint(bounds.max);
+            float bandTop = min.y + (max.y - min.y) * 0.10f;
+            float centerX = (min.x + max.x) * 0.5f;
+            float halfWidth = (max.x - min.x) * 0.5f;
+
+            var samples = new List<float>();
+            foreach (MeshFilter filter in body.GetComponentsInChildren<MeshFilter>())
+            {
+                if (filter.sharedMesh == null)
+                {
+                    continue;
+                }
+
+                Matrix4x4 toRoot = root.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+                foreach (Vector3 vertex in filter.sharedMesh.vertices)
+                {
+                    Vector3 point = toRoot.MultiplyPoint3x4(vertex);
+                    if (point.y <= bandTop && Mathf.Abs(point.x - centerX) > halfWidth * 0.55f)
+                    {
+                        samples.Add(point.z);
+                        sideHalfWidth = Mathf.Max(sideHalfWidth, Mathf.Abs(point.x - centerX));
+                    }
+                }
+            }
+
+            if (samples.Count < 40)
+            {
+                return false;
+            }
+
+            samples.Sort();
+            float bestGap = 0f, secondGap = 0f, bestCentre = 0f, secondCentre = 0f;
+            for (int i = 1; i < samples.Count; i++)
+            {
+                float gap = samples[i] - samples[i - 1];
+                float centre = (samples[i] + samples[i - 1]) * 0.5f;
+                if (gap > bestGap)
+                {
+                    secondGap = bestGap;
+                    secondCentre = bestCentre;
+                    bestGap = gap;
+                    bestCentre = centre;
+                }
+                else if (gap > secondGap)
+                {
+                    secondGap = gap;
+                    secondCentre = centre;
+                }
+            }
+
+            float length = max.z - min.z;
+            if (secondGap < length * 0.06f)
+            {
+                return false;
+            }
+
+            zHigh = Mathf.Max(bestCentre, secondCentre);
+            zLow = Mathf.Min(bestCentre, secondCentre);
+            archSpan = secondGap;
+
+            // Sanity: the gaps must sit a plausible wheelbase apart.
+            float wheelbase = zHigh - zLow;
+            return wheelbase > length * 0.35f && wheelbase < length * 0.85f;
+        }
+
+        /// <summary>
+        /// Assembles the Higgsfield taxi from a wheel-less body GLB plus four
+        /// instances of a separate wheel GLB. Unlike the single-mesh FBX path —
+        /// whose baked-in wheels need a primitive overlay to appear to spin —
+        /// the wheels here are real child pivots (FrontLeft/FrontRight/RearLeft/
+        /// RearRightWheel) that VehicleMotion rotates by the distance driven.
+        /// Axles are located from the gaps the arches leave in the body's bottom
+        /// edge. Returns null when either model is missing so callers can fall
+        /// back to the single-mesh or primitive taxi.
+        /// </summary>
+        static GameObject AssembledTaxiInstance(Transform parent, Vector3 position, float yRotation, float targetHeight)
+        {
+            GameObject bodyModel = AssetDatabase.LoadAssetAtPath<GameObject>(TaxiBodyModelPath);
+            GameObject wheelModel = AssetDatabase.LoadAssetAtPath<GameObject>(TaxiWheelModelPath);
+            if (bodyModel == null || wheelModel == null)
+            {
+                return null;
+            }
+
+            GameObject root = new GameObject("AssembledTaxi");
+            root.transform.SetParent(parent);
+            root.transform.localPosition = position;
+
+            GameObject body = Object.Instantiate(bodyModel, root.transform);
+            body.name = "TaxiBody";
+            body.transform.localPosition = Vector3.zero;
+            body.transform.localRotation = Quaternion.identity;
+            if (body.GetComponentsInChildren<Renderer>().Length == 0)
+            {
+                Object.DestroyImmediate(root);
+                return null;
+            }
+
+            // glTFast imports Y-up; turn the body's length onto Z when it arrives
+            // along X, then bake the requested facing into the visual (spawners
+            // instantiate with identity rotation, exactly as with the FBX path).
+            Bounds rawBounds = WorldRendererBounds(body);
+            if (rawBounds.size.x > rawBounds.size.z)
+            {
+                body.transform.localRotation = Quaternion.Euler(0f, -90f, 0f);
+            }
+
+            body.transform.localRotation = Quaternion.Euler(0f, yRotation, 0f) * body.transform.localRotation;
+
+            // The finished vehicle is body over ground clearance: normalize the
+            // body to the above-clearance share of the height, then lift it so
+            // the wheels have room to stand inside the arches.
+            float groundClearance = targetHeight * 0.10f;
+            NormalizeVehicleBounds(body, root.transform, targetHeight - groundClearance);
+            body.transform.position += Vector3.up * groundClearance;
+            SimplifyMeshes(body, 60000);
+            ApplyGltfLitMaterial(body, "TaxiBodyLit", 0.4f);
+
+            Bounds bodyBounds = WorldRendererBounds(body);
+            Vector3 centre = root.transform.InverseTransformPoint(bodyBounds.center);
+            float length = bodyBounds.size.z;
+            float halfWidth = bodyBounds.size.x * 0.5f;
+
+            float zHigh = centre.z + length * 0.28f;
+            float zLow = centre.z - length * 0.28f;
+            // Mirrors inflate the body bounds, so default the wheels' track to a
+            // touch inside them and prefer the measured rocker width.
+            float rockerHalf = halfWidth * 0.92f;
+            float wheelRadius = targetHeight * 0.16f;
+            if (TryMeasureArchCentres(body, root.transform, out float measuredHigh, out float measuredLow, out float archSpan, out float measuredRockerHalf))
+            {
+                zHigh = measuredHigh;
+                zLow = measuredLow;
+                rockerHalf = measuredRockerHalf;
+                // The wheel must fill most of the arch opening without scraping it.
+                wheelRadius = Mathf.Clamp(archSpan * 0.42f, targetHeight * 0.13f, targetHeight * 0.185f);
+                Debug.Log($"AssembledTaxi: arches measured at z {zLow:F2}/{zHigh:F2}, span {archSpan:F2}, rocker half-width {rockerHalf:F2}");
+            }
+            else
+            {
+                Debug.LogWarning("AssembledTaxi: arch measurement failed, using bounds heuristic for axle placement");
+            }
+
+            // A wheel smaller than the clearance would hang in the air below the
+            // rockers; keep its centre above the body's bottom edge.
+            wheelRadius = Mathf.Max(wheelRadius, groundClearance * 1.3f);
+
+            // Which local-Z direction the nose points after yRotation was baked.
+            float frontSign = Mathf.Cos(yRotation * Mathf.Deg2Rad) >= 0f ? 1f : -1f;
+            float frontAxleZ = frontSign > 0f ? zHigh : zLow;
+            float rearAxleZ = frontSign > 0f ? zLow : zHigh;
+
+            var wheels = new List<Transform>();
+            foreach ((float side, bool front) in new (float, bool)[] { (-1f, true), (1f, true), (-1f, false), (1f, false) })
+            {
+                // Named from the driver's seat: facing the nose, left is -X when
+                // the nose points +Z and +X when it points -Z.
+                bool isLeft = side * frontSign < 0f;
+                GameObject pivot = new GameObject($"{(front ? "Front" : "Rear")}{(isLeft ? "Left" : "Right")}Wheel");
+                pivot.transform.SetParent(root.transform);
+                pivot.transform.localRotation = Quaternion.identity;
+
+                GameObject wheel = Object.Instantiate(wheelModel, pivot.transform);
+                wheel.name = "WheelVisual";
+                wheel.transform.localPosition = Vector3.zero;
+
+                // Orient the wheel so its axle (the thinnest bounds axis) runs
+                // along X and it rolls when the pivot spins about X.
+                Bounds wheelRaw = WorldRendererBounds(wheel);
+                if (wheelRaw.size.z <= wheelRaw.size.x && wheelRaw.size.z <= wheelRaw.size.y)
+                {
+                    wheel.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                }
+                else if (wheelRaw.size.y <= wheelRaw.size.x && wheelRaw.size.y <= wheelRaw.size.z)
+                {
+                    wheel.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+                }
+
+                // Outer rim face toward the street side of the vehicle.
+                if (side < 0f)
+                {
+                    wheel.transform.localRotation = Quaternion.Euler(0f, 180f, 0f) * wheel.transform.localRotation;
+                }
+
+                Bounds wheelBounds = WorldRendererBounds(wheel);
+                float diameter = Mathf.Max(wheelBounds.size.y, wheelBounds.size.z);
+                wheel.transform.localScale *= wheelRadius * 2f / diameter;
+
+                wheelBounds = WorldRendererBounds(wheel);
+                pivot.transform.localPosition = new Vector3(
+                    centre.x + side * (rockerHalf - wheelBounds.size.x * 0.55f),
+                    wheelRadius,
+                    front ? frontAxleZ : rearAxleZ);
+
+                // Centre the wheel mesh on its pivot so the spin has no wobble.
+                wheelBounds = WorldRendererBounds(wheel);
+                wheel.transform.position += pivot.transform.position - wheelBounds.center;
+
+                SimplifyMeshes(wheel, 8000);
+                ApplyGltfLitMaterial(wheel, "TaxiWheelLit", 0.25f);
+                wheels.Add(pivot.transform);
+            }
+
+            VehicleMotion motion = root.AddComponent<VehicleMotion>();
+            SetField(motion, "wheels", wheels.ToArray());
+            SetField(motion, "wheelRadius", wheelRadius);
 
             foreach (Collider collider in root.GetComponentsInChildren<Collider>())
             {
@@ -1711,6 +2597,69 @@ namespace JoburgRunner.Editor
             Vector3 offset = vehicleRoot.position - bounds.center;
             offset.y = vehicleRoot.position.y - bounds.min.y;
             visual.transform.position += offset;
+        }
+
+        /// <summary>
+        /// Meshy FBX exports reference their textures at absolute /tmp paths from
+        /// the export machine, so Unity's importer leaves the materials blank.
+        /// The maps ship as sibling PNGs instead: build one URP Lit material from
+        /// &lt;model&gt;_basecolor.png (+ _normal.png when present) and apply it to
+        /// every renderer. Returns false when no sibling base color exists.
+        /// </summary>
+        static bool TryApplyVehicleSiblingTextures(GameObject visual, string modelPath)
+        {
+            string folder = Path.GetDirectoryName(modelPath).Replace('\\', '/');
+            string baseName = Path.GetFileNameWithoutExtension(modelPath);
+            Texture2D baseMap = AssetDatabase.LoadAssetAtPath<Texture2D>($"{folder}/{baseName}_basecolor.png");
+            if (baseMap == null)
+            {
+                return false;
+            }
+
+            Material material = CreateMaterial($"VehicleLit_{baseName.Replace(" ", "")}", Color.white);
+            material.SetTexture("_BaseMap", baseMap);
+            material.mainTexture = baseMap;
+            material.SetFloat("_Metallic", 0f);
+            material.SetFloat("_Smoothness", 0.35f);
+
+            Texture2D normalMap = LoadAsNormalMap($"{folder}/{baseName}_normal.png");
+            if (normalMap != null)
+            {
+                material.SetTexture("_BumpMap", normalMap);
+                material.EnableKeyword("_NORMALMAP");
+            }
+
+            EditorUtility.SetDirty(material);
+
+            foreach (Renderer renderer in visual.GetComponentsInChildren<Renderer>())
+            {
+                Material[] materials = renderer.sharedMaterials;
+                for (int i = 0; i < materials.Length; i++)
+                {
+                    materials[i] = material;
+                }
+
+                renderer.sharedMaterials = materials;
+            }
+
+            return true;
+        }
+
+        static Texture2D LoadAsNormalMap(string path)
+        {
+            TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null)
+            {
+                return null;
+            }
+
+            if (importer.textureType != TextureImporterType.NormalMap)
+            {
+                importer.textureType = TextureImporterType.NormalMap;
+                importer.SaveAndReimport();
+            }
+
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
         static void ApplyBestExtractedTexture(GameObject visual, string modelPath)
@@ -1796,6 +2745,33 @@ namespace JoburgRunner.Editor
             if (material == null)
             {
                 material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                AssetDatabase.CreateAsset(material, materialPath);
+            }
+
+            material.color = color;
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        // Same as UnlitColorMaterial but with URP's Transparent surface type
+        // set up (alpha blend, no depth write) — required for anything whose
+        // alpha is meant to actually show through, e.g. the Ubuntu Pulse
+        // shield sphere and ground glow.
+        static Material UnlitTransparentMaterial(string name, Color color)
+        {
+            string materialPath = $"Assets/Materials/{name}.mat";
+            Material material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+            if (material == null)
+            {
+                material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                material.SetFloat("_Surface", 1f);
+                material.SetFloat("_Blend", 0f);
+                material.SetOverrideTag("RenderType", "Transparent");
+                material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                material.SetInt("_ZWrite", 0);
+                material.renderQueue = 3000;
                 AssetDatabase.CreateAsset(material, materialPath);
             }
 
@@ -2127,9 +3103,12 @@ namespace JoburgRunner.Editor
         static GameObject CreateTaxiObstaclePrefab()
         {
             GameObject holder = new GameObject("TaxiObstacleHolder");
-            GameObject root = FbxVehicleInstance("taxi", holder.transform, Vector3.zero, 180f, 2.3f, "TaxiObstacle")
-                ?? MinibusTaxiVisual(holder.transform, Vector3.zero, 180f);
-            root.name = "MinibusTaxiObstacle";
+            // Prefer the Higgsfield body+wheels assembly, then a dropped-in
+            // single-mesh model, then the primitive minibus.
+            GameObject assembledRoot = AssembledTaxiInstance(holder.transform, Vector3.zero, 180f, 2.3f);
+            GameObject modelRoot = assembledRoot ?? FbxVehicleInstance("taxi", holder.transform, Vector3.zero, 180f, 2.3f, "TaxiObstacle");
+            GameObject root = modelRoot ?? MinibusTaxiVisual(holder.transform, Vector3.zero, 180f);
+            root.name = "SouthAfricanTaxiObstacle";
             root.transform.SetParent(null);
             Object.DestroyImmediate(holder);
 
@@ -2144,14 +3123,15 @@ namespace JoburgRunner.Editor
             AddObstacleCollider(root, bounds.center - root.transform.position, bounds.size * 0.9f);
 
             // Obstacle taxis face the player, so their nose points down local -Z.
-            // The GLB taxi already models its lights/windows, so it only needs
-            // spinning wheels laid over its (static, baked-in) modelled wheels;
-            // the old primitive/FBX taxi gets the full primitive running gear.
-            if (TaxiModelIsGltf())
+            // The assembled taxi's real wheel children already spin via the
+            // VehicleMotion added during assembly; a single-mesh model needs
+            // spinning wheels laid over its static, baked-in wheels; the
+            // primitive fallback gets the full running gear.
+            if (assembledRoot == null && modelRoot != null)
             {
                 AddSpinningWheels(root);
             }
-            else
+            else if (modelRoot == null)
             {
                 AddVehicleRunningGear(root, -1f);
             }
@@ -2169,8 +3149,9 @@ namespace JoburgRunner.Editor
         static GameObject CreateSceneryTaxiPrefab()
         {
             GameObject holder = new GameObject("SceneryTaxiHolder");
-            GameObject root = FbxVehicleInstance("taxi", holder.transform, Vector3.zero, 0f, 2.3f, "SceneryTaxi")
-                ?? MinibusTaxiVisual(holder.transform, Vector3.zero, 0f, true);
+            GameObject assembledRoot = AssembledTaxiInstance(holder.transform, Vector3.zero, 0f, 2.3f);
+            GameObject modelRoot = assembledRoot ?? FbxVehicleInstance("taxi", holder.transform, Vector3.zero, 0f, 2.3f, "SceneryTaxi");
+            GameObject root = modelRoot ?? MinibusTaxiVisual(holder.transform, Vector3.zero, 0f, true);
             root.name = "SceneryTaxi";
             root.transform.SetParent(null);
             Object.DestroyImmediate(holder);
@@ -2180,13 +3161,14 @@ namespace JoburgRunner.Editor
                 Object.DestroyImmediate(collider);
             }
 
-            // Scenery taxis are built facing +Z (rear toward the camera). The GLB
-            // taxi only needs spinning wheels; the primitive taxi gets full gear.
-            if (TaxiModelIsGltf())
+            // Scenery taxis are built facing +Z (rear toward the camera). The
+            // assembled taxi's wheels already spin; a single-mesh model needs the
+            // spinning-wheel overlay; the primitive gets full running gear.
+            if (assembledRoot == null && modelRoot != null)
             {
                 AddSpinningWheels(root);
             }
-            else
+            else if (modelRoot == null)
             {
                 AddVehicleRunningGear(root, 1f);
             }
@@ -2201,6 +3183,7 @@ namespace JoburgRunner.Editor
             GameObject hole = Cylinder("PotholeObstacle_DarkPatch", root.transform, new Vector3(0f, 0.04f, 0f), new Vector3(1.55f, 0.08f, 1.1f), Mat("PotholeDarkAsphalt"));
             hole.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             AddObstacleCollider(root, new Vector3(0f, 0.45f, 0f), new Vector3(1.9f, 0.9f, 1.5f));
+            root.AddComponent<ObstacleDissolveEffect>();
             return SavePrefab(root, PotholePrefabPath);
         }
 
@@ -2211,7 +3194,184 @@ namespace JoburgRunner.Editor
             Cube("BarrierStripe", root.transform, new Vector3(0f, 0.8f, -0.24f), new Vector3(2.1f, 0.18f, 0.06f), Mat("PaintWhite"));
             Cube("BarrierBase", root.transform, new Vector3(0f, 0.15f, 0f), new Vector3(2.55f, 0.28f, 0.75f), Mat("ConstructionBarrierOrange"));
             AddObstacleCollider(root, new Vector3(0f, 0.62f, 0f), new Vector3(2.5f, 1.25f, 0.9f));
+            root.AddComponent<ObstacleDissolveEffect>();
             return SavePrefab(root, BarrierPrefabPath);
+        }
+
+        // Shared blue burst used both for Ubuntu Pulse's own pickup and for
+        // small obstacles it dissolves.
+        static GameObject CreateUbuntuDissolveParticlePrefab()
+        {
+            Material glow = UnlitColorMaterial("UbuntuDissolveGlow", new Color(0.45f, 0.85f, 1f));
+            GameObject root = new GameObject("UbuntuDissolveParticles");
+            ParticleSystem particles = root.AddComponent<ParticleSystem>();
+            ParticleSystem.MainModule main = particles.main;
+            main.startLifetime = 0.5f;
+            main.startSpeed = 2.2f;
+            main.startSize = 0.08f;
+            main.maxParticles = 24;
+            main.loop = false;
+            main.playOnAwake = true;
+            main.startColor = new ParticleSystem.MinMaxGradient(glow.color, Color.white);
+
+            ParticleSystem.EmissionModule emission = particles.emission;
+            emission.rateOverTime = 0f;
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 20) });
+
+            ParticleSystem.ShapeModule shape = particles.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.4f;
+
+            ParticleSystemRenderer renderer = root.GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial = glow;
+
+            return SavePrefab(root, UbuntuDissolveParticlePrefabPath);
+        }
+
+        // Wheel-lug-style segmented ring (small elongated cubes around a
+        // circle), tilted and spinning on its own axis at its own speed —
+        // three of these layered give Ubuntu Pulse's "rotating energy rings".
+        static void AddEnergyRing(Transform parent, string name, float radius, float tiltDegrees, Material material, float spinDegreesPerSecond, int segments = 18)
+        {
+            GameObject ring = new GameObject(name);
+            ring.transform.SetParent(parent, false);
+            ring.transform.localRotation = Quaternion.Euler(tiltDegrees, 0f, 0f);
+
+            float segmentLength = radius * 2f * Mathf.PI / segments * 0.7f;
+            for (int i = 0; i < segments; i++)
+            {
+                float angle = i * Mathf.PI * 2f / segments;
+                Vector3 position = new Vector3(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius, 0f);
+                Cube($"Segment{i}", ring.transform, position, new Vector3(segmentLength, 0.03f, 0.03f), material,
+                    new Vector3(0f, 0f, angle * Mathf.Rad2Deg + 90f));
+            }
+
+            StripColliders(ring);
+            SpinAxis spin = ring.AddComponent<SpinAxis>();
+            SetField(spin, "axis", Vector3.forward);
+            SetField(spin, "degreesPerSecond", spinDegreesPerSecond);
+        }
+
+        /// <summary>
+        /// A ">" chevron built from two angled bars meeting at a tip on local
+        /// +Z — i.e. pointing the direction the player always travels (the
+        /// Player root never rotates). Returns the pivot so callers can
+        /// reposition/layer multiple chevrons.
+        /// </summary>
+        static Transform BuildForwardChevron(Transform parent, string name, float width, float depth, Material material, float thickness = 0.09f)
+        {
+            GameObject pivot = new GameObject(name);
+            pivot.transform.SetParent(parent, false);
+
+            float halfWidth = width * 0.5f;
+            float armLength = Mathf.Sqrt(halfWidth * halfWidth + depth * depth);
+            float angle = Mathf.Atan2(halfWidth, depth) * Mathf.Rad2Deg;
+
+            Cube("ArmLeft", pivot.transform, new Vector3(-halfWidth * 0.5f, 0f, 0f), new Vector3(thickness, thickness, armLength), material, new Vector3(0f, angle, 0f));
+            Cube("ArmRight", pivot.transform, new Vector3(halfWidth * 0.5f, 0f, 0f), new Vector3(thickness, thickness, armLength), material, new Vector3(0f, -angle, 0f));
+
+            StripColliders(pivot);
+            return pivot.transform;
+        }
+
+        static Material GetUbuntuOrbMaterial()
+        {
+            Material existing = AssetDatabase.LoadAssetAtPath<Material>(UbuntuOrbMaterialPath);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            string folder = Path.GetDirectoryName(UbuntuOrbModelPath).Replace("\\", "/");
+            string baseName = Path.GetFileNameWithoutExtension(UbuntuOrbModelPath);
+            Texture2D normal = LoadAsNormalMap($"{folder}/{baseName}_normal.png");
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            Material material = new Material(shader) { name = "UbuntuOrb_URP" };
+
+            // The source asset's own base-colour texture is gold/tan with the
+            // "glow" living only in a couple of small gem clusters, and its
+            // emission map is essentially empty — multiplying the gold texture
+            // toward blue only muddies it toward olive, it can never turn
+            // blue. Skip the albedo texture entirely: a flat blue base plus a
+            // flat (textureless) emission tint reads as "glowing blue" across
+            // the whole mesh, and the normal map still gives it real surface
+            // relief under lighting.
+            if (normal != null)
+            {
+                material.SetTexture("_BumpMap", normal);
+                material.EnableKeyword("_NORMALMAP");
+            }
+
+            material.color = new Color(0.4f, 0.75f, 1f, 1f);
+            material.EnableKeyword("_EMISSION");
+            material.SetColor("_EmissionColor", new Color(0.35f, 0.8f, 1f) * 1.6f);
+            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            material.SetFloat("_Smoothness", 0.65f);
+            material.SetFloat("_Metallic", 0.2f);
+
+            AssetDatabase.CreateAsset(material, UbuntuOrbMaterialPath);
+            return material;
+        }
+
+        /// <summary>
+        /// Ubuntu Pulse's collectible: the Meshy orb (falls back to a plain
+        /// glowing sphere if the model is missing) plus three independently
+        /// spinning segmented energy rings.
+        /// </summary>
+        static GameObject CreateUbuntuPulsePrefab(GameObject dissolveParticlePrefab)
+        {
+            GameObject root = new GameObject("PowerUpUbuntuPulse");
+            GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(UbuntuOrbModelPath);
+            if (model != null)
+            {
+                GameObject visual = Object.Instantiate(model, root.transform);
+                visual.name = "OrbVisual";
+                visual.transform.localPosition = Vector3.zero;
+                visual.transform.localRotation = Quaternion.identity;
+                visual.transform.localScale = Vector3.one;
+                NormalizeStaticModelBounds(visual, root.transform, 0.55f);
+                AssignMaterial(visual, GetUbuntuOrbMaterial());
+                SimplifyMeshes(visual, 20000);
+                StripColliders(visual);
+
+                // The source asset is itself a cluster of engraved rings with
+                // blue gem accents, not a plain ball — it already reads as
+                // "energy rings" on its own, so no separate ring geometry is
+                // layered on top (that only produced two competing, badly
+                // scaled ring silhouettes).
+                SpinAxis modelSpin = visual.AddComponent<SpinAxis>();
+                SetField(modelSpin, "axis", Vector3.up);
+                SetField(modelSpin, "degreesPerSecond", 24f);
+            }
+            else
+            {
+                Debug.LogWarning($"Ubuntu Pulse orb model not found at {UbuntuOrbModelPath}; using primitive fallback with generated rings.");
+                Sphere("OrbVisual", root.transform, Vector3.zero, Vector3.one * 0.5f,
+                    UnlitColorMaterial("UbuntuOrbGlow", new Color(0.4f, 0.8f, 1f)));
+
+                Material ringMaterial = UnlitColorMaterial("UbuntuRingGlow", new Color(0.5f, 0.85f, 1f));
+                AddEnergyRing(root.transform, "EnergyRingA", 0.32f, 0f, ringMaterial, 40f);
+                AddEnergyRing(root.transform, "EnergyRingB", 0.38f, 55f, ringMaterial, -28f);
+                AddEnergyRing(root.transform, "EnergyRingC", 0.44f, 110f, ringMaterial, 18f);
+            }
+
+            StripColliders(root);
+            SphereCollider collider = root.AddComponent<SphereCollider>();
+            collider.isTrigger = true;
+            collider.radius = 0.85f;
+
+            Rigidbody rigidbody = root.AddComponent<Rigidbody>();
+            rigidbody.isKinematic = true;
+            rigidbody.useGravity = false;
+
+            PowerUp powerUp = root.AddComponent<PowerUp>();
+            SetField(powerUp, "type", PowerUpType.UbuntuPulse);
+            SetField(powerUp, "rotationSpeed", 55f);
+            SetField(powerUp, "collectClip", AssetDatabase.LoadAssetAtPath<AudioClip>(UbuntuPulsePickupClipPath));
+            SetField(powerUp, "collectParticlePrefab", dissolveParticlePrefab);
+
+            return SavePrefab(root, UbuntuPulsePrefabPath);
         }
 
         static GameObject CreateCoinParticlePrefab()
@@ -2265,7 +3425,90 @@ namespace JoburgRunner.Editor
 
             root.AddComponent<Billboard>();
             root.AddComponent<CoinCollectPop>();
+            AddCoinSparkleBurst(root.transform);
             return SavePrefab(root, "Assets/Prefabs/CoinCollectPop.prefab");
+        }
+
+        // Gold sparkles plus a single large fast-fading particle that reads
+        // as the collect "pop" flash. The material here is a placeholder:
+        // CoinCollectPop swaps these renderers to a soft additive glow at
+        // runtime, since the glow sprite texture is runtime-generated.
+        static void AddCoinSparkleBurst(Transform parent)
+        {
+            Material sparkleGold = UnlitColorMaterial("CoinSparkleGold", new Color(1f, 0.84f, 0.35f));
+
+            Gradient fade = new Gradient();
+            fade.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(new Color(1f, 0.8f, 0.3f), 1f) },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f) });
+
+            GameObject sparkles = new GameObject("Sparkles");
+            sparkles.transform.SetParent(parent, false);
+            ParticleSystem sparkleSystem = sparkles.AddComponent<ParticleSystem>();
+            ParticleSystem.MainModule sparkleMain = sparkleSystem.main;
+            sparkleMain.loop = false;
+            sparkleMain.playOnAwake = true;
+            sparkleMain.duration = 0.5f;
+            sparkleMain.startLifetime = new ParticleSystem.MinMaxCurve(0.25f, 0.45f);
+            sparkleMain.startSpeed = new ParticleSystem.MinMaxCurve(1.2f, 2.8f);
+            sparkleMain.startSize = new ParticleSystem.MinMaxCurve(0.045f, 0.11f);
+            sparkleMain.maxParticles = 16;
+            sparkleMain.gravityModifier = 0.35f;
+            sparkleMain.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.85f, 0.4f), Color.white);
+            // The pop root is scaled way down to fit the coin sprite and then
+            // animates scale and rise; keep sizes in world units and don't
+            // drag already-emitted sparkles along with the rising sprite.
+            sparkleMain.simulationSpace = ParticleSystemSimulationSpace.World;
+            sparkleMain.scalingMode = ParticleSystemScalingMode.Shape;
+
+            ParticleSystem.EmissionModule sparkleEmission = sparkleSystem.emission;
+            sparkleEmission.rateOverTime = 0f;
+            sparkleEmission.SetBursts(new[] { new ParticleSystem.Burst(0f, 14) });
+
+            ParticleSystem.ShapeModule sparkleShape = sparkleSystem.shape;
+            sparkleShape.shapeType = ParticleSystemShapeType.Sphere;
+            sparkleShape.radius = 0.1f;
+
+            ParticleSystem.SizeOverLifetimeModule sparkleSize = sparkleSystem.sizeOverLifetime;
+            sparkleSize.enabled = true;
+            sparkleSize.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 1f, 1f, 0f));
+
+            ParticleSystem.ColorOverLifetimeModule sparkleColor = sparkleSystem.colorOverLifetime;
+            sparkleColor.enabled = true;
+            sparkleColor.color = fade;
+
+            ParticleSystemRenderer sparkleRenderer = sparkles.GetComponent<ParticleSystemRenderer>();
+            sparkleRenderer.sharedMaterial = sparkleGold;
+            sparkleRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            sparkleRenderer.receiveShadows = false;
+
+            GameObject flash = new GameObject("BurstFlash");
+            flash.transform.SetParent(parent, false);
+            ParticleSystem flashSystem = flash.AddComponent<ParticleSystem>();
+            ParticleSystem.MainModule flashMain = flashSystem.main;
+            flashMain.loop = false;
+            flashMain.playOnAwake = true;
+            flashMain.duration = 0.2f;
+            flashMain.startLifetime = 0.16f;
+            flashMain.startSpeed = 0f;
+            flashMain.startSize = 0.5f;
+            flashMain.maxParticles = 1;
+            flashMain.startColor = new Color(1f, 0.9f, 0.55f, 0.9f);
+            flashMain.simulationSpace = ParticleSystemSimulationSpace.World;
+            flashMain.scalingMode = ParticleSystemScalingMode.Shape;
+
+            ParticleSystem.EmissionModule flashEmission = flashSystem.emission;
+            flashEmission.rateOverTime = 0f;
+            flashEmission.SetBursts(new[] { new ParticleSystem.Burst(0f, 1) });
+
+            ParticleSystem.ColorOverLifetimeModule flashColor = flashSystem.colorOverLifetime;
+            flashColor.enabled = true;
+            flashColor.color = fade;
+
+            ParticleSystemRenderer flashRenderer = flash.GetComponent<ParticleSystemRenderer>();
+            flashRenderer.sharedMaterial = sparkleGold;
+            flashRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            flashRenderer.receiveShadows = false;
         }
 
         // Higgsfield coin art on a billboarded child, matching the menu/store
@@ -2326,9 +3569,15 @@ namespace JoburgRunner.Editor
 
             Coin coinScript = root.AddComponent<Coin>();
             SetField(coinScript, "collectParticlePrefab", coinPopPrefab);
+            SetField(coinScript, "collectClip", AssetDatabase.LoadAssetAtPath<AudioClip>(CoinCollectClipPath));
             if (spriteCoin)
             {
                 SetField(coinScript, "rotationSpeed", 0f); // flat billboard must not spin edge-on
+
+                // Double Coins swaps the art for the stacked-pair sprite
+                // (user-supplied Higgsfield art, background removed).
+                SetField(coinScript, "artRenderer", root.GetComponentInChildren<SpriteRenderer>());
+                SetField(coinScript, "doubleStackSprite", LoadHiggsfieldSprite("CoinDoubleStack"));
             }
 
             return SavePrefab(root, CoinPrefabPath);
@@ -2367,6 +3616,7 @@ namespace JoburgRunner.Editor
 
             Coin coinScript = root.AddComponent<Coin>();
             SetField(coinScript, "collectParticlePrefab", coinPopPrefab);
+            SetField(coinScript, "collectClip", AssetDatabase.LoadAssetAtPath<AudioClip>(CoinCollectClipPath));
             SetField(coinScript, "coinValue", 5);
             SetField(coinScript, "isRare", true);
             SetField(coinScript, "rotationSpeed", spriteCoin ? 0f : 180f);
@@ -2383,20 +3633,34 @@ namespace JoburgRunner.Editor
         // room across every chunk boundary.
         // ------------------------------------------------------------------
 
-        static TrackChunk[] CreateTrackChunkPrefabs(GameObject taxi, GameObject coin, GameObject rareCoin, GameObject[] powerUps)
+        static TrackChunk[] CreateTrackChunkPrefabs(GameObject taxi, GameObject coin, GameObject rareCoin, GameObject[] powerUps, GameObject barrier, GameObject pothole)
         {
             Directory.CreateDirectory("Assets/Prefabs/Chunks");
             var chunks = new List<TrackChunk>
             {
-                // --- Easy: breathers, single hazards, simple coin lines ---
+                // --- Easy: breathers, single hazards, zig-zag coin trails ---
                 NewChunkPrefab("Chunk_OpenRoad", ChunkDifficulty.Easy, 18f, 0b111, 0b111, 12f, _ => { }),
-                NewChunkPrefab("Chunk_CoinLineCentre", ChunkDifficulty.Easy, 28f, 0b111, 0b111, 12f, t =>
-                    ChunkCoinLine(t, coin, 1, 2f, 5)),
-                NewChunkPrefab("Chunk_CoinLineLeft", ChunkDifficulty.Easy, 20f, 0b111, 0b111, 12f, t =>
-                    ChunkCoinLine(t, coin, 0, 2f, 5)),
+                NewChunkPrefab("Chunk_CoinZigZagLeft", ChunkDifficulty.Easy, 28f, 0b111, 0b111, 26f, t =>
+                    ChunkCoinZigZag(t, coin, 0, 2f, 3, 3)),
+                NewChunkPrefab("Chunk_CoinZigZagRight", ChunkDifficulty.Easy, 20f, 0b111, 0b111, 26f, t =>
+                    ChunkCoinZigZag(t, coin, 2, 2f, 3, 3)),
                 NewChunkPrefab("Chunk_TaxiLeft", ChunkDifficulty.Easy, 24f, 0b110, 0b110, 14f, t =>
                 {
                     ChunkObstacle(t, taxi, 0, 11f, true);
+                    ChunkCoinLine(t, coin, 2, 3f, 4);
+                }),
+                // Small, destructible hazards (not taxis): the only obstacles
+                // Ubuntu Pulse's shield can actually absorb and dissolve.
+                NewChunkPrefab("Chunk_Barrier", ChunkDifficulty.Easy, 22f, 0b111, 0b111, 14f, t =>
+                {
+                    ChunkObstacle(t, barrier, 1, 10f, false);
+                    ChunkCoinLine(t, coin, 0, 3f, 4);
+                    ChunkCoinLine(t, coin, 2, 3f, 4);
+                }),
+                NewChunkPrefab("Chunk_Pothole", ChunkDifficulty.Easy, 22f, 0b111, 0b111, 14f, t =>
+                {
+                    ChunkObstacle(t, pothole, 1, 10f, false);
+                    ChunkCoinLine(t, coin, 0, 3f, 4);
                     ChunkCoinLine(t, coin, 2, 3f, 4);
                 }),
                 NewChunkPrefab("Chunk_TaxiRight", ChunkDifficulty.Easy, 24f, 0b011, 0b011, 14f, t =>
@@ -2516,6 +3780,36 @@ namespace JoburgRunner.Editor
             }
         }
 
+        /// <summary>
+        /// Coins weaving across the lanes. Each leg lays a few coins in one
+        /// lane, then the trail steps to the adjacent lane, leaving a gap long
+        /// enough for one swipe (a lane change settles in ~0.4s ≈ 5m at top
+        /// speed), so a runner following the trail collects every coin.
+        /// </summary>
+        static void ChunkCoinZigZag(Transform chunk, GameObject coinPrefab, int startLane, float zStart, int coinsPerLeg, int legs, float spacing = 2f, float legGap = 5f)
+        {
+            int lane = Mathf.Clamp(startLane, 0, 2);
+            int direction = lane == 2 ? -1 : 1;
+            float z = zStart;
+            for (int leg = 0; leg < legs; leg++)
+            {
+                for (int i = 0; i < coinsPerLeg; i++)
+                {
+                    GameObject coin = (GameObject)PrefabUtility.InstantiatePrefab(coinPrefab, chunk);
+                    coin.transform.localPosition = new Vector3(LaneX(lane), CoinTrailHeight, z);
+                    z += spacing;
+                }
+
+                z += legGap - spacing;
+                if (lane + direction > 2 || lane + direction < 0)
+                {
+                    direction = -direction; // bounce off the outside lanes
+                }
+
+                lane += direction;
+            }
+        }
+
         static void ChunkCoinLine(Transform chunk, GameObject coinPrefab, int lane, float zStart, int count, float spacing = 2f, float height = CoinTrailHeight)
         {
             for (int i = 0; i < count; i++)
@@ -2553,7 +3847,7 @@ namespace JoburgRunner.Editor
 
         static float LaneX(int lane) => (lane - 1) * 2.7f;
 
-        static GameObject[] CreatePowerUpPrefabs()
+        static GameObject[] CreatePowerUpPrefabs(GameObject ubuntuDissolvePrefab)
         {
             // Show the same Higgsfield pickup art the menu and store use, as a
             // camera-facing billboard in the world. Falls back to the built
@@ -2565,7 +3859,18 @@ namespace JoburgRunner.Editor
                 SpritePickupOrPrimitive(PowerUpType.DroneBoost, "PU_TaxiBoost", CreateDronePrefab),
                 SpritePickupOrPrimitive(PowerUpType.UbuntuMultiplier, "PU_Multiplier2x", CreateUbuntuStarPrefab),
                 SpritePickupOrPrimitive(PowerUpType.Hoverboard, "PU_Shield", CreateHoverboardPrefab),
+                SpritePickupOrPrimitive(PowerUpType.DoubleCoins, "PU_DoubleCoins", CreateDoubleCoinsPrefab),
+                CreateUbuntuPulsePrefab(ubuntuDissolvePrefab),
             };
+        }
+
+        // 🪙🪙 Double Coins: two overlapping gold coin discs.
+        static GameObject CreateDoubleCoinsPrefab()
+        {
+            GameObject root = new GameObject("PowerUpDoubleCoins");
+            Cylinder("CoinFront", root.transform, new Vector3(0.12f, -0.08f, 0.02f), new Vector3(0.5f, 0.03f, 0.5f), Mat("TaxiYellow"), new Vector3(90f, 0f, 0f));
+            Cylinder("CoinBack", root.transform, new Vector3(-0.14f, 0.12f, -0.04f), new Vector3(0.5f, 0.03f, 0.5f), Mat("TaxiYellow"), new Vector3(90f, 0f, 0f));
+            return FinishPowerUpPrefab(root, PowerUpType.DoubleCoins);
         }
 
         static GameObject SpritePickupOrPrimitive(PowerUpType type, string spriteName, System.Func<GameObject> primitiveFallback)
@@ -3099,6 +4404,255 @@ namespace JoburgRunner.Editor
                 root.position.z - bounds.center.z);
         }
 
+        /// <summary>
+        /// Builds one inactive board visual per catalog entry under the mount.
+        /// Board index order must match BoardNames — the Boards page and
+        /// BoardInventory.SelectedIndex both address boards by that index.
+        /// </summary>
+        static GameObject[] CreateHoverboardVisuals(Transform mount)
+        {
+            return new[]
+            {
+                CreateIonCruiserBoard(mount, 0),
+            };
+        }
+
+        static GameObject CreateIonCruiserBoard(Transform mount, int index)
+        {
+            GameObject root = new GameObject($"Board_{index}");
+            root.transform.SetParent(mount, false);
+
+            Mesh deckMesh = GetHoverboardDeckMesh();
+            if (deckMesh != null)
+            {
+                GameObject visual = new GameObject("BoardModel");
+                visual.transform.SetParent(root.transform, false);
+                visual.AddComponent<MeshFilter>().sharedMesh = deckMesh;
+                visual.AddComponent<MeshRenderer>().sharedMaterial = GetHoverboardMaterial();
+                // The FBX imports at global scale 100; the deck slab is thin in
+                // mesh +Z (its top — the carry frame attached there) with its
+                // length along X. Stand it flat with the length down the road.
+                visual.transform.localScale = Vector3.one * 100f;
+                visual.transform.localRotation = Quaternion.Euler(0f, 90f, 0f) * Quaternion.Euler(-90f, 0f, 0f);
+                NormalizeBoardBounds(visual, root.transform, 1.7f);
+                SimplifyMeshes(visual, 16000);
+            }
+            else
+            {
+                Debug.LogWarning($"Hoverboard deck mesh unavailable ({HoverboardModelPath}); using primitive deck fallback.");
+                Cube("BoardDeck", root.transform, new Vector3(0f, -0.06f, 0f), new Vector3(0.6f, 0.1f, 1.7f),
+                    UnlitColorMaterial("HoverboardFallback", new Color(0.25f, 0.7f, 1f)));
+                StripColliders(root);
+            }
+
+            // Saved inactive: HoverboardVisual enables the selected board only
+            // while the shield runs, and editor previews shouldn't show it.
+            root.SetActive(false);
+            return root;
+        }
+
+        /// <summary>
+        /// The Meshy "futuristic board" export fuses the rideable deck with a
+        /// carry frame and a kickstand strut (~30% of the mesh, spread through
+        /// +Z in mesh space); this cuts the mesh down to the deck slab
+        /// (mesh-local z ≤ -0.0044, measured from the vertex distribution).
+        /// Cached as an asset — delete Assets/Meshes/HoverboardDeck.asset to
+        /// re-cut after changing the threshold.
+        /// </summary>
+        static Mesh GetHoverboardDeckMesh()
+        {
+            const string path = "Assets/Meshes/HoverboardDeck.asset";
+            Mesh cached = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            if (cached != null)
+            {
+                return cached;
+            }
+
+            GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(HoverboardModelPath);
+            MeshFilter sourceFilter = model != null ? model.GetComponentInChildren<MeshFilter>() : null;
+            Mesh source = sourceFilter != null ? sourceFilter.sharedMesh : null;
+            if (source == null)
+            {
+                return null;
+            }
+
+            const float deckZMax = -0.0044f;
+            Vector3[] vertices = source.vertices;
+            Vector3[] normals = source.normals;
+            Vector4[] tangents = source.tangents;
+            Vector2[] uv = source.uv;
+            int[] triangles = source.triangles;
+
+            var indexMap = new Dictionary<int, int>();
+            var newVertices = new List<Vector3>();
+            var newNormals = new List<Vector3>();
+            var newTangents = new List<Vector4>();
+            var newUv = new List<Vector2>();
+            var newTriangles = new List<int>();
+
+            for (int t = 0; t < triangles.Length; t += 3)
+            {
+                if (vertices[triangles[t]].z > deckZMax ||
+                    vertices[triangles[t + 1]].z > deckZMax ||
+                    vertices[triangles[t + 2]].z > deckZMax)
+                {
+                    continue;
+                }
+
+                for (int corner = 0; corner < 3; corner++)
+                {
+                    int sourceIndex = triangles[t + corner];
+                    if (!indexMap.TryGetValue(sourceIndex, out int newIndex))
+                    {
+                        newIndex = newVertices.Count;
+                        indexMap[sourceIndex] = newIndex;
+                        newVertices.Add(vertices[sourceIndex]);
+                        if (normals.Length > sourceIndex)
+                        {
+                            newNormals.Add(normals[sourceIndex]);
+                        }
+
+                        if (tangents.Length > sourceIndex)
+                        {
+                            newTangents.Add(tangents[sourceIndex]);
+                        }
+
+                        if (uv.Length > sourceIndex)
+                        {
+                            newUv.Add(uv[sourceIndex]);
+                        }
+                    }
+
+                    newTriangles.Add(newIndex);
+                }
+            }
+
+            if (newTriangles.Count == 0)
+            {
+                Debug.LogWarning("Hoverboard deck cut removed everything; check the deckZMax threshold.");
+                return null;
+            }
+
+            Mesh deck = new Mesh
+            {
+                name = "HoverboardDeck",
+                indexFormat = UnityEngine.Rendering.IndexFormat.UInt32,
+            };
+            deck.SetVertices(newVertices);
+            if (newNormals.Count == newVertices.Count)
+            {
+                deck.SetNormals(newNormals);
+            }
+
+            if (newTangents.Count == newVertices.Count)
+            {
+                deck.SetTangents(newTangents);
+            }
+
+            if (newUv.Count == newVertices.Count)
+            {
+                deck.SetUVs(0, newUv);
+            }
+
+            deck.SetTriangles(newTriangles, 0);
+            deck.RecalculateBounds();
+
+            Directory.CreateDirectory("Assets/Meshes");
+            AssetDatabase.CreateAsset(deck, path);
+            Debug.Log($"Hoverboard deck cut: {source.vertexCount} -> {deck.vertexCount} verts");
+            return deck;
+        }
+
+        // Like NormalizeStaticModelBounds but sized by length (Z) and parked
+        // with the deck's TOP surface at the mount origin — the player root
+        // sits at the feet, so the board hangs just below them.
+        static void NormalizeBoardBounds(GameObject visual, Transform root, float targetLength)
+        {
+            Renderer[] renderers = visual.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0)
+            {
+                return;
+            }
+
+            Bounds bounds = CombinedRendererBounds(visual);
+            if (bounds.size.z < 0.0001f)
+            {
+                return;
+            }
+
+            visual.transform.localScale *= targetLength / bounds.size.z;
+
+            bounds = CombinedRendererBounds(visual);
+            visual.transform.position += new Vector3(
+                root.position.x - bounds.center.x,
+                root.position.y - bounds.max.y,
+                root.position.z - bounds.center.z);
+        }
+
+        static Material GetHoverboardMaterial()
+        {
+            // Same stale-material rule as the coin faces: this early-out means
+            // changing the values below has no effect until the .mat asset is
+            // deleted first.
+            Material existing = AssetDatabase.LoadAssetAtPath<Material>(HoverboardMaterialPath);
+            if (existing != null)
+            {
+                return existing;
+            }
+
+            string folder = Path.GetDirectoryName(HoverboardModelPath).Replace("\\", "/");
+            string baseName = Path.GetFileNameWithoutExtension(HoverboardModelPath);
+            string baseColorPath = $"{folder}/{baseName}.png";
+            string normalPath = $"{folder}/{baseName}_normal.png";
+            string metallicPath = $"{folder}/{baseName}_metallic.png";
+            string emissionPath = $"{folder}/{baseName}_emission.png";
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            Material material = new Material(shader) { name = "HoverboardIon_URP" };
+
+            Texture2D baseColor = AssetDatabase.LoadAssetAtPath<Texture2D>(baseColorPath);
+            if (baseColor != null)
+            {
+                SetTextureSrgb(baseColorPath, true);
+                material.SetTexture("_BaseMap", baseColor);
+                material.mainTexture = baseColor;
+            }
+
+            material.SetColor("_BaseColor", Color.white);
+            material.SetFloat("_Smoothness", 0.55f);
+
+            Texture2D normal = LoadAsNormalMap(normalPath);
+            if (normal != null)
+            {
+                material.SetTexture("_BumpMap", normal);
+                material.EnableKeyword("_NORMALMAP");
+            }
+
+            Texture2D metallic = AssetDatabase.LoadAssetAtPath<Texture2D>(metallicPath);
+            if (metallic != null)
+            {
+                SetTextureSrgb(metallicPath, false);
+                material.SetTexture("_MetallicGlossMap", metallic);
+                material.EnableKeyword("_METALLICSPECGLOSSMAP");
+                material.SetFloat("_Metallic", 1f);
+            }
+
+            // A black emission map simply contributes nothing, so wiring it is
+            // safe even if this export's map turns out mostly empty.
+            Texture2D emission = AssetDatabase.LoadAssetAtPath<Texture2D>(emissionPath);
+            if (emission != null)
+            {
+                SetTextureSrgb(emissionPath, true);
+                material.SetTexture("_EmissionMap", emission);
+                material.EnableKeyword("_EMISSION");
+                material.SetColor("_EmissionColor", Color.white * 1.4f);
+                material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            }
+
+            AssetDatabase.CreateAsset(material, HoverboardMaterialPath);
+            return material;
+        }
+
         static Transform EnvironmentCategory(string name)
         {
             GameObject environment = GameObject.Find("Environment");
@@ -3280,29 +4834,109 @@ namespace JoburgRunner.Editor
             return player;
         }
 
+        // Adds the additive, event-driven systems introduced in the P1–P5
+        // overhaul: progression (stats/missions/achievements/daily rewards),
+        // the environment zone director, quality control, and the dev overlay.
+        // These only observe central GameEvents and never duplicate existing
+        // effects/sounds, so they are safe to activate now. The pooled VFX and
+        // audio MANAGERS are intentionally NOT added here yet — activating them
+        // requires migrating gameplay's ad-hoc effect/sound calls first, or the
+        // same coin/dodge feedback would play twice.
+        static void CreateGameSystems(GameObject player)
+        {
+            GameObject systems = new GameObject("GameSystems");
+
+            systems.AddComponent<JoburgRunner.Progression.StatsRecorder>();
+
+            var missionManager = systems.AddComponent<JoburgRunner.Progression.MissionManager>();
+            SetField(missionManager, "missionPool",
+                LoadAllAssets<JoburgRunner.Progression.MissionDefinition>("Assets/GameplayContent/Missions"));
+
+            var achievementManager = systems.AddComponent<JoburgRunner.Progression.AchievementManager>();
+            SetField(achievementManager, "achievements",
+                LoadAllAssets<JoburgRunner.Progression.AchievementDefinition>("Assets/GameplayContent/Achievements"));
+
+            var dailyReward = systems.AddComponent<JoburgRunner.Progression.DailyRewardManager>();
+            SetField(dailyReward, "cycle",
+                AssetDatabase.LoadAssetAtPath<JoburgRunner.Progression.DailyRewardCycle>("Assets/GameplayContent/DailyRewardCycle.asset"));
+
+            var quality = systems.AddComponent<JoburgRunner.Core.QualityController>();
+            SetField(quality, "low", AssetDatabase.LoadAssetAtPath<JoburgRunner.Core.GameQualitySettings>("Assets/GameplayContent/Quality_Low.asset"));
+            SetField(quality, "medium", AssetDatabase.LoadAssetAtPath<JoburgRunner.Core.GameQualitySettings>("Assets/GameplayContent/Quality_Medium.asset"));
+            SetField(quality, "high", AssetDatabase.LoadAssetAtPath<JoburgRunner.Core.GameQualitySettings>("Assets/GameplayContent/Quality_High.asset"));
+
+            var envDirector = systems.AddComponent<JoburgRunner.Environment.EnvironmentDirector>();
+            SetField(envDirector, "catalog", AssetDatabase.LoadAssetAtPath<JoburgRunner.Environment.ZoneCatalog>("Assets/Environment/Zones/ZoneCatalog.asset"));
+            SetField(envDirector, "player", player.transform);
+            SetField(envDirector, "sun", RenderSettings.sun);
+
+            systems.AddComponent<JoburgRunner.Core.DebugOverlay>();
+        }
+
+        static System.Collections.Generic.List<T> LoadAllAssets<T>(string folder) where T : Object
+        {
+            var list = new System.Collections.Generic.List<T>();
+            foreach (string guid in AssetDatabase.FindAssets($"t:{typeof(T).Name}", new[] { folder }))
+            {
+                T asset = AssetDatabase.LoadAssetAtPath<T>(AssetDatabase.GUIDToAssetPath(guid));
+                if (asset != null)
+                {
+                    list.Add(asset);
+                }
+            }
+
+            return list;
+        }
+
         static void AddPlayerControlStack(GameObject player)
         {
-            // Hierarchy: Player (moves, never rotates) → ModelLeanPivot
-            // (cosmetic lane-change roll only) → character model.
+            // Hierarchy: Player (moves, never rotates) → DroneFlightPivot
+            // (cosmetic prone pitch while the drone flies) → ModelLeanPivot
+            // (cosmetic lane-change roll only) → character visuals, one per
+            // selectable character; CharacterSelector activates the chosen one.
             Transform leanPivot = null;
-            if (player.transform.childCount > 0)
+            Transform flightPivot = null;
+            var characterVisuals = new List<Transform>();
+            foreach (Transform child in player.transform)
             {
-                Transform model = player.transform.GetChild(0);
-                Vector3 modelLocalPosition = model.localPosition;
-                Quaternion modelLocalRotation = model.localRotation;
-                Vector3 modelLocalScale = model.localScale;
+                characterVisuals.Add(child);
+            }
+
+            if (characterVisuals.Count > 0)
+            {
+                GameObject flightObject = new GameObject("DroneFlightPivot");
+                flightObject.transform.SetParent(player.transform, false);
+                flightObject.transform.localPosition = Vector3.zero;
+                flightObject.transform.localRotation = Quaternion.identity;
+                flightObject.transform.localScale = Vector3.one;
+                flightPivot = flightObject.transform;
 
                 GameObject pivotObject = new GameObject("ModelLeanPivot");
-                pivotObject.transform.SetParent(player.transform, false);
+                pivotObject.transform.SetParent(flightObject.transform, false);
                 pivotObject.transform.localPosition = Vector3.zero;
                 pivotObject.transform.localRotation = Quaternion.identity;
                 pivotObject.transform.localScale = Vector3.one;
 
-                model.SetParent(pivotObject.transform, false);
-                model.localPosition = modelLocalPosition;
-                model.localRotation = modelLocalRotation;
-                model.localScale = modelLocalScale;
+                // Reparent under identity pivots with locals preserved.
+                foreach (Transform model in characterVisuals)
+                {
+                    model.SetParent(pivotObject.transform, false);
+                }
+
                 leanPivot = pivotObject.transform;
+
+                CharacterSelector selector = player.AddComponent<CharacterSelector>();
+                var visualObjects = new GameObject[characterVisuals.Count];
+                for (int i = 0; i < characterVisuals.Count; i++)
+                {
+                    visualObjects[i] = characterVisuals[i].gameObject;
+                    // Save the scene in the default state — only the first
+                    // character visible — so editor previews (which never run
+                    // CharacterSelector) don't show the characters overlapping.
+                    visualObjects[i].SetActive(i == 0);
+                }
+
+                SetField(selector, "characterVisuals", visualObjects);
             }
 
             player.AddComponent<PlayerAnimator>();
@@ -3311,6 +4945,597 @@ namespace JoburgRunner.Editor
 
             RunnerLeanVisual lean = player.AddComponent<RunnerLeanVisual>();
             SetField(lean, "leanPivot", leanPivot);
+
+            DroneFlightVisual droneVisual = player.AddComponent<DroneFlightVisual>();
+            SetField(droneVisual, "flightPivot", flightPivot);
+
+            // Hoverboard boosters: one board visual per catalog entry, mounted
+            // under the lean pivot so the deck leans into lane changes with
+            // the character. HoverboardVisual lifts the pivot and shows the
+            // selected board while the Hoverboard shield runs.
+            if (leanPivot != null)
+            {
+                GameObject boardMount = new GameObject("HoverboardMount");
+                boardMount.transform.SetParent(leanPivot, false);
+                GameObject[] boardVisuals = CreateHoverboardVisuals(boardMount.transform);
+
+                HoverboardVisual hoverboardVisual = player.AddComponent<HoverboardVisual>();
+                SetField(hoverboardVisual, "boardMount", boardMount.transform);
+                SetField(hoverboardVisual, "boardVisuals", boardVisuals);
+                SetField(hoverboardVisual, "groundSink", RunnerGroundSink);
+            }
+
+            AddUbuntuPulseRig(player);
+            AddPerfectDodgeSystem(player);
+            AddRunningDustRig(player);
+            AddUbuntuLaneShiftRig(player);
+        }
+
+        /// <summary>
+        /// Ubuntu Pulse Lane Shift rig — the signature lane-change feedback.
+        /// One anchor under the player holds the main energy ribbon and the
+        /// softer glow ribbon at the torso (the player root sits at the
+        /// feet, matching UbuntuMotionTrail's mount point), the spark and
+        /// ground-burst particle systems, and one cached AudioSource for the
+        /// pitch-randomized swipe whoosh. Every renderer ships an unlit
+        /// placeholder that UbuntuLaneShift swaps for the shared additive
+        /// glow materials at runtime.
+        /// </summary>
+        static void AddUbuntuLaneShiftRig(GameObject player)
+        {
+            Material ribbonMaterial = UnlitTransparentMaterial("UbuntuLaneRibbon", new Color(0.62f, 0.88f, 1f, 0.75f));
+            Material ribbonGlowMaterial = UnlitTransparentMaterial("UbuntuLaneRibbonGlow", new Color(0.3f, 0.62f, 1f, 0.3f));
+            Material sparkMaterial = UnlitTransparentMaterial("UbuntuLaneSpark", new Color(0.75f, 0.92f, 1f, 0.8f));
+
+            GameObject anchor = new GameObject("UbuntuLaneShiftAnchor");
+            anchor.transform.SetParent(player.transform, false);
+            anchor.transform.localPosition = Vector3.zero;
+
+            TrailRenderer ribbon = CreateLaneRibbon(
+                anchor.transform, "UbuntuLaneRibbon", ribbonMaterial, 0.22f, RibbonEnergyGradient(0.85f, 0.5f));
+            TrailRenderer glowRibbon = CreateLaneRibbon(
+                anchor.transform, "UbuntuLaneGlowRibbon", ribbonGlowMaterial, 0.3f, RibbonEnergyGradient(0.35f, 0.2f));
+            // The glow halo sits a touch further back so the two additive
+            // ribbons layer instead of rendering coplanar.
+            glowRibbon.transform.localPosition = new Vector3(0f, 0.75f, -0.17f);
+
+            ParticleSystem sparks = CreateUbuntuSparkSystem(anchor.transform, sparkMaterial);
+            ParticleSystem groundBurst = CreateUbuntuGroundBurstSystem(anchor.transform, sparkMaterial);
+
+            // One reusable 2D source: PlayClipAtPoint cannot randomize pitch
+            // and spawns a temp GameObject per play; this allocates nothing.
+            AudioSource swipeSource = anchor.AddComponent<AudioSource>();
+            swipeSource.playOnAwake = false;
+            swipeSource.spatialBlend = 0f;
+
+            UbuntuLaneShift shift = anchor.AddComponent<UbuntuLaneShift>();
+            SetField(shift, "ubuntuRibbon", ribbon);
+            SetField(shift, "glowRibbon", glowRibbon);
+            SetField(shift, "energySparks", sparks);
+            SetField(shift, "groundBurst", groundBurst);
+            SetField(shift, "swipeSource", swipeSource);
+            SetField(shift, "swipeClip", AssetDatabase.LoadAssetAtPath<AudioClip>(LaneSwitchClipPath));
+
+            PlayerController controller = player.GetComponent<PlayerController>();
+            SetField(shift, "playerController", controller);
+            SetField(controller, "ubuntuLaneShift", shift);
+        }
+
+        static TrailRenderer CreateLaneRibbon(Transform parent, string name, Material material, float lifetime, Gradient gradient)
+        {
+            GameObject item = new GameObject(name);
+            item.transform.SetParent(parent, false);
+            item.transform.localPosition = new Vector3(0f, 0.75f, -0.12f);
+
+            TrailRenderer ribbon = item.AddComponent<TrailRenderer>();
+            ribbon.sharedMaterial = material;
+            // Short on purpose: the camera sits directly behind the runner,
+            // and a longer trail reads as a beam splitting the screen.
+            ribbon.time = lifetime;
+            ribbon.widthMultiplier = 0f;
+            // Comet taper: full width at the runner, nothing at the old end.
+            ribbon.widthCurve = AnimationCurve.EaseInOut(0f, 1f, 1f, 0f);
+            ribbon.minVertexDistance = 0.04f;
+            ribbon.numCornerVertices = 2;
+            ribbon.numCapVertices = 2;
+            ribbon.alignment = LineAlignment.View;
+            ribbon.textureMode = LineTextureMode.Tile;
+            ribbon.generateLightingData = false;
+            ribbon.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
+            ribbon.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ribbon.receiveShadows = false;
+            ribbon.emitting = false;
+            ribbon.colorGradient = gradient;
+            return ribbon;
+        }
+
+        // The Ubuntu energy signature: bright white head → electric blue →
+        // azure → transparent, with no harsh steps.
+        static Gradient RibbonEnergyGradient(float headAlpha, float midAlpha)
+        {
+            Gradient gradient = new Gradient();
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(Color.white, 0f),
+                    new GradientColorKey(new Color(0.35f, 0.62f, 1f), 0.45f),
+                    new GradientColorKey(new Color(0f, 0.5f, 1f), 0.8f),
+                },
+                new[]
+                {
+                    new GradientAlphaKey(headAlpha, 0f),
+                    new GradientAlphaKey(midAlpha, 0.5f),
+                    new GradientAlphaKey(midAlpha * 0.5f, 0.8f),
+                    new GradientAlphaKey(0f, 1f),
+                });
+            return gradient;
+        }
+
+        static ParticleSystem CreateUbuntuSparkSystem(Transform parent, Material material)
+        {
+            GameObject sparks = new GameObject("UbuntuLaneSparks");
+            sparks.transform.SetParent(parent, false);
+            sparks.transform.localPosition = new Vector3(0f, 0.75f, -0.12f);
+
+            ParticleSystem system = sparks.AddComponent<ParticleSystem>();
+            ParticleSystem.MainModule main = system.main;
+            main.loop = false;
+            main.duration = 0.25f;
+            main.playOnAwake = false;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.15f, 0.3f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.8f, 2f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.03f, 0.08f);
+            main.startColor = new ParticleSystem.MinMaxGradient(Color.white, new Color(0.45f, 0.75f, 1f));
+            main.gravityModifier = 0f;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.scalingMode = ParticleSystemScalingMode.Shape;
+            main.maxParticles = 36;
+
+            // Emit()-driven from UbuntuLaneShift.Play — no rate, no bursts.
+            ParticleSystem.EmissionModule emission = system.emission;
+            emission.rateOverTime = 0f;
+
+            ParticleSystem.ShapeModule shape = system.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.3f;
+
+            // Peel away from the ribbon: drift backwards relative to the
+            // run (world -Z) while the runner races on.
+            ParticleSystem.VelocityOverLifetimeModule velocity = system.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.World;
+            velocity.z = new ParticleSystem.MinMaxCurve(-1.4f, -0.5f);
+
+            ParticleSystem.ColorOverLifetimeModule colorOverLifetime = system.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            colorOverLifetime.color = DustFadeGradient();
+
+            ParticleSystem.SizeOverLifetimeModule sizeOverLifetime = system.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 1f, 1f, 0f));
+
+            ParticleSystemRenderer sparkRenderer = sparks.GetComponent<ParticleSystemRenderer>();
+            sparkRenderer.sharedMaterial = material;
+            sparkRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            sparkRenderer.receiveShadows = false;
+            return system;
+        }
+
+        /// <summary>
+        /// Tiny radial energy pulse under the shoes, replacing a dust puff —
+        /// played only when the lane change starts grounded.
+        /// </summary>
+        static ParticleSystem CreateUbuntuGroundBurstSystem(Transform parent, Material material)
+        {
+            GameObject burst = new GameObject("UbuntuGroundBurst");
+            burst.transform.SetParent(parent, false);
+            // Just above the road (the player root is at the feet); circle
+            // emits in its local XY plane, so pitch it flat.
+            burst.transform.localPosition = new Vector3(0f, 0.06f, 0f);
+            burst.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+            ParticleSystem system = burst.AddComponent<ParticleSystem>();
+            ParticleSystem.MainModule main = system.main;
+            main.loop = false;
+            main.duration = 0.2f;
+            main.playOnAwake = false;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.14f, 0.22f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.6f, 1.1f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.05f, 0.1f);
+            // Low-opacity blue-white so it stays a whisper, not a stomp.
+            main.startColor = new ParticleSystem.MinMaxGradient(
+                new Color(0.75f, 0.92f, 1f, 0.45f), new Color(0.45f, 0.75f, 1f, 0.35f));
+            main.gravityModifier = 0f;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.scalingMode = ParticleSystemScalingMode.Shape;
+            main.maxParticles = 6;
+
+            ParticleSystem.EmissionModule emission = system.emission;
+            emission.rateOverTime = 0f;
+
+            ParticleSystem.ShapeModule shape = system.shape;
+            shape.shapeType = ParticleSystemShapeType.Circle;
+            shape.radius = 0.14f;
+
+            ParticleSystem.ColorOverLifetimeModule colorOverLifetime = system.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            colorOverLifetime.color = DustFadeGradient();
+
+            ParticleSystem.SizeOverLifetimeModule sizeOverLifetime = system.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 1f, 1f, 0f));
+
+            ParticleSystemRenderer burstRenderer = burst.GetComponent<ParticleSystemRenderer>();
+            burstRenderer.sharedMaterial = material;
+            burstRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            burstRenderer.receiveShadows = false;
+            return system;
+        }
+
+        /// <summary>
+        /// Foot-dust rig: an anchor just behind and below the runner's feet
+        /// (the player root sits ~1.1m above the road at the capsule centre)
+        /// holding the continuous running dust and the landing burst.
+        /// PlayerRunningDustController drives emission from ground contact
+        /// and forward speed, and swaps in the shared alpha-blended dust
+        /// material at runtime (the soft sprite texture is runtime-generated).
+        /// </summary>
+        static void AddRunningDustRig(GameObject player)
+        {
+            Material dustMaterial = UnlitTransparentMaterial("RunningDust", new Color(0.62f, 0.55f, 0.47f, 0.5f));
+
+            // The player root sits at the FEET (the Ubuntu rig, coin-pull
+            // target and dodge probe all treat root+1 as the torso), so the
+            // anchor needs only a small lift to hover just above the road.
+            GameObject anchor = new GameObject("RunningDustAnchor");
+            anchor.transform.SetParent(player.transform, false);
+            anchor.transform.localPosition = new Vector3(0f, 0.08f, -0.35f);
+
+            ParticleSystem continuousDust = CreateContinuousDustSystem(anchor.transform, dustMaterial);
+            ParticleSystem landingDust = CreateLandingDustSystem(anchor.transform, dustMaterial);
+
+            PlayerRunningDustController dust = player.AddComponent<PlayerRunningDustController>();
+            SetField(dust, "continuousDust", continuousDust);
+            SetField(dust, "landingDust", landingDust);
+            SetField(dust, "groundedReference", player.GetComponent<PlayerController>());
+            SetField(dust, "rollController", player.GetComponent<RollController>());
+        }
+
+        static ParticleSystem CreateContinuousDustSystem(Transform parent, Material material)
+        {
+            GameObject dust = new GameObject("ContinuousRunningDust");
+            dust.transform.SetParent(parent, false);
+            // Box emits along local +Z; face it backward with a slight
+            // upward tilt so puffs kick out behind the heels.
+            dust.transform.localRotation = Quaternion.Euler(-15f, 180f, 0f);
+
+            ParticleSystem system = dust.AddComponent<ParticleSystem>();
+            ParticleSystem.MainModule main = system.main;
+            main.loop = true;
+            main.duration = 1f;
+            main.playOnAwake = false;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.25f, 0.5f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.3f, 1.2f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.08f, 0.22f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.gravityModifier = new ParticleSystem.MinMaxCurve(-0.05f, 0.05f);
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.scalingMode = ParticleSystemScalingMode.Shape;
+            main.maxParticles = 30;
+
+            // Builder default only: PlayerRunningDustController drives this
+            // between 0 and its min/max range from ground contact and speed.
+            ParticleSystem.EmissionModule emission = system.emission;
+            emission.rateOverTime = 12f;
+
+            ParticleSystem.ShapeModule shape = system.shape;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(0.45f, 0.06f, 0.2f);
+
+            ParticleSystem.ColorOverLifetimeModule colorOverLifetime = system.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            colorOverLifetime.color = DustFadeGradient();
+
+            ParticleSystem.SizeOverLifetimeModule sizeOverLifetime = system.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+                new Keyframe(0f, 0.55f), new Keyframe(0.4f, 0.85f), new Keyframe(1f, 1f)));
+
+            ParticleSystem.VelocityOverLifetimeModule velocity = system.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.World;
+            velocity.x = new ParticleSystem.MinMaxCurve(-0.25f, 0.25f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0.1f, 0.4f);
+            // The player root never rotates and always travels +Z, so world
+            // -Z is "behind the runner".
+            velocity.z = new ParticleSystem.MinMaxCurve(-0.6f, -0.2f);
+
+            ConfigureDustRenderer(dust, material);
+            return system;
+        }
+
+        static ParticleSystem CreateLandingDustSystem(Transform parent, Material material)
+        {
+            GameObject dust = new GameObject("LandingDustBurst");
+            dust.transform.SetParent(parent, false);
+            // Hemisphere emits along local +Z; point it upward.
+            dust.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+
+            ParticleSystem system = dust.AddComponent<ParticleSystem>();
+            ParticleSystem.MainModule main = system.main;
+            main.loop = false;
+            main.duration = 0.3f;
+            main.playOnAwake = false;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.3f, 0.6f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(1.2f, 2.5f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.12f, 0.3f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.scalingMode = ParticleSystemScalingMode.Shape;
+            main.maxParticles = 20;
+
+            // No rate and no configured burst: the controller calls Emit()
+            // with a count scaled by fall speed, so the module stays empty.
+            ParticleSystem.EmissionModule emission = system.emission;
+            emission.rateOverTime = 0f;
+
+            ParticleSystem.ShapeModule shape = system.shape;
+            shape.shapeType = ParticleSystemShapeType.Hemisphere;
+            shape.radius = 0.35f;
+
+            ParticleSystem.ColorOverLifetimeModule colorOverLifetime = system.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            colorOverLifetime.color = DustFadeGradient();
+
+            ParticleSystem.SizeOverLifetimeModule sizeOverLifetime = system.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+                new Keyframe(0f, 0.6f), new Keyframe(0.5f, 0.95f), new Keyframe(1f, 1f)));
+
+            ConfigureDustRenderer(dust, material);
+            return system;
+        }
+
+        static Gradient DustFadeGradient()
+        {
+            Gradient fade = new Gradient();
+            fade.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[]
+                {
+                    new GradientAlphaKey(0f, 0f),
+                    new GradientAlphaKey(0.65f, 0.15f),
+                    new GradientAlphaKey(0f, 1f),
+                });
+            return fade;
+        }
+
+        static void ConfigureDustRenderer(GameObject dust, Material material)
+        {
+            ParticleSystemRenderer dustRenderer = dust.GetComponent<ParticleSystemRenderer>();
+            dustRenderer.sharedMaterial = material;
+            dustRenderer.renderMode = ParticleSystemRenderMode.Billboard;
+            dustRenderer.maxParticleSize = 0.25f;
+            dustRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            dustRenderer.receiveShadows = false;
+        }
+
+        /// <summary>
+        /// Wires the Perfect Dodge near-miss reward onto the player: the
+        /// detector/orchestrator component, its pooled streak-burst prefab,
+        /// and the lane-switch whoosh as the dodge sound. The HUD label is
+        /// wired later, when the canvas exists.
+        /// </summary>
+        static void AddPerfectDodgeSystem(GameObject player)
+        {
+            GameObject vfxPrefab = CreatePerfectDodgeVfxPrefab();
+            PerfectDodge dodge = player.AddComponent<PerfectDodge>();
+            SetField(dodge, "vfxPrefab", vfxPrefab);
+            SetField(dodge, "whooshClip", AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/LaneSwitch.mp3"));
+        }
+
+        /// <summary>
+        /// Pooled near-miss burst: thin stretched white streaks racing past on
+        /// both sides plus one soft low-opacity centre flash. Materials are
+        /// unlit placeholders — PerfectDodgeVFX swaps them for the shared
+        /// additive glow at runtime (the glow texture is runtime-generated).
+        /// </summary>
+        static GameObject CreatePerfectDodgeVfxPrefab()
+        {
+            Material streakWhite = UnlitColorMaterial("PerfectDodgeStreak", Color.white);
+
+            GameObject root = new GameObject("PerfectDodgeVFX");
+            AddDodgeStreaks(root.transform, "LeftStreaks", new Vector3(-0.75f, 0f, 0f), streakWhite);
+            AddDodgeStreaks(root.transform, "RightStreaks", new Vector3(0.75f, 0f, 0f), streakWhite);
+            AddDodgeCentreFlash(root.transform, streakWhite);
+            root.AddComponent<PerfectDodgeVFX>();
+            root.SetActive(false);
+            return SavePrefab(root, "Assets/Prefabs/PerfectDodgeVFX.prefab");
+        }
+
+        static void AddDodgeStreaks(Transform parent, string name, Vector3 localPosition, Material material)
+        {
+            GameObject streaks = new GameObject(name);
+            streaks.transform.SetParent(parent, false);
+            streaks.transform.localPosition = localPosition;
+            // Cone emits along local +Z; face it backwards so the streaks
+            // race past the player toward the camera.
+            streaks.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+
+            ParticleSystem system = streaks.AddComponent<ParticleSystem>();
+            ParticleSystem.MainModule main = system.main;
+            main.loop = false;
+            main.playOnAwake = false;
+            main.duration = 0.3f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.15f, 0.25f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(18f, 25f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.035f, 0.07f);
+            main.maxParticles = 30;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.scalingMode = ParticleSystemScalingMode.Shape;
+            // White core with a slight blue tint mixed in at random.
+            main.startColor = new ParticleSystem.MinMaxGradient(Color.white, new Color(0.72f, 0.86f, 1f));
+
+            ParticleSystem.EmissionModule emission = system.emission;
+            emission.rateOverTime = 0f;
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 24) });
+
+            ParticleSystem.ShapeModule shape = system.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 10f;
+            shape.radius = 0.18f;
+
+            ParticleSystem.ColorOverLifetimeModule colorOverLifetime = system.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient fade = new Gradient();
+            fade.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f) });
+            colorOverLifetime.color = fade;
+
+            ParticleSystemRenderer streakRenderer = streaks.GetComponent<ParticleSystemRenderer>();
+            streakRenderer.sharedMaterial = material;
+            // Velocity-stretched billboards turn the round glow sprite into
+            // thin motion streaks; no geometry or lights involved.
+            streakRenderer.renderMode = ParticleSystemRenderMode.Stretch;
+            streakRenderer.lengthScale = 8f;
+            streakRenderer.velocityScale = 0f;
+            streakRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            streakRenderer.receiveShadows = false;
+        }
+
+        static void AddDodgeCentreFlash(Transform parent, Material material)
+        {
+            GameObject flash = new GameObject("CenterFlash");
+            flash.transform.SetParent(parent, false);
+
+            ParticleSystem system = flash.AddComponent<ParticleSystem>();
+            ParticleSystem.MainModule main = system.main;
+            main.loop = false;
+            main.playOnAwake = false;
+            main.duration = 0.15f;
+            main.startLifetime = 0.1f;
+            main.startSpeed = 0f;
+            main.startSize = 0.9f;
+            main.maxParticles = 1;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.scalingMode = ParticleSystemScalingMode.Shape;
+            main.startColor = new Color(1f, 1f, 1f, 0.28f);
+
+            ParticleSystem.EmissionModule emission = system.emission;
+            emission.rateOverTime = 0f;
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, 1) });
+
+            ParticleSystem.ColorOverLifetimeModule colorOverLifetime = system.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient fade = new Gradient();
+            fade.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f) });
+            colorOverLifetime.color = fade;
+
+            ParticleSystemRenderer flashRenderer = flash.GetComponent<ParticleSystemRenderer>();
+            flashRenderer.sharedMaterial = material;
+            flashRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            flashRenderer.receiveShadows = false;
+        }
+
+        /// <summary>
+        /// Builds the always-present, initially-hidden Ubuntu Pulse effect rig
+        /// on the player: shield sphere, ambient particles, a forward-pointing
+        /// arrow, ground glow, pulse light, and the looping shield-hum
+        /// AudioSource. UbuntuPulseVisual (added here) turns all of it on/off
+        /// by polling PowerUpManager each frame — see that script for why.
+        /// </summary>
+        static void AddUbuntuPulseRig(GameObject player)
+        {
+            GameObject rig = new GameObject("UbuntuPulseRig");
+            rig.transform.SetParent(player.transform, false);
+            rig.transform.localPosition = new Vector3(0f, 1f, 0f);
+
+            GameObject shieldSphereObject = Sphere("ShieldSphere", rig.transform, Vector3.zero, Vector3.one,
+                UnlitTransparentMaterial("UbuntuShieldSphere", new Color(0.35f, 0.75f, 1f, 0.35f)));
+            StripColliders(shieldSphereObject);
+            Renderer shieldRenderer = shieldSphereObject.GetComponent<Renderer>();
+            shieldSphereObject.SetActive(false);
+
+            Material groundGlowMaterial = UnlitTransparentMaterial("UbuntuGroundGlow", new Color(0.35f, 0.75f, 1f, 0.5f));
+            GameObject groundGlowObject = Cylinder("GroundGlow", rig.transform, new Vector3(0f, -0.95f, 0f), new Vector3(1.6f, 0.02f, 1.6f),
+                groundGlowMaterial);
+            StripColliders(groundGlowObject);
+            Renderer groundGlowRenderer = groundGlowObject.GetComponent<Renderer>();
+            groundGlowObject.SetActive(false);
+
+            GameObject particlesObject = new GameObject("ShieldParticles");
+            particlesObject.transform.SetParent(rig.transform, false);
+            ParticleSystem shieldParticles = particlesObject.AddComponent<ParticleSystem>();
+            ParticleSystem.MainModule particleMain = shieldParticles.main;
+            particleMain.startLifetime = 1.2f;
+            particleMain.startSpeed = 0.15f;
+            particleMain.startSize = 0.05f;
+            particleMain.maxParticles = 30;
+            particleMain.loop = true;
+            particleMain.playOnAwake = false;
+            particleMain.startColor = new ParticleSystem.MinMaxGradient(new Color(0.5f, 0.85f, 1f), Color.white);
+            ParticleSystem.EmissionModule particleEmission = shieldParticles.emission;
+            particleEmission.rateOverTime = 10f;
+            ParticleSystem.ShapeModule particleShape = shieldParticles.shape;
+            particleShape.shapeType = ParticleSystemShapeType.Sphere;
+            particleShape.radius = 0.65f;
+            Material particleMaterial = UnlitColorMaterial("UbuntuShieldParticleGlow", new Color(0.5f, 0.85f, 1f));
+            particlesObject.GetComponent<ParticleSystemRenderer>().sharedMaterial = particleMaterial;
+
+            // Forward arrow: a chevron pointing down local +Z (the direction
+            // the player always travels — the Player root never rotates), set
+            // ahead of the player rather than trailing behind like a
+            // TrailRenderer would (a TrailRenderer only ever shows where the
+            // object already was, so it structurally cannot point forward).
+            Material arrowMaterial = UnlitColorMaterial("UbuntuArrowGlow", new Color(0.45f, 0.85f, 1f));
+            GameObject arrowPivot = new GameObject("ForwardArrow");
+            arrowPivot.transform.SetParent(rig.transform, false);
+            arrowPivot.transform.localPosition = new Vector3(0f, -0.4f, 1.8f);
+            BuildForwardChevron(arrowPivot.transform, "ChevronNear", 0.7f, 0.5f, arrowMaterial);
+            BuildForwardChevron(arrowPivot.transform, "ChevronFar", 0.55f, 0.4f, arrowMaterial).localPosition = new Vector3(0f, 0f, 0.5f);
+
+            GameObject lightObject = new GameObject("PulseLight");
+            lightObject.transform.SetParent(rig.transform, false);
+            Light pulseLight = lightObject.AddComponent<Light>();
+            pulseLight.type = LightType.Point;
+            pulseLight.color = new Color(0.5f, 0.85f, 1f);
+            pulseLight.range = 6f;
+            pulseLight.intensity = 0f;
+            pulseLight.shadows = LightShadows.None;
+            pulseLight.enabled = false;
+
+            AudioSource shieldHum = rig.AddComponent<AudioSource>();
+            shieldHum.clip = AssetDatabase.LoadAssetAtPath<AudioClip>(UbuntuPulseHumClipPath);
+            shieldHum.loop = true;
+            shieldHum.playOnAwake = false;
+            shieldHum.volume = 0.35f;
+
+            UbuntuPulseVisual ubuntuVisual = player.AddComponent<UbuntuPulseVisual>();
+            SetField(ubuntuVisual, "shieldSphere", shieldSphereObject.transform);
+            SetField(ubuntuVisual, "shieldRenderer", shieldRenderer);
+            SetField(ubuntuVisual, "shieldParticles", shieldParticles);
+            SetField(ubuntuVisual, "forwardArrow", arrowPivot.transform);
+            SetField(ubuntuVisual, "groundGlow", groundGlowRenderer);
+            SetField(ubuntuVisual, "pulseLight", pulseLight);
+            SetField(ubuntuVisual, "shieldHum", shieldHum);
+            SetField(ubuntuVisual, "shieldMaterial", shieldRenderer.sharedMaterial);
+            SetField(ubuntuVisual, "vfxMaterial", particleMaterial);
+            SetField(ubuntuVisual, "trailMaterial", UnlitTransparentMaterial("UbuntuTrailGlow", new Color(0.5f, 0.85f, 1f, 0.6f)));
+            SetField(ubuntuVisual, "groundGlowMaterial", groundGlowMaterial);
+            SetField(ubuntuVisual, "impactClip", AssetDatabase.LoadAssetAtPath<AudioClip>(UbuntuPulseImpactClipPath));
+            SetField(ubuntuVisual, "powerDownClip", AssetDatabase.LoadAssetAtPath<AudioClip>(UbuntuPulsePowerDownClipPath));
+            SetField(ubuntuVisual, "shieldScale", 1.12f);
+            SetField(ubuntuVisual, "bloomIntensity", 2.4f);
+            SetField(ubuntuVisual, "shieldOpacity", 0.32f);
+            SetField(ubuntuVisual, "ringHeight", 0.78f);
+            SetField(ubuntuVisual, "ringVerticalSeparation", 0.14f);
+            SetField(ubuntuVisual, "ringRadiusMultiplier", 0.62f);
+            SetField(ubuntuVisual, "particleCount", 42);
+            SetField(ubuntuVisual, "trailWidth", 0.12f);
+            SetField(ubuntuVisual, "lightningFrequency", 7f);
         }
 
         /// <summary>
@@ -3326,10 +5551,35 @@ namespace JoburgRunner.Editor
                 return false;
             }
 
+            if (BuildRunnerVisual(modelPath, playerRoot, "RunnerVisual_Fbx", RunnerPbrMaterialPath, RunnerAnimatorPath) == null)
+            {
+                return false;
+            }
+
+            // Second selectable character for the ME page. The game stays fully
+            // playable without it — the ME page then offers a single choice.
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(SecondRunnerModelPath) != null &&
+                BuildRunnerVisual(SecondRunnerModelPath, playerRoot, "RunnerVisual_Char1", SecondRunnerPbrMaterialPath, SecondRunnerAnimatorPath) == null)
+            {
+                Debug.LogWarning($"Second runner model at {SecondRunnerModelPath} could not be built; ME page offers only the default character.");
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Builds one playable character visual under the player root from a
+        /// rigged humanoid FBX: humanoid import, its own animator controller
+        /// around its run clip (idle/jump/roll clips retarget across avatars),
+        /// normalized scale, textures, and the per-visual presentation stack.
+        /// Returns null when the model or its run clip cannot be loaded.
+        /// </summary>
+        static GameObject BuildRunnerVisual(string modelPath, Transform playerRoot, string visualName, string materialPath, string animatorPath)
+        {
             ModelImporter importer = AssetImporter.GetAtPath(modelPath) as ModelImporter;
             if (importer == null)
             {
-                return false;
+                return null;
             }
 
             ModelImporterClipAnimation[] clips = importer.clipAnimations;
@@ -3383,11 +5633,11 @@ namespace JoburgRunner.Editor
             if (model == null || runClip == null)
             {
                 Debug.LogWarning($"Found runner model at {modelPath} but could not load a run clip; using primitive runner.");
-                return false;
+                return null;
             }
 
             GameObject visual = Object.Instantiate(model, playerRoot);
-            visual.name = "RunnerVisual_Fbx";
+            visual.name = visualName;
             visual.transform.localPosition = Vector3.zero;
             visual.transform.localRotation = Quaternion.identity;
             visual.transform.localScale = Vector3.one;
@@ -3398,7 +5648,7 @@ namespace JoburgRunner.Editor
                 animator = visual.AddComponent<Animator>();
             }
 
-            animator.runtimeAnimatorController = CreateRunnerAnimatorController(runClip);
+            animator.runtimeAnimatorController = CreateRunnerAnimatorController(runClip, animatorPath);
             animator.applyRootMotion = false;
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 
@@ -3418,7 +5668,7 @@ namespace JoburgRunner.Editor
             SimplifyMeshes(visual, 50000);
 
             if (!hasTextures && !TryApplyExtractedTextures(visual, modelPath)
-                && !TryApplyExternalPbrTextures(visual, modelPath))
+                && !TryApplyExternalPbrTextures(visual, modelPath, materialPath))
             {
                 RemapUntexturedRunnerMaterials(visual);
             }
@@ -3426,7 +5676,7 @@ namespace JoburgRunner.Editor
             AddRunnerPresentation(visual, null);
 
             Debug.Log($"Player visual using rigged model '{modelPath}' with clip '{runClip.name}' (textured: {hasTextures}, triangles: {CountTriangles(visual)}).");
-            return true;
+            return visual;
         }
 
         static void AddRunnerPresentation(GameObject visual, RunnerLimbSwing limbSwing)
@@ -3448,6 +5698,83 @@ namespace JoburgRunner.Editor
             // Faces the camera while idling/dancing; gameManager wired in CreateSystems.
             IdleFacing idleFacing = visual.AddComponent<IdleFacing>();
             SetField(idleFacing, "visual", visual.transform);
+        }
+
+        /// <summary>
+        /// Builds the JRPD traffic officer NPC: a rigged Meshy biped looping its
+        /// run clip, hidden until TrafficOfficerChase shows him after a taxi
+        /// side-swipe. Returns null when the model is missing so side bumps
+        /// simply stay fatal.
+        /// </summary>
+        static TrafficOfficerChase CreateTrafficOfficer(Transform player, GameManager gameManager)
+        {
+            AnimationClip runClip = LoadRunnerClipFromModel(OfficerModelPath, loop: true);
+            GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(OfficerModelPath);
+            if (model == null || runClip == null)
+            {
+                Debug.LogWarning($"Traffic officer model or clip missing at {OfficerModelPath}; taxi side bumps stay fatal.");
+                return null;
+            }
+
+            GameObject officerObject = new GameObject("TrafficOfficer");
+            // Parked behind the run start until a chase teleports him into view.
+            officerObject.transform.position = new Vector3(0f, 0f, -40f);
+
+            TrafficOfficerChase chase = officerObject.AddComponent<TrafficOfficerChase>();
+            SetField(chase, "player", player);
+            SetField(chase, "gameManager", gameManager);
+
+            GameObject visual = Object.Instantiate(model, officerObject.transform);
+            visual.name = "OfficerVisual";
+            visual.transform.localPosition = Vector3.zero;
+            visual.transform.localRotation = Quaternion.identity;
+            visual.transform.localScale = Vector3.one;
+
+            Animator animator = visual.GetComponent<Animator>();
+            if (animator == null)
+            {
+                animator = visual.AddComponent<Animator>();
+            }
+
+            animator.runtimeAnimatorController = CreateOfficerAnimatorController(runClip);
+            animator.applyRootMotion = false;
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+
+            foreach (SkinnedMeshRenderer renderer in visual.GetComponentsInChildren<SkinnedMeshRenderer>())
+            {
+                renderer.updateWhenOffscreen = true;
+            }
+
+            NormalizeRunnerScale(visual, officerObject.transform);
+            SimplifyMeshes(visual, 50000);
+
+            ModelImporter importer = AssetImporter.GetAtPath(OfficerModelPath) as ModelImporter;
+            bool hasTextures = importer != null && ExtractEmbeddedTextures(importer, OfficerModelPath);
+            if (!hasTextures)
+            {
+                TryApplyExternalPbrTextures(visual, OfficerModelPath, OfficerPbrMaterialPath);
+            }
+
+            foreach (Collider collider in officerObject.GetComponentsInChildren<Collider>())
+            {
+                Object.DestroyImmediate(collider);
+            }
+
+            SetField(chase, "officerVisual", visual);
+            Debug.Log($"Traffic officer built from '{OfficerModelPath}' with clip '{runClip.name}' (triangles: {CountTriangles(visual)}).");
+            return chase;
+        }
+
+        static RuntimeAnimatorController CreateOfficerAnimatorController(AnimationClip runClip)
+        {
+            Directory.CreateDirectory("Assets/Animations");
+            AssetDatabase.DeleteAsset(OfficerAnimatorPath);
+            AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(OfficerAnimatorPath);
+            AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
+            AnimatorState runState = stateMachine.AddState("Run", new Vector3(260f, 100f, 0f));
+            runState.motion = runClip;
+            stateMachine.defaultState = runState;
+            return controller;
         }
 
         /// <summary>
@@ -3578,7 +5905,7 @@ namespace JoburgRunner.Editor
         /// flat-colour remap. Unity does not reliably auto-bind these external
         /// maps through the FBX material import, which left the runner untextured.
         /// </summary>
-        static bool TryApplyExternalPbrTextures(GameObject visual, string modelPath)
+        static bool TryApplyExternalPbrTextures(GameObject visual, string modelPath, string materialPath = RunnerPbrMaterialPath)
         {
             string folder = Path.GetDirectoryName(modelPath).Replace("\\", "/");
             string baseColorPath = null, normalPath = null, metallicPath = null;
@@ -3625,11 +5952,11 @@ namespace JoburgRunner.Editor
                 SetTextureNormalMap(normalPath);
             }
 
-            Material material = AssetDatabase.LoadAssetAtPath<Material>(RunnerPbrMaterialPath);
+            Material material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
             if (material == null)
             {
                 material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                AssetDatabase.CreateAsset(material, RunnerPbrMaterialPath);
+                AssetDatabase.CreateAsset(material, materialPath);
             }
 
             Texture2D baseColor = AssetDatabase.LoadAssetAtPath<Texture2D>(baseColorPath);
@@ -3716,9 +6043,11 @@ namespace JoburgRunner.Editor
                     continue;
                 }
 
-                // Vehicle models are scenery/obstacles, never the playable character.
+                // Vehicle models are scenery/obstacles and the traffic officer
+                // is an NPC: none of them may become the playable character.
                 string fileName = Path.GetFileNameWithoutExtension(path).ToLowerInvariant();
-                if (fileName.Contains("taxi") || fileName.Contains("bus") || fileName.Contains("car") || fileName.Contains("vehicle"))
+                if (fileName.Contains("taxi") || fileName.Contains("bus") || fileName.Contains("car")
+                    || fileName.Contains("vehicle") || fileName.Contains("officer"))
                 {
                     continue;
                 }
@@ -3734,10 +6063,10 @@ namespace JoburgRunner.Editor
             return bestPath;
         }
 
-        static RuntimeAnimatorController CreateRunnerAnimatorController(AnimationClip runClip)
+        static RuntimeAnimatorController CreateRunnerAnimatorController(AnimationClip runClip, string controllerPath)
         {
             Directory.CreateDirectory("Assets/Animations");
-            AssetDatabase.DeleteAsset(RunnerAnimatorPath);
+            AssetDatabase.DeleteAsset(controllerPath);
             // Idle plays the real Meshy dance clip (looping) as the pre-run showcase.
             AnimationClip idleClip = LoadRunnerClipFromModel(RunnerIdleModelPath, loop: true)
                 ?? CreateGeneratedClip(RunnerIdleClipPath, 1f);
@@ -3749,7 +6078,7 @@ namespace JoburgRunner.Editor
                 ?? CreateGeneratedClip(RunnerRollClipPath, 0.7f);
             AnimationClip rollClip = CreateGeneratedClip(RunnerRollClipPath, 0.7f);
 
-            AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(RunnerAnimatorPath);
+            AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(controllerPath);
             controller.AddParameter("isRunning", AnimatorControllerParameterType.Bool);
             controller.AddParameter("isJumping", AnimatorControllerParameterType.Bool);
             controller.AddParameter("Roll", AnimatorControllerParameterType.Trigger);
@@ -3920,6 +6249,21 @@ namespace JoburgRunner.Editor
             GameObject gameManagerObject = new GameObject("GameManager");
             GameManager gameManager = gameManagerObject.AddComponent<GameManager>();
 
+            AudioClip backgroundMusicClip = AssetDatabase.LoadAssetAtPath<AudioClip>(BackgroundMusicClipPath);
+            if (backgroundMusicClip != null)
+            {
+                GameObject backgroundMusicObject = new GameObject("BackgroundMusic");
+                AudioSource backgroundMusicSource = backgroundMusicObject.AddComponent<AudioSource>();
+                backgroundMusicSource.clip = backgroundMusicClip;
+                backgroundMusicSource.loop = true;
+                backgroundMusicSource.playOnAwake = false;
+                // Well under the coin-collect (0.8) and lane-switch (0.6) SFX
+                // volumes — Remix.mp3 is mastered louder than those short
+                // clips, so 0.45 still read as competing with them in play.
+                backgroundMusicSource.volume = 0.2f;
+                backgroundMusicObject.AddComponent<BackgroundMusic>();
+            }
+
             GameObject scoreManagerObject = new GameObject("ScoreManager");
             ScoreManager scoreManager = scoreManagerObject.AddComponent<ScoreManager>();
             SetField(scoreManager, "player", player);
@@ -3930,15 +6274,35 @@ namespace JoburgRunner.Editor
             SetField(powerUpManager, "gameManager", gameManager);
             SetField(scoreManager, "powerUpManager", powerUpManager);
 
+            DroneFlightVisual droneVisual = player.GetComponent<DroneFlightVisual>();
+            if (droneVisual != null)
+            {
+                SetField(droneVisual, "powerUpManager", powerUpManager);
+            }
+
+            UbuntuPulseVisual ubuntuVisual = player.GetComponent<UbuntuPulseVisual>();
+            if (ubuntuVisual != null)
+            {
+                SetField(ubuntuVisual, "powerUpManager", powerUpManager);
+            }
+
+            HoverboardVisual hoverboardVisual = player.GetComponent<HoverboardVisual>();
+            if (hoverboardVisual != null)
+            {
+                SetField(hoverboardVisual, "powerUpManager", powerUpManager);
+            }
+
             GameObject roadSpawnerObject = new GameObject("Road");
             roadSpawnerObject.transform.SetParent(EnvironmentCategory("Road"));
             RoadSegmentSpawner roadSpawner = roadSpawnerObject.AddComponent<RoadSegmentSpawner>();
             SetField(roadSpawner, "player", player);
             SetField(roadSpawner, "roadSegmentPrefab", roadPrefab);
+            // One segment sits behind the origin so the cameras (which trail the
+            // player) never see past the road's near edge on tall screens.
             int[] openingDistricts = { 0, 0, 2, 1, 3, 0 };
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 7; i++)
             {
-                GameObject segment = Object.Instantiate(roadPrefab, new Vector3(0f, 0f, i * 30f), Quaternion.identity, roadSpawnerObject.transform);
+                GameObject segment = Object.Instantiate(roadPrefab, new Vector3(0f, 0f, (i - 1) * 30f), Quaternion.identity, roadSpawnerObject.transform);
                 RoadSegmentVisuals visuals = segment.GetComponent<RoadSegmentVisuals>();
                 if (visuals != null)
                 {
@@ -3958,8 +6322,9 @@ namespace JoburgRunner.Editor
                 SetField(cameraFollow, "gameManager", gameManager);
             }
 
-            IdleFacing idleFacing = player.GetComponentInChildren<IdleFacing>();
-            if (idleFacing != null)
+            // Every character visual has its own IdleFacing (inactive ones
+            // included), so wire them all, not just the first.
+            foreach (IdleFacing idleFacing in player.GetComponentsInChildren<IdleFacing>(true))
             {
                 SetField(idleFacing, "gameManager", gameManager);
             }
@@ -3972,6 +6337,12 @@ namespace JoburgRunner.Editor
             SetField(gameManager, "player", controller);
             SetField(gameManager, "scoreManager", scoreManager);
             SetField(scoreManager, "gameManager", gameManager);
+
+            TrafficOfficerChase officerChase = CreateTrafficOfficer(player, gameManager);
+            if (officerChase != null)
+            {
+                SetField(controller, "officerChase", officerChase);
+            }
         }
 
         static void CreateSceneryTraffic(Transform player, GameObject sceneryTaxiPrefab)
@@ -3997,7 +6368,10 @@ namespace JoburgRunner.Editor
             CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1080f, 1920f);
-            scaler.matchWidthOrHeight = 0.5f;
+            // Match width only: phones taller than 16:9 (20:9 flagships) must keep
+            // the full 1080-unit layout width or the title and pickup strip crop
+            // at the screen edges; extra height just adds breathing room.
+            scaler.matchWidthOrHeight = 0f;
             canvasObject.AddComponent<GraphicRaycaster>();
 
             Sprite rounded = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
@@ -4017,6 +6391,11 @@ namespace JoburgRunner.Editor
 
             TextMeshProUGUI scoreText = Text(scorePill.transform, "ScoreText", "Score: 0  x1", 48, TextAlignmentOptions.Left);
             scoreText.fontStyle = FontStyles.Bold;
+            // Auto-size down for six-figure scores with a double-digit
+            // multiplier, which otherwise wrap onto a second line.
+            scoreText.enableAutoSizing = true;
+            scoreText.fontSizeMax = 48f;
+            scoreText.fontSizeMin = 24f;
             Anchor(scoreText.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             scoreText.rectTransform.offsetMin = new Vector2(36f, 0f);
             scoreText.rectTransform.offsetMax = new Vector2(-24f, 0f);
@@ -4032,6 +6411,10 @@ namespace JoburgRunner.Editor
             coinIcon.preserveAspect = true;
             Anchor(coinIcon.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(28f, 0f), new Vector2(52f, 52f));
             coinIcon.rectTransform.pivot = new Vector2(0f, 0.5f);
+            // Collected coins fly into this icon (CoinCollectPop reads the anchor)
+            // and set off a sparkle on the counter as they land.
+            coinIcon.gameObject.AddComponent<CoinHudAnchor>();
+            coinIcon.gameObject.AddComponent<CoinCounterSparkle>();
 
             TextMeshProUGUI coinText = Text(coinPill.transform, "CoinText", "0", 48, TextAlignmentOptions.Right);
             coinText.fontStyle = FontStyles.Bold;
@@ -4042,7 +6425,120 @@ namespace JoburgRunner.Editor
 
             TextMeshProUGUI powerUpStatus = Text(safeArea.transform, "PowerUpStatusText", "", 40, TextAlignmentOptions.Center);
             powerUpStatus.fontStyle = FontStyles.Bold;
-            Anchor(powerUpStatus.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -152f), new Vector2(960f, 56f));
+            // Below the pause button (which spans roughly -32..-136) so active
+            // booster labels never crowd or overlap it.
+            Anchor(powerUpStatus.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -208f), new Vector2(960f, 56f));
+
+            // Perfect Dodge label: hidden until PerfectDodge pops it on a
+            // near miss; that component drives the scale/alpha animation.
+            TextMeshProUGUI dodgeLabel = Text(safeArea.transform, "PerfectDodgeLabel", "PERFECT DODGE!", 66, TextAlignmentOptions.Center);
+            dodgeLabel.fontStyle = FontStyles.Bold;
+            dodgeLabel.color = new Color(1f, 0.84f, 0.35f, 1f);
+            dodgeLabel.characterSpacing = 4f;
+            Anchor(dodgeLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 250f), new Vector2(900f, 90f));
+            dodgeLabel.gameObject.SetActive(false);
+
+            GameObject dodgePlayer = GameObject.Find("Player");
+            PerfectDodge perfectDodge = dodgePlayer != null ? dodgePlayer.GetComponent<PerfectDodge>() : null;
+            if (perfectDodge != null)
+            {
+                SetField(perfectDodge, "dodgeLabel", dodgeLabel);
+            }
+
+            // Ubuntu Pulse HUD icon: hidden until active, then shows a
+            // pulsing blue glow and a radial countdown ring. UbuntuPulseUI
+            // lives on the always-active root and toggles the "Visuals"
+            // child — Update() never runs on a disabled GameObject, so the
+            // script itself must not be the thing that gets deactivated.
+            GameObject ubuntuIconRoot = new GameObject("UbuntuPulseIcon");
+            ubuntuIconRoot.transform.SetParent(safeArea.transform, false);
+            RectTransform ubuntuIconRect = ubuntuIconRoot.AddComponent<RectTransform>();
+            Anchor(ubuntuIconRect, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-32f, -152f), new Vector2(112f, 112f));
+
+            GameObject ubuntuVisuals = new GameObject("Visuals");
+            ubuntuVisuals.transform.SetParent(ubuntuIconRoot.transform, false);
+            RectTransform ubuntuVisualsRect = ubuntuVisuals.AddComponent<RectTransform>();
+            Anchor(ubuntuVisualsRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            // Centered soft halo behind the tile. Note the offsetMin/Max
+            // assignments: passing expansion values through Anchor's
+            // position/size parameters shifts a stretched rect off-centre —
+            // that was the stray blue "crescent" poking out of the icon.
+            Image ubuntuGlow = new GameObject("Glow").AddComponent<Image>();
+            ubuntuGlow.transform.SetParent(ubuntuVisuals.transform, false);
+            ubuntuGlow.sprite = knob;
+            ubuntuGlow.color = new Color(0.35f, 0.75f, 1f, 0.4f);
+            Anchor(ubuntuGlow.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            ubuntuGlow.rectTransform.offsetMin = new Vector2(-10f, -10f);
+            ubuntuGlow.rectTransform.offsetMax = new Vector2(10f, 10f);
+
+            // Countdown reads as a thin horizontal bar under the tile — the
+            // old radial pie sat behind the square icon sprite and only its
+            // corners showed, which looked like a rendering glitch.
+            Image ubuntuRingBackground = new GameObject("RingBackground").AddComponent<Image>();
+            ubuntuRingBackground.transform.SetParent(ubuntuVisuals.transform, false);
+            ubuntuRingBackground.sprite = knob;
+            ubuntuRingBackground.color = new Color(0f, 0f, 0f, 0.5f);
+            Anchor(ubuntuRingBackground.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, -12f), new Vector2(0f, 10f));
+
+            Image ubuntuRingFill = new GameObject("RingFill").AddComponent<Image>();
+            ubuntuRingFill.transform.SetParent(ubuntuVisuals.transform, false);
+            ubuntuRingFill.sprite = knob;
+            ubuntuRingFill.color = new Color(0.45f, 0.85f, 1f, 1f);
+            ubuntuRingFill.type = Image.Type.Filled;
+            ubuntuRingFill.fillMethod = Image.FillMethod.Horizontal;
+            ubuntuRingFill.fillOrigin = (int)Image.OriginHorizontal.Left;
+            ubuntuRingFill.fillAmount = 1f;
+            Anchor(ubuntuRingFill.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, -12f), new Vector2(0f, 10f));
+
+            Image ubuntuIconImage = new GameObject("Icon").AddComponent<Image>();
+            ubuntuIconImage.transform.SetParent(ubuntuVisuals.transform, false);
+            ubuntuIconImage.preserveAspect = true;
+            Anchor(ubuntuIconImage.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            ubuntuIconImage.rectTransform.offsetMin = new Vector2(6f, 6f);
+            ubuntuIconImage.rectTransform.offsetMax = new Vector2(-6f, -6f);
+            Sprite ubuntuIconSprite = RenderPrefabIcon(UbuntuPulsePrefabPath, "IconUbuntuPulse", new Vector3(-16f, 28f, 0f));
+            if (ubuntuIconSprite != null)
+            {
+                ubuntuIconImage.sprite = ubuntuIconSprite;
+            }
+
+            UbuntuPulseUI ubuntuPulseUi = ubuntuIconRoot.AddComponent<UbuntuPulseUI>();
+            SetField(ubuntuPulseUi, "root", ubuntuVisuals);
+            SetField(ubuntuPulseUi, "fillImage", ubuntuRingFill);
+            SetField(ubuntuPulseUi, "glow", ubuntuGlow);
+            ubuntuVisuals.SetActive(false);
+
+            // Pause sits level with the score and coin pills, forming one top
+            // row: same top (y -32) and height (104), centred in the gap between
+            // them. The score pill (470) is wider than the coin pill (340), so
+            // the gap centre is 65px right of the safe-area centre; because both
+            // pills use fixed edge insets that offset holds at any safe-area
+            // width. Taps do nothing until a run is underway (GameManager guards it).
+            Button pauseUiButton = UiButton(safeArea.transform, "PauseButton", "II", 44, new Color(0f, 0f, 0f, 0.45f), rounded,
+                new Vector2(0.5f, 1f), new Vector2(65f, -32f), new Vector2(110f, 104f));
+            pauseUiButton.GetComponentInChildren<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
+            pauseUiButton.gameObject.AddComponent<PauseButton>();
+
+            GameObject pausePanel = Panel(canvasObject.transform, "PausePanel", new Color(0f, 0f, 0f, 0.75f));
+            Anchor(pausePanel.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            GameObject pauseCard = RoundedPanel(pausePanel.transform, "PauseCard", new Color(0.07f, 0.08f, 0.12f, 0.98f), rounded, 0.3f);
+            Anchor(pauseCard.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(760f, 640f));
+
+            TextMeshProUGUI pauseTitle = Text(pauseCard.transform, "PauseTitle", "PAUSED", 84, TextAlignmentOptions.Center);
+            pauseTitle.fontStyle = FontStyles.Bold;
+            pauseTitle.color = gold;
+            pauseTitle.characterSpacing = 8f;
+            Anchor(pauseTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -90f), new Vector2(680f, 110f));
+
+            Button resumeUiButton = UiButton(pauseCard.transform, "ResumeButton", "RESUME", 60, new Color(1f, 0.6f, 0.05f, 1f), rounded,
+                new Vector2(0.5f, 0f), new Vector2(0f, 250f), new Vector2(560f, 150f));
+            resumeUiButton.gameObject.AddComponent<ResumeButton>();
+
+            Button pauseMenuUiButton = UiButton(pauseCard.transform, "PauseMenuButton", "MENU", 50, new Color(0.25f, 0.28f, 0.35f, 1f), rounded,
+                new Vector2(0.5f, 0f), new Vector2(0f, 80f), new Vector2(560f, 115f));
+            pauseMenuUiButton.gameObject.AddComponent<MenuButton>();
 
             GameObject gameOverPanel = Panel(canvasObject.transform, "GameOverPanel", new Color(0f, 0f, 0f, 0.8f));
             Anchor(gameOverPanel.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
@@ -4092,6 +6588,8 @@ namespace JoburgRunner.Editor
                 LoadHiggsfieldSprite("PU_TaxiBoost") ?? RenderPrefabIcon("Assets/Prefabs/PowerUpDroneBoost.prefab", "IconDroneBoost", new Vector3(-35f, 30f, 0f)),
                 LoadHiggsfieldSprite("PU_Multiplier2x") ?? RenderPrefabIcon("Assets/Prefabs/PowerUpUbuntuMultiplier.prefab", "IconUbuntuMultiplier", pickupEuler),
                 LoadHiggsfieldSprite("PU_Shield") ?? RenderPrefabIcon("Assets/Prefabs/PowerUpHoverboard.prefab", "IconHoverboard", new Vector3(-28f, 24f, 0f)),
+                LoadHiggsfieldSprite("PU_DoubleCoins") ?? RenderPrefabIcon("Assets/Prefabs/PowerUpDoubleCoins.prefab", "IconDoubleCoins", new Vector3(0f, 25f, 0f)),
+                ubuntuIconSprite ?? RenderPrefabIcon(UbuntuPulsePrefabPath, "IconUbuntuPulse", new Vector3(-16f, 28f, 0f)),
             };
             Sprite r5Icon = LoadHiggsfieldSprite("PU_Coin") ?? RenderPrefabIcon(RareCoinPrefabPath, "IconRareCoinR5", new Vector3(0f, 25f, 0f));
 
@@ -4110,14 +6608,16 @@ namespace JoburgRunner.Editor
             menuSubtitle.characterSpacing = 6f;
             Anchor(menuSubtitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -440f), new Vector2(900f, 60f));
 
-            // Showcase strip: the five power-ups plus the rare R5 coin.
-            Sprite[] showcase = { pickupIcons[0], pickupIcons[1], pickupIcons[2], pickupIcons[3], pickupIcons[4], r5Icon };
+            // Showcase strip: all seven power-ups plus the rare R5 coin. Eight
+            // chips need tighter spacing than the original six-plus-one to
+            // stay within the 1080-wide canvas.
+            Sprite[] showcase = { pickupIcons[0], pickupIcons[1], pickupIcons[2], pickupIcons[3], pickupIcons[4], pickupIcons[5], pickupIcons[6], r5Icon };
             for (int i = 0; i < showcase.Length; i++)
             {
                 GameObject chip = RoundedPanel(menuPanel.transform, $"ShowcaseChip{i}", rowDark, rounded, 0.25f);
                 Anchor(chip.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                    new Vector2((i - (showcase.Length - 1) * 0.5f) * 150f, -590f), new Vector2(136f, 136f));
-                IconImage(chip.transform, "Icon", showcase[i], new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(120f, 120f));
+                    new Vector2((i - (showcase.Length - 1) * 0.5f) * 130f, -590f), new Vector2(118f, 118f));
+                IconImage(chip.transform, "Icon", showcase[i], new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(104f, 104f));
             }
 
             Button playButton = UiButton(menuPanel.transform, "PlayButton", "PLAY", 74, buttonOrange, rounded,
@@ -4126,6 +6626,14 @@ namespace JoburgRunner.Editor
                 new Vector2(0.5f, 0.5f), new Vector2(0f, -260f), new Vector2(640f, 140f));
             Button collectablesButton = UiButton(menuPanel.transform, "CollectablesButton", "COLLECTABLES", 52, rowDark, rounded,
                 new Vector2(0.5f, 0.5f), new Vector2(0f, -430f), new Vector2(640f, 140f));
+            Button meButton = UiButton(menuPanel.transform, "MeButton", "ME", 52, rowDark, rounded,
+                new Vector2(0.5f, 0.5f), new Vector2(0f, -600f), new Vector2(640f, 140f));
+            Button boardsButton = UiButton(menuPanel.transform, "BoardsButton", "BOARDS", 52, rowDark, rounded,
+                new Vector2(0.5f, 0.5f), new Vector2(0f, -770f), new Vector2(640f, 140f));
+            Button missionsButton = UiButton(menuPanel.transform, "MissionsButton", "MISSIONS", 52, rowDark, rounded,
+                new Vector2(0.5f, 0.5f), new Vector2(0f, -935f), new Vector2(640f, 140f));
+            Button soundButton = UiButton(menuPanel.transform, "SoundButton", "SOUND: ON", 44, rowDark, rounded,
+                new Vector2(0.5f, 0.5f), new Vector2(0f, -1090f), new Vector2(640f, 110f));
 
             // ---------------- Store ----------------
             GameObject storePanel = Panel(canvasObject.transform, "StorePanel", panelDark);
@@ -4147,6 +6655,8 @@ namespace JoburgRunner.Editor
                 PowerUpType.DroneBoost,
                 PowerUpType.UbuntuMultiplier,
                 PowerUpType.Hoverboard,
+                PowerUpType.DoubleCoins,
+                PowerUpType.UbuntuPulse,
             };
 
             var storeItemLabels = new TextMeshProUGUI[storeOrder.Length];
@@ -4155,7 +6665,7 @@ namespace JoburgRunner.Editor
             for (int i = 0; i < storeOrder.Length; i++)
             {
                 GameObject row = RoundedPanel(storePanel.transform, $"StoreRow{i}", rowDark, rounded, 0.25f);
-                Anchor(row.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -330f - i * 185f), new Vector2(960f, 165f));
+                Anchor(row.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -330f - i * 170f), new Vector2(960f, 165f));
 
                 IconImage(row.transform, "ItemIcon", pickupIcons[i], new Vector2(0f, 0.5f), new Vector2(24f, 0f), new Vector2(132f, 132f));
 
@@ -4178,12 +6688,14 @@ namespace JoburgRunner.Editor
             TextMeshProUGUI specialsHeader = Text(storePanel.transform, "SpecialsHeader", "SPECIALS · <color=#FFC845>R5 COINS</color>", 40, TextAlignmentOptions.Center);
             specialsHeader.fontStyle = FontStyles.Bold;
             specialsHeader.characterSpacing = 4f;
-            Anchor(specialsHeader.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -1280f), new Vector2(700f, 50f));
+            // Shifted down one row-height (170) from the original 6-row layout
+            // to make room for the 7th store row (Ubuntu Pulse).
+            Anchor(specialsHeader.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -1500f), new Vector2(700f, 50f));
 
-            string[] specialNames = { "Head Start", "Shield Start" };
-            string[] specialDescriptions = { "Begin your next run flying the Drone", "Begin your next run with a Hoverboard shield" };
-            int[] specialCosts = { 1, 2 };
-            Sprite[] specialIcons = { pickupIcons[2], pickupIcons[4] };
+            string[] specialNames = { "Head Start", "Shield Start", "Pulse Start" };
+            string[] specialDescriptions = { "Begin your next run flying the Drone", "Begin your next run with a Hoverboard shield", "Begin your next run with Ubuntu Pulse active" };
+            int[] specialCosts = { 1, 2, 3 };
+            Sprite[] specialIcons = { pickupIcons[2], pickupIcons[4], pickupIcons[6] };
 
             var specialItemLabels = new TextMeshProUGUI[specialNames.Length];
             var specialBuyButtons = new Button[specialNames.Length];
@@ -4191,7 +6703,7 @@ namespace JoburgRunner.Editor
             for (int i = 0; i < specialNames.Length; i++)
             {
                 GameObject row = RoundedPanel(storePanel.transform, $"SpecialRow{i}", rowDark, rounded, 0.25f);
-                Anchor(row.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -1355f - i * 185f), new Vector2(960f, 165f));
+                Anchor(row.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -1590f - i * 168f), new Vector2(960f, 160f));
 
                 IconImage(row.transform, "ItemIcon", specialIcons[i], new Vector2(0f, 0.5f), new Vector2(24f, 0f), new Vector2(132f, 132f));
 
@@ -4213,7 +6725,7 @@ namespace JoburgRunner.Editor
             }
 
             Button storeBackButton = UiButton(storePanel.transform, "StoreBackButton", "BACK", 48, buttonGrey, rounded,
-                new Vector2(0.5f, 0f), new Vector2(0f, 80f), new Vector2(400f, 120f));
+                new Vector2(0.5f, 0f), new Vector2(0f, 65f), new Vector2(400f, 110f));
 
             // ---------------- Collectables ----------------
             GameObject collectablesPanel = Panel(canvasObject.transform, "CollectablesPanel", panelDark);
@@ -4242,15 +6754,199 @@ namespace JoburgRunner.Editor
             Button collectablesBackButton = UiButton(collectablesPanel.transform, "CollectablesBackButton", "BACK", 48, buttonGrey, rounded,
                 new Vector2(0.5f, 0f), new Vector2(0f, 80f), new Vector2(400f, 120f));
 
+            // ---------------- Me (character select) ----------------
+            GameObject mePanel = Panel(canvasObject.transform, "MePanel", panelDark);
+            Anchor(mePanel.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            TextMeshProUGUI meTitle = Text(mePanel.transform, "MeTitle", "ME", 84, TextAlignmentOptions.Center);
+            meTitle.fontStyle = FontStyles.Bold;
+            meTitle.color = gold;
+            meTitle.characterSpacing = 8f;
+            Anchor(meTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -110f), new Vector2(600f, 110f));
+
+            TextMeshProUGUI meSubtitle = Text(mePanel.transform, "MeSubtitle", "CHOOSE YOUR RUNNER", 40, TextAlignmentOptions.Center);
+            meSubtitle.color = new Color(0.85f, 0.87f, 0.92f);
+            meSubtitle.characterSpacing = 4f;
+            Anchor(meSubtitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -232f), new Vector2(700f, 60f));
+
+            // One card per character visual actually built on the player.
+            CharacterSelector characterSelector = Object.FindAnyObjectByType<CharacterSelector>();
+            string[] characterNames = { "Mgijimi", "Jabu" };
+            string[] characterTaglines =
+            {
+                "The original Jozi street runner",
+                "Braamfontein tech speedster",
+            };
+            // Portraits are rendered from the scene visuals — the raw FBX assets
+            // have Meshy's blank materials; only the built visuals carry the real
+            // textures. Non-default visuals are saved inactive, so search the
+            // player hierarchy including inactive objects.
+            var characterIconSources = new GameObject[2];
+            PlayerController playerForIcons = Object.FindAnyObjectByType<PlayerController>();
+            if (playerForIcons != null)
+            {
+                foreach (Transform child in playerForIcons.GetComponentsInChildren<Transform>(true))
+                {
+                    if (child.name == "RunnerVisual_Fbx")
+                    {
+                        characterIconSources[0] = child.gameObject;
+                    }
+                    else if (child.name == "RunnerVisual_Char1")
+                    {
+                        characterIconSources[1] = child.gameObject;
+                    }
+                }
+            }
+            int characterCount = Mathf.Clamp(
+                characterSelector != null ? characterSelector.CharacterCount : 1, 1, characterNames.Length);
+
+            var characterSelectButtons = new Button[characterCount];
+            var characterSelectLabels = new TextMeshProUGUI[characterCount];
+            for (int i = 0; i < characterCount; i++)
+            {
+                GameObject row = RoundedPanel(mePanel.transform, $"CharacterRow{i}", rowDark, rounded, 0.25f);
+                Anchor(row.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                    new Vector2(0f, -450f - i * 320f), new Vector2(960f, 300f));
+
+                Sprite portrait = characterIconSources[i] != null
+                    ? RenderInstanceIcon(Object.Instantiate(characterIconSources[i]), $"IconRunner{i}", new Vector3(0f, 180f, 0f))
+                    : null;
+                IconImage(row.transform, "Portrait", portrait, new Vector2(0f, 0.5f), new Vector2(28f, 0f), new Vector2(244f, 244f));
+
+                TextMeshProUGUI cardLabel = Text(row.transform, "CardLabel",
+                    $"<b>{characterNames[i].ToUpperInvariant()}</b>\n<size=32><color=#AEB4C2>{characterTaglines[i]}</color></size>",
+                    46, TextAlignmentOptions.Left);
+                Anchor(cardLabel.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+                cardLabel.rectTransform.offsetMin = new Vector2(310f, 0f);
+                cardLabel.rectTransform.offsetMax = new Vector2(-270f, 0f);
+
+                Button selectButton = UiButton(row.transform, "SelectButton", "SELECT", 40, buttonOrange, rounded,
+                    new Vector2(1f, 0.5f), new Vector2(-26f, 0f), new Vector2(210f, 112f));
+                characterSelectButtons[i] = selectButton;
+                characterSelectLabels[i] = selectButton.GetComponentInChildren<TextMeshProUGUI>();
+            }
+
+            Button meBackButton = UiButton(mePanel.transform, "MeBackButton", "BACK", 48, buttonGrey, rounded,
+                new Vector2(0.5f, 0f), new Vector2(0f, 80f), new Vector2(400f, 120f));
+
+            // ---------------- Boards (hoverboard boosters + skin select) ----------------
+            GameObject boardsPanel = Panel(canvasObject.transform, "BoardsPanel", panelDark);
+            Anchor(boardsPanel.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            TextMeshProUGUI boardsTitle = Text(boardsPanel.transform, "BoardsTitle", "BOARDS", 84, TextAlignmentOptions.Center);
+            boardsTitle.fontStyle = FontStyles.Bold;
+            boardsTitle.color = gold;
+            boardsTitle.characterSpacing = 8f;
+            Anchor(boardsTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -110f), new Vector2(600f, 110f));
+
+            TextMeshProUGUI boardsSubtitle = Text(boardsPanel.transform, "BoardsSubtitle", "DOUBLE-TAP DURING A RUN TO RIDE", 40, TextAlignmentOptions.Center);
+            boardsSubtitle.color = new Color(0.85f, 0.87f, 0.92f);
+            boardsSubtitle.characterSpacing = 4f;
+            Anchor(boardsSubtitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -232f), new Vector2(900f, 60f));
+
+            // Booster wallet row: owned count plus the coin-priced BUY button.
+            GameObject boosterRow = RoundedPanel(boardsPanel.transform, "BoosterRow", rowDark, rounded, 0.25f);
+            Anchor(boosterRow.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -350f), new Vector2(960f, 165f));
+
+            IconImage(boosterRow.transform, "ItemIcon", pickupIcons[4], new Vector2(0f, 0.5f), new Vector2(24f, 0f), new Vector2(132f, 132f));
+
+            TextMeshProUGUI boardsOwnedLabel = Text(boosterRow.transform, "OwnedLabel",
+                "<b>Hoverboard Boosters</b>  <color=#FFC845>Owned x0</color>\n" +
+                "<size=30><color=#AEB4C2>Double-tap during a run to ride · absorbs one crash</color></size>",
+                40, TextAlignmentOptions.Left);
+            Anchor(boardsOwnedLabel.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            boardsOwnedLabel.rectTransform.offsetMin = new Vector2(180f, 0f);
+            boardsOwnedLabel.rectTransform.offsetMax = new Vector2(-270f, 0f);
+
+            Button boardBuyButton = UiButton(boosterRow.transform, "BuyButton", $"{MenuController.BoardBoosterCost}", 46, buttonOrange, rounded,
+                new Vector2(1f, 0.5f), new Vector2(-26f, 0f), new Vector2(210f, 112f));
+
+            // One selectable card per board built on the player's mount, in the
+            // same index order as BoardNames. Portraits render from the scene
+            // visual (the raw Meshy FBX would render untextured); the visuals
+            // are saved inactive, so search including inactive objects.
+            Transform boardsMount = null;
+            PlayerController playerForBoards = Object.FindAnyObjectByType<PlayerController>();
+            if (playerForBoards != null)
+            {
+                foreach (Transform child in playerForBoards.GetComponentsInChildren<Transform>(true))
+                {
+                    if (child.name == "HoverboardMount")
+                    {
+                        boardsMount = child;
+                        break;
+                    }
+                }
+            }
+
+            int boardCount = Mathf.Clamp(boardsMount != null ? boardsMount.childCount : 0, 0, BoardNames.Length);
+            var boardSelectButtons = new Button[boardCount];
+            var boardSelectLabels = new TextMeshProUGUI[boardCount];
+            for (int i = 0; i < boardCount; i++)
+            {
+                GameObject row = RoundedPanel(boardsPanel.transform, $"BoardRow{i}", rowDark, rounded, 0.25f);
+                Anchor(row.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                    new Vector2(0f, -580f - i * 320f), new Vector2(960f, 300f));
+
+                Sprite portrait = RenderInstanceIcon(
+                    Object.Instantiate(boardsMount.GetChild(i).gameObject), $"IconBoard{i}", new Vector3(25f, 40f, 0f));
+                IconImage(row.transform, "Portrait", portrait, new Vector2(0f, 0.5f), new Vector2(28f, 0f), new Vector2(244f, 244f));
+
+                TextMeshProUGUI cardLabel = Text(row.transform, "CardLabel",
+                    $"<b>{BoardNames[i].ToUpperInvariant()}</b>\n<size=32><color=#AEB4C2>{BoardTaglines[i]}</color></size>",
+                    46, TextAlignmentOptions.Left);
+                Anchor(cardLabel.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+                cardLabel.rectTransform.offsetMin = new Vector2(310f, 0f);
+                cardLabel.rectTransform.offsetMax = new Vector2(-270f, 0f);
+
+                Button selectButton = UiButton(row.transform, "SelectButton", "SELECT", 40, buttonOrange, rounded,
+                    new Vector2(1f, 0.5f), new Vector2(-26f, 0f), new Vector2(210f, 112f));
+                boardSelectButtons[i] = selectButton;
+                boardSelectLabels[i] = selectButton.GetComponentInChildren<TextMeshProUGUI>();
+            }
+
+            Button boardsBackButton = UiButton(boardsPanel.transform, "BoardsBackButton", "BACK", 48, buttonGrey, rounded,
+                new Vector2(0.5f, 0f), new Vector2(0f, 80f), new Vector2(400f, 120f));
+
+            // ---------------- Missions & daily rewards ----------------
+            GameObject missionsPanel = Panel(canvasObject.transform, "MissionsPanel", panelDark);
+            Anchor(missionsPanel.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            TextMeshProUGUI missionsTitle = Text(missionsPanel.transform, "MissionsTitle", "MISSIONS", 84, TextAlignmentOptions.Center);
+            missionsTitle.fontStyle = FontStyles.Bold;
+            missionsTitle.color = gold;
+            missionsTitle.characterSpacing = 8f;
+            Anchor(missionsTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -110f), new Vector2(700f, 110f));
+
+            // Daily-reward claim button up top (retention hook).
+            Button claimRewardButton = UiButton(missionsPanel.transform, "ClaimRewardButton", "DAILY REWARD", 44, buttonOrange, rounded,
+                new Vector2(0.5f, 1f), new Vector2(0f, -250f), new Vector2(820f, 120f));
+            TextMeshProUGUI claimRewardLabel = claimRewardButton.GetComponentInChildren<TextMeshProUGUI>();
+
+            GameObject missionsCard = RoundedPanel(missionsPanel.transform, "MissionsCard", rowDark, rounded, 0.3f);
+            Anchor(missionsCard.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -370f), new Vector2(920f, 900f));
+
+            TextMeshProUGUI missionsText = Text(missionsCard.transform, "MissionsText",
+                "<size=40><color=#AEB4C2>TODAY'S MISSIONS</color></size>", 40, TextAlignmentOptions.Top);
+            Anchor(missionsText.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            missionsText.rectTransform.offsetMin = new Vector2(48f, 40f);
+            missionsText.rectTransform.offsetMax = new Vector2(-48f, -40f);
+
+            Button missionsBackButton = UiButton(missionsPanel.transform, "MissionsBackButton", "BACK", 48, buttonGrey, rounded,
+                new Vector2(0.5f, 0f), new Vector2(0f, 80f), new Vector2(400f, 120f));
+
             // ---------------- Wiring ----------------
             GameManager gameManager = Object.FindAnyObjectByType<GameManager>();
             ScoreManager scoreManager = Object.FindAnyObjectByType<ScoreManager>();
             PowerUpManager powerUpManager = Object.FindAnyObjectByType<PowerUpManager>();
             SetField(gameManager, "gameOverPanel", gameOverPanel);
+            SetField(gameManager, "pausePanel", pausePanel);
             SetField(gameManager, "finalScoreText", finalScore);
             SetField(scoreManager, "scoreText", scoreText);
             SetField(scoreManager, "coinText", coinText);
             SetField(powerUpManager, "statusText", powerUpStatus);
+            SetField(powerUpManager, "coinAttractionClip", AssetDatabase.LoadAssetAtPath<AudioClip>(UbuntuPulseCoinAttractionClipPath));
+            SetField(ubuntuPulseUi, "powerUpManager", powerUpManager);
             SetField(restartButton, "gameManager", gameManager);
             SetField(menuButton, "gameManager", gameManager);
             SetField(continueButton, "gameManager", gameManager);
@@ -4264,11 +6960,30 @@ namespace JoburgRunner.Editor
             SetField(menuController, "menuPanel", menuPanel);
             SetField(menuController, "storePanel", storePanel);
             SetField(menuController, "collectablesPanel", collectablesPanel);
+            SetField(menuController, "mePanel", mePanel);
+            SetField(menuController, "boardsPanel", boardsPanel);
             SetField(menuController, "playButton", playButton);
             SetField(menuController, "storeButton", storeButton);
             SetField(menuController, "collectablesButton", collectablesButton);
+            SetField(menuController, "meButton", meButton);
+            SetField(menuController, "boardsButton", boardsButton);
+            SetField(menuController, "missionsButton", missionsButton);
+            SetField(menuController, "soundButton", soundButton);
             SetField(menuController, "storeBackButton", storeBackButton);
             SetField(menuController, "collectablesBackButton", collectablesBackButton);
+            SetField(menuController, "meBackButton", meBackButton);
+            SetField(menuController, "boardsBackButton", boardsBackButton);
+            SetField(menuController, "missionsBackButton", missionsBackButton);
+            SetField(menuController, "missionsPanel", missionsPanel);
+            SetField(menuController, "missionsText", missionsText);
+            SetField(menuController, "claimRewardButton", claimRewardButton);
+            SetField(menuController, "claimRewardLabel", claimRewardLabel);
+            SetField(menuController, "characterSelectButtons", characterSelectButtons);
+            SetField(menuController, "characterSelectLabels", characterSelectLabels);
+            SetField(menuController, "boardsOwnedText", boardsOwnedLabel);
+            SetField(menuController, "boardBuyButton", boardBuyButton);
+            SetField(menuController, "boardSelectButtons", boardSelectButtons);
+            SetField(menuController, "boardSelectLabels", boardSelectLabels);
             SetField(menuController, "powerUpManager", powerUpManager);
             SetField(menuController, "storeBalanceText", storeBalance);
             SetField(menuController, "storeItemLabels", storeItemLabels);
@@ -4280,9 +6995,13 @@ namespace JoburgRunner.Editor
             SetField(menuController, "collectablesText", collectablesText);
 
             gameOverPanel.SetActive(false);
+            pausePanel.SetActive(false);
             menuPanel.SetActive(false);
             storePanel.SetActive(false);
             collectablesPanel.SetActive(false);
+            mePanel.SetActive(false);
+            boardsPanel.SetActive(false);
+            missionsPanel.SetActive(false);
         }
 
         // Renders a prefab to a small icon texture on the UI's dark card
@@ -4296,11 +7015,24 @@ namespace JoburgRunner.Editor
                 return null;
             }
 
+            return RenderInstanceIcon((GameObject)PrefabUtility.InstantiatePrefab(prefab), iconName, modelEuler);
+        }
+
+        /// <summary>
+        /// Renders (and consumes) a staged instance to an icon sprite. Use with
+        /// a clone of a scene object when the raw asset would render untextured
+        /// — e.g. character FBXes, whose materials are only built on the scene
+        /// visual — otherwise prefer RenderPrefabIcon.
+        /// </summary>
+        static Sprite RenderInstanceIcon(GameObject instance, string iconName, Vector3 modelEuler)
+        {
             bool previousAsyncCompilation = EditorSettings.asyncShaderCompilation;
             EditorSettings.asyncShaderCompilation = false;
 
             // Stage the model far above the scene so nothing else is in frame.
-            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            // Clones of disabled scene objects (e.g. non-default characters)
+            // arrive inactive and would render an empty icon.
+            instance.SetActive(true);
             instance.transform.position = new Vector3(0f, 400f, 0f);
             instance.transform.rotation = Quaternion.Euler(modelEuler);
 

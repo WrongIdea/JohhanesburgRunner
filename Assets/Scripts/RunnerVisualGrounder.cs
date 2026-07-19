@@ -16,6 +16,14 @@ namespace JoburgRunner
         Renderer[] renderers;
         PlayerDeathVisual deathVisual;
 
+        /// <summary>
+        /// Extra height added to the grounding target so the runner can be
+        /// lifted off the road as one piece (used by HoverboardVisual so the
+        /// character rises with the board instead of the grounder yanking the
+        /// feet back down to street level every frame).
+        /// </summary>
+        public float RideLift { get; set; }
+
         void Awake()
         {
             if (visualRoot == null)
@@ -50,7 +58,7 @@ namespace JoburgRunner
                 bounds.Encapsulate(renderers[i].bounds);
             }
 
-            Vector3 worldCorrection = Vector3.up * (groundRoot.position.y - groundSink - bounds.min.y);
+            Vector3 worldCorrection = Vector3.up * (groundRoot.position.y - groundSink + RideLift - bounds.min.y);
             if (centerOnLane)
             {
                 worldCorrection.x = groundRoot.position.x - bounds.center.x;

@@ -101,6 +101,7 @@ GameObject:
   - component: {fileID: 714257991893626247}
   - component: {fileID: 6291357711458046958}
   - component: {fileID: 3395094180206079450}
+  - component: {fileID: 885418609011168235}
   m_Layer: 0
   m_Name: PotholeObstacle
   m_TagString: Untagged
@@ -157,3 +158,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0855007b60e194714b00a34d40c7b7d6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.RunnerObstacle
+--- !u!114 &885418609011168235
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4382846176813899990}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1720c1253540f4ff893e1441eb02f50d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.ObstacleDissolveEffect
+  dissolveSeconds: 0.4
+  dissolveTint: {r: 0.45, g: 0.85, b: 1, a: 1}
+  dissolveGlowIntensity: 2.2
+  particleCount: 36
+  dissolveEndScale: 0.05
+  dissolveParticlePrefab: {fileID: 0}

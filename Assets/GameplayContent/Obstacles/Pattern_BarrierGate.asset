@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c3f1ada8733646e8ac5094860cca2e2, type: 3}
+  m_Name: Pattern_BarrierGate
+  m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.Obstacles.ObstaclePattern
+  elements:
+  - relativeDistance: 0
+    laneMask: 3
+    requiredAction: 0
+    obstacle: {fileID: 11400000, guid: de33de5170d5246799690b0e5360ff5e, type: 2}
+    categoryHint: 6
+  - relativeDistance: 14
+    laneMask: 4
+    requiredAction: 0
+    obstacle: {fileID: 11400000, guid: 738497a0f21474a739b2c876e3e41e0c, type: 2}
+    categoryHint: 9
+  difficultyRating: 0.5
+  minSpawnSpeed: 0
+  minPlayerProgression: 200
+  spawnProbability: 1
+  allowedZones: 
+  length: 26

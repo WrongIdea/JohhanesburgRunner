@@ -191,6 +191,7 @@ GameObject:
   - component: {fileID: 4261781156314069617}
   - component: {fileID: 1901168933467034045}
   - component: {fileID: 7344326585922829024}
+  - component: {fileID: 1443702929112406080}
   m_Layer: 0
   m_Name: ConstructionBarrier
   m_TagString: Untagged
@@ -249,6 +250,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0855007b60e194714b00a34d40c7b7d6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.RunnerObstacle
+--- !u!114 &1443702929112406080
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4418984896703566704}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1720c1253540f4ff893e1441eb02f50d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.ObstacleDissolveEffect
+  dissolveSeconds: 0.4
+  dissolveTint: {r: 0.45, g: 0.85, b: 1, a: 1}
+  dissolveGlowIntensity: 2.2
+  particleCount: 36
+  dissolveEndScale: 0.05
+  dissolveParticlePrefab: {fileID: 0}
 --- !u!1 &9072393120950913638
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,0 +1,136 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 559930a7d0769441284f568f2aea0fa5, type: 3}
+  m_Name: Zone_JoburgCBD
+  m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.Environment.EnvironmentZoneProfile
+  displayName: Joburg CBD
+  zoneId: 0
+  palette:
+    buildingColors:
+    - {r: 0.6, g: 0.58, b: 0.52, a: 1}
+    - {r: 0.7, g: 0.45, b: 0.3, a: 1}
+    - {r: 0.45, g: 0.5, b: 0.55, a: 1}
+    accentColors:
+    - {r: 0.95, g: 0.62, b: 0.12, a: 1}
+    - {r: 0.15, g: 0.45, b: 0.3, a: 1}
+    skyTint: {r: 0.66, g: 0.72, b: 0.8, a: 1}
+    hazeColor: {r: 0.74, g: 0.72, b: 0.66, a: 1}
+    roadWearTint: {r: 0.85, g: 0.84, b: 0.82, a: 1}
+    weatherTint: {r: 1, g: 0.97, b: 0.9, a: 1}
+  lighting:
+    overrideLighting: 0
+    sunColor: {r: 1, g: 1, b: 1, a: 1}
+    sunIntensity: 1
+    ambientTint: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    enableFog: 0
+    fogColor: {r: 0.7, g: 0.76, b: 0.83, a: 1}
+    fogDensity: 0.008
+  audio:
+    ambienceClip: {fileID: 0}
+    ambienceVolume: 0.5
+    musicClip: {fileID: 0}
+    musicVolume: 0.45
+  difficulty:
+    forwardSpeedMultiplier: 1
+    easyWeightScale: 1
+    mediumWeightScale: 1.1
+    hardWeightScale: 1
+    specialWeightScale: 1
+  buildings:
+  - prefab: {fileID: 5564772546775276084, guid: 765e1904a718844fe8fe8dd63bf4470b,
+      type: 3}
+    weight: 2
+  - prefab: {fileID: 6200741502849740055, guid: d6a978def5ec54d629806e3b1caefac0,
+      type: 3}
+    weight: 2
+  - prefab: {fileID: 2741996407837217530, guid: 9f31763bb1ba0403fb1e0a5ef90cd996,
+      type: 3}
+    weight: 1
+  - prefab: {fileID: 1946422767217000551, guid: 65f71f24a7fd343018555825c9f322e6,
+      type: 3}
+    weight: 1.5
+  props:
+  - prefab: {fileID: 5978773766082716465, guid: f4c4ce0e250e7438bbf6a134fc8e82db,
+      type: 3}
+    weight: 2
+  - prefab: {fileID: 8949184704703428627, guid: 758bc907b17eb4e0a834e10e5be472ae,
+      type: 3}
+    weight: 1.5
+  - prefab: {fileID: 6452186604608012796, guid: 0b3bc98c3529e40189d38019c602b435,
+      type: 3}
+    weight: 1
+  - prefab: {fileID: 4914081872037105682, guid: 6fd69e186c59247cda35b0a8696242ca,
+      type: 3}
+    weight: 1
+  - prefab: {fileID: 3394768797001682201, guid: ff7f867950cf346da977fc3a98a16cf2,
+      type: 3}
+    weight: 0.7
+  - prefab: {fileID: 3859637334297559506, guid: eba8a58e9f4cb4806b8f174ed1d057d4,
+      type: 3}
+    weight: 0.6
+  obstacles: []
+  variation:
+    buildingColors:
+    - {r: 0.6, g: 0.58, b: 0.52, a: 1}
+    - {r: 0.7, g: 0.45, b: 0.3, a: 1}
+    - {r: 0.45, g: 0.5, b: 0.55, a: 1}
+    windowMaterials: []
+    wallMaterials: []
+    vehicleColors:
+    - {r: 0.85, g: 0.85, b: 0.85, a: 1}
+    - {r: 0.15, g: 0.3, b: 0.55, a: 1}
+    - {r: 0.7, g: 0.15, b: 0.15, a: 1}
+    - {r: 0.9, g: 0.8, b: 0.1, a: 1}
+    shopSigns:
+    - JOZI ELECTRONICS
+    - CBD CASH STORE
+    - MZANSI PHONES
+    - GOLDEN SPUR CAFE
+    - EGOLI FASHION
+    billboardTextures: []
+    graffitiDecals: []
+    treeSpacingRange: {x: 6, y: 12}
+    streetlightSpacingRange: {x: 12, y: 20}
+    roadWearRange: {x: 0, y: 0.4}
+    weatherTintRange:
+      serializedVersion: 2
+      key0: {r: 1, g: 1, b: 1, a: 1}
+      key1: {r: 1, g: 1, b: 1, a: 1}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
+    avoidRecentCount: 3
+  routeWeight: 1.5
+  minRunDistance: 0

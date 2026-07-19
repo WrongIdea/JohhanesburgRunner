@@ -37,6 +37,7 @@ namespace JoburgRunner
         int shownScore = -1;
         int shownMultiplier = -1;
         int shownCoins = -1;
+        int lastRaisedScore = -1;
 
         public float Score { get; private set; }
         public float Distance => initialised && player != null ? Mathf.Max(0f, player.position.z - startZ) : 0f;
@@ -44,6 +45,7 @@ namespace JoburgRunner
         public int RareCoins { get; private set; }
         public int Multiplier { get; private set; } = 1;
         public int HighScore => PlayerPrefs.GetInt(HighScoreKey, 0);
+        public static int BestScore => PlayerPrefs.GetInt(HighScoreKey, 0);
         public int TotalCoins => PlayerPrefs.GetInt(TotalCoinsKey, 0);
         public int TotalRareCoins => PlayerPrefs.GetInt(RareCoinsKey, 0);
 
@@ -58,6 +60,21 @@ namespace JoburgRunner
         {
             int balance = PlayerPrefs.GetInt(RareCoinsKey, 0);
             PlayerPrefs.SetInt(RareCoinsKey, Mathf.Max(0, balance - amount));
+            PlayerPrefs.Save();
+        }
+
+        /// <summary>Banks reward coins into the persistent total (missions, achievements, daily rewards).</summary>
+        public static void GrantCoins(int amount)
+        {
+            if (amount <= 0) return;
+            PlayerPrefs.SetInt(TotalCoinsKey, PlayerPrefs.GetInt(TotalCoinsKey, 0) + amount);
+            PlayerPrefs.Save();
+        }
+
+        public static void GrantRareCoins(int amount)
+        {
+            if (amount <= 0) return;
+            PlayerPrefs.SetInt(RareCoinsKey, PlayerPrefs.GetInt(RareCoinsKey, 0) + amount);
             PlayerPrefs.Save();
         }
 
@@ -89,11 +106,22 @@ namespace JoburgRunner
             int powerMultiplier = powerUpManager != null ? powerUpManager.ScoreMultiplier : 1;
             Score += delta * pointsPerMeter * Multiplier * powerMultiplier;
             UpdateHud();
+
+            GameEvents.RaiseDistanceChanged(Distance);
+            int scoreInt = Mathf.FloorToInt(Score);
+            if (scoreInt != lastRaisedScore)
+            {
+                lastRaisedScore = scoreInt;
+                GameEvents.RaiseScoreChanged(scoreInt);
+            }
         }
 
         public void AddCoins(int value, bool rare)
         {
-            Coins += value;
+            // Double Coins power-up: every pickup pays out twice. The rare R5
+            // collectable count stays honest — only its coin value doubles.
+            int coinMultiplier = powerUpManager != null ? powerUpManager.CoinMultiplier : 1;
+            Coins += value * coinMultiplier;
             if (rare)
             {
                 RareCoins++;

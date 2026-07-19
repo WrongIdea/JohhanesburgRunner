@@ -12,6 +12,9 @@ namespace JoburgRunner
         [SerializeField] float rotationSpeed = 90f;
         [SerializeField] float bobAmplitude = 0.18f;
         [SerializeField] float bobFrequency = 1.6f;
+        [SerializeField] AudioClip collectClip;
+        [SerializeField] float collectVolume = 0.8f;
+        [SerializeField] GameObject collectParticlePrefab;
 
         float baseY;
 
@@ -42,6 +45,16 @@ namespace JoburgRunner
             if (manager != null)
             {
                 manager.Activate(type);
+            }
+
+            if (collectParticlePrefab != null)
+            {
+                Instantiate(collectParticlePrefab, transform.position, Quaternion.identity);
+            }
+
+            if (collectClip != null)
+            {
+                AudioSource.PlayClipAtPoint(collectClip, transform.position, collectVolume);
             }
 
             // Deactivate instead of destroy: pickups live inside pooled

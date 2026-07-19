@@ -18,6 +18,8 @@ namespace JoburgRunner
             new[] { 5f, 8f, 11f, 15f, 19f, 24f, 29f, 34f, 39f, 45f },  // Drone Boost
             new[] { 8f, 12f, 16f, 21f, 26f, 31f, 35f, 39f, 42f, 45f }, // Ubuntu Multiplier
             new[] { 6f, 10f, 14f, 18f, 22f, 26f, 30f, 35f, 40f, 45f }, // Hoverboard
+            new[] { 8f, 12f, 16f, 20f, 24f, 28f, 32f, 36f, 40f, 45f }, // Double Coins
+            new[] { 8f, 12f, 16f, 20f, 24f, 28f, 32f, 36f, 40f, 45f }, // Ubuntu Pulse
         };
 
         static readonly int[][] UpgradeCosts =
@@ -27,6 +29,8 @@ namespace JoburgRunner
             new[] { 100, 250, 500, 900, 1500, 2300, 3300, 4600, 6100 },  // Drone Boost
             new[] { 150, 350, 700, 1200, 1900, 2800, 3900, 5200, 6800 }, // Ubuntu Multiplier
             new[] { 120, 300, 600, 1000, 1600, 2400, 3400, 4700, 6200 }, // Hoverboard
+            new[] { 150, 350, 700, 1200, 1900, 2800, 3900, 5200, 6800 }, // Double Coins
+            new[] { 200, 450, 850, 1400, 2200, 3200, 4500, 6200, 8200 }, // Ubuntu Pulse — the flagship combo item, priced above the rest
         };
 
         public static float Duration(PowerUpType type, int level)

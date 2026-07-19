@@ -6,7 +6,7 @@ namespace JoburgRunner
     {
         [SerializeField] Transform player;
         [SerializeField] GameObject roadSegmentPrefab;
-        [SerializeField] int visibleSegments = 6;
+        [SerializeField] int visibleSegments = 7;
         [SerializeField] float segmentLength = 30f;
         [SerializeField] float recycleBehindDistance = 35f;
         int nextDistrictIndex = 1;
@@ -26,7 +26,10 @@ namespace JoburgRunner
         {
             while (transform.childCount < visibleSegments)
             {
-                float zPosition = transform.childCount * segmentLength;
+                // Start one segment behind the origin: the menu and run cameras
+                // sit behind the player, and with no road there the bottom of
+                // tall screens shows the road's cross-section and skybox ground.
+                float zPosition = (transform.childCount - 1) * segmentLength;
                 GameObject segment = Instantiate(roadSegmentPrefab, new Vector3(0f, 0f, zPosition), Quaternion.identity, transform);
                 ApplyNextDistrict(segment);
             }
