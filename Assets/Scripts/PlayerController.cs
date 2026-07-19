@@ -421,13 +421,41 @@ namespace JoburgRunner
                 return;
             }
 
+            MovingObstacle taxi = obstacle.GetComponentInParent<MovingObstacle>();
+            bool frontTaxiImpact = taxi != null && IsFrontTaxiImpact(hit, obstacle.transform);
+
+            // Scraping a taxi's side never ends the run: the runner just bounces
+            // back into the neighbouring lane. A traffic officer still gives
+            // chase for flavour, but further scrapes only bounce again. A short
+            // grace window stops one sustained contact from bouncing every
+            // frame. Handled before the shields so a survivable scrape never
+            // wastes an Ubuntu Pulse or Hoverboard.
+            if (taxi != null && !frontTaxiImpact && IsSideTaxiBump(hit))
+            {
+                if (Time.time < sideBumpGraceUntil)
+                {
+                    return;
+                }
+
+                sideBumpGraceUntil = Time.time + 1.2f;
+                BounceOffTaxiSide(hit.normal.x);
+                if (officerChase != null && !officerChase.IsChasing)
+                {
+                    officerChase.StartChase();
+                }
+
+                return;
+            }
+
+            // Otherwise the crash is fatal unless a shield eats it. Ubuntu Pulse
+            // takes priority: while it is active the player cannot die — the hit
+            // simply switches the Pulse off (TryConsumeUbuntuShield ends it) and
+            // the obstacle is absorbed.
             if (powerUpManager != null && powerUpManager.TryConsumeUbuntuShield())
             {
-                // Ubuntu Pulse absorbs any crash, taxis included: small
-                // obstacles dissolve (pool-safe, never destroyed); taxis fall
-                // back to the same Destroy() the Hoverboard shield already
-                // uses for them, since a pooled MovingObstacle has no
-                // dissolve component to animate out cleanly.
+                // Small obstacles dissolve (pool-safe, never destroyed); taxis
+                // fall back to the same Destroy() the Hoverboard shield uses,
+                // since a pooled MovingObstacle has no dissolve component.
                 ubuntuPulseVisual?.PlayShieldImpact(hit.point);
                 AbsorbObstacle(obstacle);
                 return;
@@ -438,28 +466,6 @@ namespace JoburgRunner
                 // Hoverboard absorbs the crash; clear the obstacle and run on.
                 Destroy(obstacle.gameObject);
                 return;
-            }
-
-            MovingObstacle taxi = obstacle.GetComponentInParent<MovingObstacle>();
-            bool frontTaxiImpact = taxi != null && IsFrontTaxiImpact(hit, obstacle.transform);
-
-            // Scraping a taxi's side is survivable once: the runner bounces
-            // back into the neighbouring lane and a traffic officer gives
-            // chase. A second scrape while he is still chasing ends the run.
-            if (taxi != null && !frontTaxiImpact && IsSideTaxiBump(hit) && officerChase != null)
-            {
-                if (Time.time < sideBumpGraceUntil)
-                {
-                    return;
-                }
-
-                if (!officerChase.IsChasing)
-                {
-                    sideBumpGraceUntil = Time.time + 1.2f;
-                    BounceOffTaxiSide(hit.normal.x);
-                    officerChase.StartChase();
-                    return;
-                }
             }
 
             if (frontTaxiImpact)

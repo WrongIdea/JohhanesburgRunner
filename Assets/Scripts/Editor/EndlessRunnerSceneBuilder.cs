@@ -40,7 +40,7 @@ namespace JoburgRunner.Editor
         const string LaneSwitchClipPath = "Assets/Audio/LaneSwitch.mp3";
         // Ubuntu Pulse: the glowing collectible orb (Meshy static prop, has an
         // emission map) plus its own pickup/impact/power-down one-shots.
-        const string UbuntuOrbModelPath = "Assets/Meshy_AI_Create_a_game_ready_3_0711063038_texture_fbx/Meshy_AI_Create_a_game_ready_3_0711063038_texture.fbx";
+        const string UbuntuOrbModelPath = "Assets/Meshy_AI_Create_a_game_ready_3_0719103918_texture_fbx/Meshy_AI_Create_a_game_ready_3_0719103918_texture.fbx";
         const string UbuntuOrbMaterialPath = "Assets/Materials/UbuntuOrb_URP.mat";
         const string UbuntuPulsePickupClipPath = "Assets/Audio/UbuntuPulsePickup.wav";
         const string UbuntuPulseImpactClipPath = "Assets/Audio/UbuntuPulseImpact.wav";
@@ -3284,31 +3284,40 @@ namespace JoburgRunner.Editor
 
             string folder = Path.GetDirectoryName(UbuntuOrbModelPath).Replace("\\", "/");
             string baseName = Path.GetFileNameWithoutExtension(UbuntuOrbModelPath);
+            Texture2D albedo = AssetDatabase.LoadAssetAtPath<Texture2D>($"{folder}/{baseName}.png");
             Texture2D normal = LoadAsNormalMap($"{folder}/{baseName}_normal.png");
 
             Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
             Material material = new Material(shader) { name = "UbuntuOrb_URP" };
 
-            // The source asset's own base-colour texture is gold/tan with the
-            // "glow" living only in a couple of small gem clusters, and its
-            // emission map is essentially empty — multiplying the gold texture
-            // toward blue only muddies it toward olive, it can never turn
-            // blue. Skip the albedo texture entirely: a flat blue base plus a
-            // flat (textureless) emission tint reads as "glowing blue" across
-            // the whole mesh, and the normal map still gives it real surface
-            // relief under lighting.
+            // This orb's own base colour IS the wanted look: engraved gold and
+            // bronze rings around a bright blue crystal core. Show it directly
+            // (the earlier orb was flat gold and had to be faked blue). A
+            // base-colour emission map at modest strength self-lights the mesh
+            // so the gold, bronze and blue all read vividly in the flatly-lit,
+            // dark-background icon render — and glow a little in world — without
+            // depending on environment reflections, which render bare metal
+            // dark. Its emission map ships essentially empty, so drive emission
+            // from the base colour instead. The normal map keeps the engraving.
+            if (albedo != null)
+            {
+                material.SetTexture("_BaseMap", albedo);
+                material.SetTexture("_MainTex", albedo);
+                material.SetTexture("_EmissionMap", albedo);
+            }
+
             if (normal != null)
             {
                 material.SetTexture("_BumpMap", normal);
                 material.EnableKeyword("_NORMALMAP");
             }
 
-            material.color = new Color(0.4f, 0.75f, 1f, 1f);
+            material.color = Color.white;
             material.EnableKeyword("_EMISSION");
-            material.SetColor("_EmissionColor", new Color(0.35f, 0.8f, 1f) * 1.6f);
+            material.SetColor("_EmissionColor", Color.white * 0.45f);
             material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
-            material.SetFloat("_Smoothness", 0.65f);
-            material.SetFloat("_Metallic", 0.2f);
+            material.SetFloat("_Smoothness", 0.55f);
+            material.SetFloat("_Metallic", 0.35f);
 
             AssetDatabase.CreateAsset(material, UbuntuOrbMaterialPath);
             return material;
