@@ -3,26 +3,26 @@ using UnityEngine;
 namespace JoburgRunner
 {
     /// <summary>
-    /// Cosmetic flying pose for the Drone Boost. While the drone is active the
-    /// animator is frozen on a mid-jump frame and the character is pitched prone
-    /// so he reads as flying. A horizontal facing offset can flip the character
-    /// back-to-front without rotating the Player root.
+    /// Flying visual for the Drone Boost. While the drone is active the animator
+    /// plays the looping Falling clip and the body is pitched forward into a
+    /// dive so the clip reads as falling/soaring through the air rather than
+    /// walking upright; a banking yaw leans him into lateral swipes.
     /// </summary>
     public class DroneFlightVisual : MonoBehaviour
     {
         [SerializeField] PowerUpManager powerUpManager;
         [SerializeField] Transform flightPivot;
 
-        [Tooltip("Forward pitch while flying; 90 would be perfectly flat.")]
-        [SerializeField] float proneDegrees = 78f;
+        [Tooltip("Forward dive pitch while flying. The Falling clip alone looks like walking when upright (0); ~45 tips it into a convincing forward fall.")]
+        [SerializeField] float proneDegrees = 45f;
 
         [Tooltip("Horizontal facing correction while flying. Use 0 to face oncoming taxis; use 180 if the character faces away.")]
         [SerializeField] float horizontalFacingOffset = 0f;
 
         [SerializeField] float blendSeconds = 0.35f;
 
-        [Tooltip("Normalized time into the jump clip whose frame is held as the flying pose.")]
-        [SerializeField] float flightPoseFrame = 0.4f;
+        [Tooltip("Animator state played (looping) while the drone carries the runner.")]
+        [SerializeField] string flightStateName = "Fall";
 
         [Tooltip("Yaw per unit of lateral speed; face swings away from the swipe direction.")]
         [SerializeField] float yawDegreesPerLateralMeterPerSecond = 3.2f;
@@ -62,13 +62,18 @@ namespace JoburgRunner
                 {
                     if (flying)
                     {
-                        animator.Play("Jump", 0, flightPoseFrame);
-                        animator.Update(0f);
-                        animator.speed = 0f;
+                        // Play the looping Falling clip at full speed so the
+                        // runner actually animates in the air (the old flight
+                        // pose froze a jump frame).
+                        animator.speed = 1f;
+                        animator.Play(flightStateName, 0, 0f);
                     }
                     else
                     {
+                        // Hand control back to locomotion; the Run→Idle
+                        // transition settles it if the run has stopped.
                         animator.speed = 1f;
+                        animator.Play("Run", 0, 0f);
                     }
                 }
             }

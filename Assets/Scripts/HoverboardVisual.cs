@@ -19,17 +19,20 @@ namespace JoburgRunner
         [SerializeField] GameObject[] boardVisuals;
         [Tooltip("Must match RunnerVisualGrounder.groundSink so the board's top lines up with the planted feet.")]
         [SerializeField] float groundSink = 0.35f;
+        [Tooltip("How far the feet sink into the deck so the shoes plant on the riding surface instead of floating on the raised chrome rim (the deck's bounding-box top).")]
+        [SerializeField] float footPlant = 0.16f;
         [Tooltip("How far the runner-plus-board floats above the road while riding.")]
         [SerializeField] float rideHeight = 0.5f;
         [SerializeField] float blendSeconds = 0.25f;
         [SerializeField] float bobAmplitude = 0.05f;
         [SerializeField] float bobFrequency = 1.4f;
-        [Tooltip("Run-clip frame frozen as the standing-on-the-board pose.")]
-        [SerializeField] float standPoseFrame = 0.02f;
+        [Tooltip("Normalized time into the Idle clip frozen as the standing-on-the-board pose (0 = the upright rest stance).")]
+        [SerializeField] float standPoseFrame = 0f;
 
         float blend;
         bool wasRiding;
         GameObject activeBoard;
+        float activeBoardTop;
 
         RunnerVisualGrounder grounder;
         Animator animator;
@@ -58,6 +61,7 @@ namespace JoburgRunner
                 {
                     activeBoard.SetActive(false);
                     activeBoard = null;
+                    activeBoardTop = 0f;
                 }
 
                 if (grounder != null)
@@ -88,7 +92,9 @@ namespace JoburgRunner
 
             if (boardMount != null)
             {
-                boardMount.localPosition = new Vector3(0f, lift - groundSink, boardMount.localPosition.z);
+                boardMount.localPosition = new Vector3(0f,
+                    lift - groundSink - activeBoardTop + footPlant,
+                    boardMount.localPosition.z);
             }
         }
 
@@ -106,18 +112,43 @@ namespace JoburgRunner
                 if (activeBoard != null)
                 {
                     activeBoard.SetActive(true);
+                    activeBoardTop = MeasureBoardTop(activeBoard);
                 }
             }
 
-            // Freeze the runner on a near-upright run frame so it stands still
-            // on the board instead of pumping its legs (same freeze trick the
-            // drone uses for its flying pose).
+            // Freeze the runner on its Idle stance so it stands upright on the
+            // board instead of pumping its legs (same freeze trick the drone
+            // uses for its flying pose, but the idle reads as "riding" rather
+            // than "running in place").
             if (animator != null)
             {
-                animator.Play("Run", 0, standPoseFrame);
+                animator.Play("Idle", 0, standPoseFrame);
                 animator.Update(0f);
                 animator.speed = 0f;
             }
+        }
+
+        float MeasureBoardTop(GameObject board)
+        {
+            if (boardMount == null)
+            {
+                return 0f;
+            }
+
+            Renderer[] renderers = board.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0)
+            {
+                return 0f;
+            }
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++)
+            {
+                bounds.Encapsulate(renderers[i].bounds);
+            }
+
+            return boardMount.InverseTransformPoint(
+                new Vector3(bounds.center.x, bounds.max.y, bounds.center.z)).y;
         }
 
         void EndRide()
@@ -150,6 +181,8 @@ namespace JoburgRunner
                 activeBoard.SetActive(false);
                 activeBoard = null;
             }
+
+            activeBoardTop = 0f;
 
             blend = 0f;
             wasRiding = false;

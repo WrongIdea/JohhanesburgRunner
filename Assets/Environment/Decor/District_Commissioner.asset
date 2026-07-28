@@ -1,0 +1,77 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d97dafc3c22304e46b87c1f797558f52, type: 3}
+  m_Name: District_Commissioner
+  m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.Environment.Decor.DistrictDecorProfile
+  districtName: Commissioner Street
+  rules:
+  - socketType: 0
+    spawnProbability: 0.7
+    maxCountPerSegment: 3
+    minSpacing: 12
+    maxSpacing: 30
+    allowedPrefabs:
+    - {fileID: 1805258652435262161, guid: dcd06803b70cb48788bd2cb98b957b28, type: 3}
+    - {fileID: 8137604048660939268, guid: cb0ddf0ad15e44a8d8c5c467306cf68e, type: 3}
+    allowConsecutiveRepetition: 0
+    scaleRange: {x: 0.9, y: 1.15}
+    yawJitterRange: {x: 0, y: 360}
+    positionJitter: {x: 0.5, y: 2}
+    sidewalkOffset: 0.2
+    tintVariation: 0.15
+    requiresIntersection: 0
+    collisionRadius: 1.6
+  - socketType: 1
+    spawnProbability: 0.8
+    maxCountPerSegment: 2
+    minSpacing: 12
+    maxSpacing: 30
+    allowedPrefabs:
+    - {fileID: 7005477920021505675, guid: 6beac78a71374430f91ca06d4a63161c, type: 3}
+    allowConsecutiveRepetition: 0
+    scaleRange: {x: 1, y: 1.05}
+    yawJitterRange: {x: 0, y: 0}
+    positionJitter: {x: 0, y: 0.5}
+    sidewalkOffset: 0
+    tintVariation: 0
+    requiresIntersection: 0
+    collisionRadius: 0.8
+  - socketType: 5
+    spawnProbability: 0.4
+    maxCountPerSegment: 1
+    minSpacing: 30
+    maxSpacing: 30
+    allowedPrefabs:
+    - {fileID: 6166961827689953787, guid: 12390089cbc934685a31ae9dcba53c3c, type: 3}
+    allowConsecutiveRepetition: 0
+    scaleRange: {x: 1, y: 1.1}
+    yawJitterRange: {x: 0, y: 0}
+    positionJitter: {x: 0, y: 1}
+    sidewalkOffset: 0
+    tintVariation: 0
+    requiresIntersection: 0
+    collisionRadius: 1.6
+  - socketType: 6
+    spawnProbability: 0.3
+    maxCountPerSegment: 1
+    minSpacing: 30
+    maxSpacing: 30
+    allowedPrefabs:
+    - {fileID: 6091276841563584042, guid: 5fb93354f46d84c29a7fb9b1f9b2c462, type: 3}
+    allowConsecutiveRepetition: 0
+    scaleRange: {x: 1, y: 1}
+    yawJitterRange: {x: 0, y: 0}
+    positionJitter: {x: 0, y: 0}
+    sidewalkOffset: 0
+    tintVariation: 0
+    requiresIntersection: 0
+    collisionRadius: 2.5

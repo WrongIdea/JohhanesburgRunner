@@ -1,0 +1,92 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d97dafc3c22304e46b87c1f797558f52, type: 3}
+  m_Name: District_Park
+  m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.Environment.Decor.DistrictDecorProfile
+  districtName: Park District
+  rules:
+  - socketType: 0
+    spawnProbability: 0.9
+    maxCountPerSegment: 4
+    minSpacing: 10
+    maxSpacing: 30
+    allowedPrefabs:
+    - {fileID: 1805258652435262161, guid: dcd06803b70cb48788bd2cb98b957b28, type: 3}
+    - {fileID: 8137604048660939268, guid: cb0ddf0ad15e44a8d8c5c467306cf68e, type: 3}
+    allowConsecutiveRepetition: 0
+    scaleRange: {x: 0.9, y: 1.15}
+    yawJitterRange: {x: 0, y: 360}
+    positionJitter: {x: 0.6, y: 2}
+    sidewalkOffset: 0.3
+    tintVariation: 0.15
+    requiresIntersection: 0
+    collisionRadius: 1.6
+  - socketType: 2
+    spawnProbability: 0.6
+    maxCountPerSegment: 2
+    minSpacing: 12
+    maxSpacing: 30
+    allowedPrefabs:
+    - {fileID: 6516367699630537901, guid: 9bf1139fbb83d4efa903a53ef5b8e9fc, type: 3}
+    allowConsecutiveRepetition: 0
+    scaleRange: {x: 1, y: 1}
+    yawJitterRange: {x: -8, y: 8}
+    positionJitter: {x: 0.2, y: 1}
+    sidewalkOffset: 0
+    tintVariation: 0
+    requiresIntersection: 0
+    collisionRadius: 1.2
+  - socketType: 1
+    spawnProbability: 0.5
+    maxCountPerSegment: 1
+    minSpacing: 15
+    maxSpacing: 30
+    allowedPrefabs:
+    - {fileID: 7005477920021505675, guid: 6beac78a71374430f91ca06d4a63161c, type: 3}
+    allowConsecutiveRepetition: 0
+    scaleRange: {x: 1, y: 1.05}
+    yawJitterRange: {x: 0, y: 0}
+    positionJitter: {x: 0, y: 0.5}
+    sidewalkOffset: 0
+    tintVariation: 0
+    requiresIntersection: 0
+    collisionRadius: 0.8
+  - socketType: 3
+    spawnProbability: 0.4
+    maxCountPerSegment: 1
+    minSpacing: 15
+    maxSpacing: 30
+    allowedPrefabs:
+    - {fileID: 9202174539902639476, guid: 11afa52682c5147fd9455aa7f56c082a, type: 3}
+    allowConsecutiveRepetition: 0
+    scaleRange: {x: 1, y: 1}
+    yawJitterRange: {x: 0, y: 360}
+    positionJitter: {x: 0, y: 0.5}
+    sidewalkOffset: 0
+    tintVariation: 0
+    requiresIntersection: 0
+    collisionRadius: 0.6
+  - socketType: 6
+    spawnProbability: 0.2
+    maxCountPerSegment: 1
+    minSpacing: 30
+    maxSpacing: 30
+    allowedPrefabs:
+    - {fileID: 6091276841563584042, guid: 5fb93354f46d84c29a7fb9b1f9b2c462, type: 3}
+    allowConsecutiveRepetition: 0
+    scaleRange: {x: 1, y: 1}
+    yawJitterRange: {x: 0, y: 0}
+    positionJitter: {x: 0, y: 0}
+    sidewalkOffset: 0
+    tintVariation: 0
+    requiresIntersection: 0
+    collisionRadius: 2.5

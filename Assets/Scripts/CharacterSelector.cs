@@ -35,6 +35,11 @@ namespace JoburgRunner
             }
 
             int selected = Mathf.Clamp(SelectedIndex, 0, characterVisuals.Length - 1);
+            if (selected != SelectedIndex)
+            {
+                Select(selected);
+            }
+
             for (int i = 0; i < characterVisuals.Length; i++)
             {
                 if (characterVisuals[i] != null)

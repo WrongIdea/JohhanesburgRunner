@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 864a7cd41c5004b7d9d44bf8ed7005f7, type: 3}
+  m_Name: HeroBuildingSet
+  m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.Environment.Decor.HeroBuildingSet
+  entries:
+  - label: JHB_Building02
+    prefab: {fileID: 3747004421356106737, guid: 7172c26c790964ba2afd1a49d0ad52e8,
+      type: 3}
+    weight: 1
+    allowedSides: 3
+    localPositionOffset: {x: 0, y: 0, z: -2}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    facePlayerDegrees: 40
+    uniformScale: 1
+    footprintRadius: 10.5
+    minRepeatDistance: 0
+    enabled: 1
+  - label: JHB_SkylinePop_02
+    prefab: {fileID: 2772312973052275331, guid: de37e042d888d44e593f2d44332b685c,
+      type: 3}
+    weight: 1
+    allowedSides: 3
+    localPositionOffset: {x: 0, y: 0, z: -4}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    facePlayerDegrees: 40
+    uniformScale: 1
+    footprintRadius: 12.5
+    minRepeatDistance: 0
+    enabled: 1

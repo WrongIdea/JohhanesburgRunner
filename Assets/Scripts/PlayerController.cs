@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using JoburgRunner.Environment;
 
 namespace JoburgRunner
 {
@@ -342,7 +343,11 @@ namespace JoburgRunner
             }
 
             float distance = Mathf.Max(0f, transform.position.z - startZ);
-            CurrentForwardSpeed = Mathf.Min(maxForwardSpeed, forwardSpeed + distance / 100f * speedIncreasePer100Meters);
+            float zoneSpeed = EnvironmentDirector.Instance != null
+                ? EnvironmentDirector.Instance.ForwardSpeedMultiplier
+                : 1f;
+            CurrentForwardSpeed = Mathf.Min(maxForwardSpeed * zoneSpeed,
+                (forwardSpeed + distance / 100f * speedIncreasePer100Meters) * zoneSpeed);
             float targetX = laneXPositions[currentLane];
             // SmoothDamp eases in and out of the lane slide; the old
             // exponential lerp jumped ~20% of the gap on the first frame,
@@ -424,12 +429,16 @@ namespace JoburgRunner
             MovingObstacle taxi = obstacle.GetComponentInParent<MovingObstacle>();
             bool frontTaxiImpact = taxi != null && IsFrontTaxiImpact(hit, obstacle.transform);
 
-            // Scraping a taxi's side never ends the run: the runner just bounces
-            // back into the neighbouring lane. A traffic officer still gives
-            // chase for flavour, but further scrapes only bounce again. A short
-            // grace window stops one sustained contact from bouncing every
-            // frame. Handled before the shields so a survivable scrape never
-            // wastes an Ubuntu Pulse or Hoverboard.
+            // First scrape of a taxi's side never ends the run: the runner
+            // bounces into the neighbouring lane and a traffic officer is
+            // summoned to give chase. Scrape another taxi WHILE he is still
+            // chasing and he catches the runner — that hit is fatal, handled by
+            // falling through to the crash path below (which runs CatchPlayer()
+            // and ends the run). A short grace window stops one sustained
+            // contact from counting as several scrapes. The survivable first
+            // scrape is resolved before the shields so it never wastes an Ubuntu
+            // Pulse or Hoverboard; the fatal second scrape deliberately falls
+            // through so a shield still gets its chance to absorb it.
             if (taxi != null && !frontTaxiImpact && IsSideTaxiBump(hit))
             {
                 if (Time.time < sideBumpGraceUntil)
@@ -438,13 +447,15 @@ namespace JoburgRunner
                 }
 
                 sideBumpGraceUntil = Time.time + 1.2f;
-                BounceOffTaxiSide(hit.normal.x);
-                if (officerChase != null && !officerChase.IsChasing)
+
+                if (officerChase == null || !officerChase.IsChasing)
                 {
-                    officerChase.StartChase();
+                    BounceOffTaxiSide(hit.normal.x);
+                    officerChase?.StartChase();
+                    return;
                 }
 
-                return;
+                // Officer already chasing: fall through to the fatal path.
             }
 
             // Otherwise the crash is fatal unless a shield eats it. Ubuntu Pulse

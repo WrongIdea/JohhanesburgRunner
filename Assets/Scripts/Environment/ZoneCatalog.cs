@@ -37,6 +37,15 @@ namespace JoburgRunner.Environment
                 return null;
             }
 
+            int leg = Mathf.FloorToInt(runDistance / Mathf.Max(50f, metresPerZone));
+            foreach (EnvironmentZoneProfile zone in zones)
+            {
+                if (zone != null && zone.routeLeg == leg && runDistance >= zone.minRunDistance)
+                {
+                    return zone;
+                }
+            }
+
             // Only zones unlocked by distance are eligible; if none are yet,
             // fall back to the opening zone so a run always has a valid look.
             float totalWeight = 0f;

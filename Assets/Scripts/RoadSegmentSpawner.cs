@@ -1,7 +1,12 @@
 using UnityEngine;
+using JoburgRunner.Environment;
+using JoburgRunner.Environment.Decor;
 
 namespace JoburgRunner
 {
+    // Runs after the environment director's default-order Start so its pools exist,
+    // while still completing initial dressing before the first rendered frame.
+    [DefaultExecutionOrder(100)]
     public class RoadSegmentSpawner : MonoBehaviour
     {
         [SerializeField] Transform player;
@@ -11,6 +16,23 @@ namespace JoburgRunner
         [SerializeField] float recycleBehindDistance = 35f;
         int nextDistrictIndex = 1;
 
+        void Start()
+        {
+            if (player == null || roadSegmentPrefab == null)
+            {
+                return;
+            }
+
+            // Dress the baked ring before the first frame is rendered so pooled
+            // buildings never visibly activate around the player.
+            for (int i = 0; i < transform.childCount; i++)
+            {
+                ApplyNextDistrict(transform.GetChild(i).gameObject);
+            }
+
+            EnsureSegmentsAhead();
+        }
+
         void Update()
         {
             if (player == null || roadSegmentPrefab == null)
@@ -18,7 +40,6 @@ namespace JoburgRunner
                 return;
             }
 
-            EnsureSegmentsAhead();
             RecycleSegmentsBehind();
         }
 
@@ -49,8 +70,11 @@ namespace JoburgRunner
                 if (segment.position.z + segmentLength < player.position.z - recycleBehindDistance)
                 {
                     furthestZ += segmentLength;
-                    segment.position = new Vector3(0f, 0f, furthestZ);
+                    // Rent/activate and position pooled buildings while this complete
+                    // segment is still behind the camera. Only then teleport the fully
+                    // dressed tile ahead, preventing visible in-frustum spawn pops.
                     ApplyNextDistrict(segment.gameObject);
+                    segment.position = new Vector3(0f, 0f, furthestZ);
                 }
             }
         }
@@ -60,7 +84,19 @@ namespace JoburgRunner
             RoadSegmentVisuals visuals = segment.GetComponent<RoadSegmentVisuals>();
             if (visuals != null)
             {
-                visuals.SetDistrict(nextDistrictIndex);
+                int district = EnvironmentDirector.Instance != null &&
+                    EnvironmentDirector.Instance.ActiveZone != null &&
+                    EnvironmentDirector.Instance.ActiveZone.zoneId == EnvironmentZoneId.MandelaBridge
+                        ? 4
+                        : nextDistrictIndex;
+                visuals.SetDistrict(district);
+
+                // Decoration is data-driven and district-keyed; the director dresses
+                // this tile from its socket layout. Purely visual – it never touches
+                // obstacles, coins, power-ups, lanes or the road geometry.
+                EnvironmentDecorDirector.Instance?.DecorateSegment(
+                    segment.GetComponent<SegmentDecorator>(), district);
+
                 nextDistrictIndex++;
             }
         }

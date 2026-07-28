@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using JoburgRunner.Environment;
 
 namespace JoburgRunner
 {
@@ -173,7 +174,7 @@ namespace JoburgRunner
                 }
 
                 candidates.Add(prefab);
-                totalWeight += prefab.Weight;
+                totalWeight += prefab.Weight * ZoneWeight(prefab.Difficulty);
             }
 
             // Fall back to any reachable chunk, then to the first prefab
@@ -186,7 +187,7 @@ namespace JoburgRunner
                     if (prefab != lastPrefab && TrackChunk.Reachable(lastExitLanes, prefab.EntrySafeLanes))
                     {
                         candidates.Add(prefab);
-                        totalWeight += prefab.Weight;
+                        totalWeight += prefab.Weight * ZoneWeight(prefab.Difficulty);
                     }
                 }
             }
@@ -199,7 +200,7 @@ namespace JoburgRunner
             float pick = Random.value * totalWeight;
             foreach (TrackChunk prefab in candidates)
             {
-                pick -= prefab.Weight;
+                pick -= prefab.Weight * ZoneWeight(prefab.Difficulty);
                 if (pick <= 0f)
                 {
                     return prefab;
@@ -208,6 +209,11 @@ namespace JoburgRunner
 
             return candidates[candidates.Count - 1];
         }
+
+        static float ZoneWeight(ChunkDifficulty difficulty) =>
+            EnvironmentDirector.Instance != null
+                ? EnvironmentDirector.Instance.SpawnWeightScale(difficulty)
+                : 1f;
 
         float DistanceTravelled() => Mathf.Max(0f, player.position.z - difficultyStartZ);
 

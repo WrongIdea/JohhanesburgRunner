@@ -16,6 +16,7 @@ namespace JoburgRunner.Environment
         Sandton,
         TaxiRankDistrict,
         IndustrialDistrict,
+        MandelaBridge,
     }
 
     /// <summary>
@@ -63,6 +64,8 @@ namespace JoburgRunner.Environment
         [Min(0f)] public float routeWeight = 1f;
         [Tooltip("Metres the player must have run before this zone can appear (0 = from the start).")]
         [Min(0f)] public float minRunDistance = 0f;
+        [Tooltip("Optional fixed route leg (0 = first). Negative keeps weighted selection.")]
+        public int routeLeg = -1;
 
         /// <summary>Colours that dress buildings, roads, weather and haze.</summary>
         [System.Serializable]

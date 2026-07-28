@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using JoburgRunner;
+using JoburgRunner.Environment.Decor;
 using TMPro;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -54,8 +55,10 @@ namespace JoburgRunner.Editor
         // BoardNames/BoardTaglines and create one more visual in
         // CreateHoverboardVisuals — the Boards page and HoverboardVisual are
         // both length-generic.
-        const string HoverboardModelPath = "Assets/Meshy_AI_Extract_the_futuristi_0714130802_texture_fbx/Meshy_AI_Extract_the_futuristi_0714130802_texture.fbx";
+        const string HoverboardModelPath = "Assets/Meshy_AI_Extract_the_futuristi_0719124050_texture_fbx/Meshy_AI_Extract_the_futuristi_0719124050_texture.fbx";
         const string HoverboardMaterialPath = "Assets/Materials/HoverboardIon_URP.mat";
+        // Clockwise (viewed from above) yaw applied to the flat ride deck.
+        const float BoardYawDegrees = 90f;
         static readonly string[] BoardNames = { "Ion Cruiser" };
         static readonly string[] BoardTaglines = { "Anti-grav deck from the future of Jozi" };
         const string CoinTailsModelPath = "Assets/Models/R1Tails/R1Tails.fbx";
@@ -71,11 +74,38 @@ namespace JoburgRunner.Editor
         // Extra clips on the same rig: retargeted onto the runner's avatar.
         const string RunnerJumpModelPath = "Assets/Characters/Meshy_AI_Beaded_Warrior_biped/Meshy_AI_Beaded_Warrior_biped_Animation_Jump_Over_Obstacle_2_withSkin.fbx";
         const string RunnerAirRollModelPath = "Assets/Characters/Meshy_AI_Beaded_Warrior_biped/Meshy_AI_Beaded_Warrior_biped_Animation_Run_Jump_and_Roll_withSkin.fbx";
+        // Combined jump-into-roll mocap (same Beaded Warrior rig). One continuous
+        // take: anticipation → aerial flip → landing IMPACT → forward roll →
+        // recovery. Split into a standalone Jump clip (takeoff→landing) and a
+        // Roll clip (landing→recovery) plus the full clip for the AirRoll dodge.
+        // Blender authoring (meshy_jump_roll/create_animation.py): frames 18–83,
+        // markers TAKEOFF 21 / PEAK 36 / IMPACT 46 / ROLL 53 / RECOVERY 76.
+        const string RunnerJumpRollModelPath = "Assets/Characters/Meshy_AI_Beaded_Warrior_biped/jumpandroll.fbx";
+        const int JumpRollAuthorStartFrame = 18;
+        const int JumpRollAuthorEndFrame = 83;
+        const int JumpRollAuthorImpactFrame = 46; // jump ends / roll begins at the landing
         const string RunnerIdleModelPath = "Assets/Characters/Meshy_AI_Beaded_Warrior_biped/Meshy_AI_Beaded_Warrior_biped_Animation_Hip_Hop_Dance_2_withSkin.fbx";
-        // Second selectable character on the ME page ("Jabu"); Mgijimi above
-        // stays the default. Each character gets its own animator controller
-        // (same states, its own run clip) and its own PBR material asset.
-        const string SecondRunnerModelPath = "Assets/Meshy_AI_Here_s_a_version_opti_biped/Meshy_AI_Here_s_a_version_opti_biped_Animation_RunFast_withSkin.fbx";
+        // Falling loop held while the Drone Boost carries the runner through the air.
+        const string RunnerFallModelPath = "Assets/Animations/MainRunner@Falling.fbx";
+        // Horizontal superman-style fly loop played while the Drone Boost is active
+        // (same Beaded Warrior rig). The clip bakes the flat aerodynamic pose into
+        // the skeleton itself (Hips pitched 90°), so it renders horizontal on its
+        // own — the DroneFlightVisual prone pitch is zeroed for it. Authoring:
+        // meshy_jump_roll/create_fly_horizontal.py (frames 1–61 @30fps, loops).
+        const string RunnerFlyModelPath = "Assets/Characters/Meshy_AI_Beaded_Warrior_biped/Fly_Horizontal_Loop.fbx";
+        // Dedicated swipe-down forward-roll (same Beaded Warrior rig). Like the fly
+        // clip it authors the body rotation into the Hips (the humanoid root); the
+        // full 0→360° somersault must be baked into the pose or it vanishes under
+        // the runner's root-motion-off Animator. Rolls in place (forward travel
+        // left as discarded root motion — the world scrolls under it). Authoring:
+        // meshy_jump_roll/create_roll_forward.py (frames 1–30 @30fps, one-shot).
+        const string RunnerRollForwardModelPath = "Assets/Characters/Meshy_AI_Beaded_Warrior_biped/Roll_Forward.fbx";
+        // Second selectable character on the ME page ("Themba"); Mgijimi above
+        // stays the default. Its merged-animation FBX bundles the skin plus
+        // several takes (Running, run_fast, Walking); BuildRunnerVisual picks
+        // the run take and retargets the shared idle/jump/roll clips onto its
+        // humanoid avatar. It has its own animator controller and PBR material.
+        const string SecondRunnerModelPath = "Assets/Characters/Meshy_AI_Full_body_character_c_biped/Meshy_AI_Full_body_character_c_biped_Meshy_AI_Meshy_Merged_Animations.fbx";
         const string SecondRunnerAnimatorPath = "Assets/Animations/RunnerAnimator2.controller";
         const string SecondRunnerPbrMaterialPath = "Assets/Materials/Runner2ExternalPbr.mat";
         // JRPD traffic officer who chases the runner after a taxi side-swipe.
@@ -88,6 +118,8 @@ namespace JoburgRunner.Editor
         const string TelkomTowerAlbedoPath = "Assets/Environment/TelkomTower/Meshy_AI_Telkom_Tower_Skyline_0705203244_texture_fbx/Meshy_AI_Telkom_Tower_Skyline_0705203244_texture.png";
         const string TelkomTowerNormalPath = "Assets/Environment/TelkomTower/Meshy_AI_Telkom_Tower_Skyline_0705203244_texture_fbx/Meshy_AI_Telkom_Tower_Skyline_0705203244_texture_normal.png";
         const string TelkomTowerMaterialPath = "Assets/Environment/TelkomTower/TelkomTower_URP.mat";
+        const string JacarandaTreeModelPath = "Assets/Environment/Roadside/Jacaranda_Tree.fbx";
+        const string TrafficLightModelPath = "Assets/Environment/Roadside/Traffic_Light.fbx";
         const string ApkPath = "Builds/JoburgEndlessRunner.apk";
         const string PreviewPath = "Builds/preview.png";
         const string RunnerPbrMaterialPath = "Assets/Materials/RunnerExternalPbr.mat";
@@ -111,6 +143,7 @@ namespace JoburgRunner.Editor
             EnsureFolders();
             CreatePalette();
             CreateEnvironmentLibraryPrefabs();
+            EnvironmentZoneProfileBuilder.GenerateExampleZoneProfiles();
             TuneRenderPipelineForMobile();
             CompressTextures();
 
@@ -127,6 +160,12 @@ namespace JoburgRunner.Editor
             GameObject[] powerUpPrefabs = CreatePowerUpPrefabs(ubuntuDissolvePrefab);
             TrackChunk[] chunkPrefabs = CreateTrackChunkPrefabs(taxiPrefab, coinPrefab, rareCoinPrefab, powerUpPrefabs, barrierPrefab, potholePrefab);
 
+            // Phase 1 socket decoration: poolable prop prefabs + tunable district profiles.
+            DecorPrefabSet decorPrefabs = CreateDecorPrefabs();
+            DistrictDecorProfile[] decorProfiles = CreateDistrictDecorProfiles(decorPrefabs);
+            // Hero-building catalogue asset, wired into the decor director below.
+            HeroBuildingSet heroSet = CreateHeroBuildingSet();
+
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             scene.name = "JoburgEndlessRunner";
 
@@ -138,6 +177,7 @@ namespace JoburgRunner.Editor
             CreateSystems(player.transform, roadPrefab, chunkPrefabs);
             CreateUi(player.GetComponent<PlayerController>());
             CreateGameSystems(player);
+            CreateDecorDirector(decorProfiles, heroSet);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
@@ -176,7 +216,7 @@ namespace JoburgRunner.Editor
             // invisible to camera.Render(); point them at the camera while
             // capturing so the UI lands in the screenshot.
             List<Canvas> overlayCanvases = new List<Canvas>();
-            foreach (Canvas sceneCanvas in Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+            foreach (Canvas sceneCanvas in Object.FindObjectsByType<Canvas>())
             {
                 if (sceneCanvas.renderMode == RenderMode.ScreenSpaceOverlay)
                 {
@@ -262,6 +302,551 @@ namespace JoburgRunner.Editor
             }
 
             taxi.transform.position = new Vector3(0f, 0f, 7f);
+            CapturePreviewScreenshot();
+            Object.DestroyImmediate(holder);
+        }
+
+        [MenuItem("Joburg Runner/Debug Roadside Models")]
+        public static void DebugRoadsideModels()
+        {
+            CreatePalette();
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            GameObject parent = new GameObject("DebugParent");
+            var placements = new[]
+            {
+                (JacarandaTreeModelPath, new Vector3(-8.75f, 0f, 6f), 40f, 6.5f, "JacarandaTree"),
+                (TrafficLightModelPath, new Vector3(-5.95f, 0f, 4f), 90f, 4.8f, "TrafficLight"),
+            };
+            foreach (var (path, pos, yRot, targetH, key) in placements)
+            {
+                RoadsideModel(path, parent.transform, pos, yRot, targetH, key);
+            }
+
+            foreach (Transform child in parent.transform)
+            {
+                Renderer[] rs = child.GetComponentsInChildren<Renderer>();
+                if (rs.Length == 0)
+                {
+                    Debug.Log($"ROADSIDE-DEBUG placed '{child.name}' NO renderers");
+                    continue;
+                }
+
+                Bounds b = rs[0].bounds;
+                foreach (Renderer r in rs)
+                {
+                    b.Encapsulate(r.bounds);
+                }
+
+                Transform visual = child.GetChild(0);
+                Debug.Log($"ROADSIDE-DEBUG placed '{child.name}' visualScale={visual.localScale} FINAL-WORLD-SIZE=({b.size.x:F2},{b.size.y:F2},{b.size.z:F2}) center=({b.center.x:F2},{b.center.y:F2},{b.center.z:F2})");
+            }
+        }
+
+        // Renders one dressed tile per district to Builds/preview_district_{i}.png.
+        // Runs the decorator in edit mode (Awake does not fire, so SegmentDecorator
+        // lazily caches its sockets) with the intersection flag on, so CBD/Business
+        // traffic lights are visible.
+        [MenuItem("Joburg Runner/Capture District Decor (all 4)")]
+        public static void CaptureAllDistrictDecor()
+        {
+            // Isolated throwaway scene with its own camera/light so we never open,
+            // dirty or depend on the saved game scene (which has no baked road – the
+            // spawner builds tiles at runtime).
+            EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            CreatePalette();
+
+            bool prevAsync = EditorSettings.asyncShaderCompilation;
+            EditorSettings.asyncShaderCompilation = false;
+
+            Camera cam = Camera.main;
+            cam.transform.position = new Vector3(0f, 5.2f, -7f);
+            cam.transform.rotation = Quaternion.Euler(14f, 0f, 0f);
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.55f, 0.72f, 0.88f);
+            cam.fieldOfView = 55f;
+            cam.farClipPlane = 200f;
+
+            string[] files =
+            {
+                "Assets/Environment/Decor/District_CBD.asset",
+                "Assets/Environment/Decor/District_Commissioner.asset",
+                "Assets/Environment/Decor/District_Park.asset",
+                "Assets/Environment/Decor/District_Business.asset",
+            };
+
+            GameObject roadPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(RoadPrefabPath);
+            GameObject idle = new GameObject("EditDecorPoolRoot");
+            idle.SetActive(false);
+            var pool = new DecorPool(idle.transform);
+
+            for (int district = 0; district < files.Length; district++)
+            {
+                var profile = AssetDatabase.LoadAssetAtPath<DistrictDecorProfile>(files[district]);
+                GameObject tile = (GameObject)PrefabUtility.InstantiatePrefab(roadPrefab);
+                tile.transform.position = Vector3.zero;
+                tile.GetComponent<RoadSegmentVisuals>().SetDistrict(district);
+
+                var decorator = tile.GetComponent<SegmentDecorator>();
+                decorator.Decorate(profile, seed: district * 1000 + 7, isIntersection: true, pool);
+                Debug.Log($"DECOR-DEBUG district {district} ({(profile != null ? profile.districtName : "null")}): {decorator.DebugState()}");
+
+                RenderCameraToFile(cam, $"Builds/preview_district_{district}.png");
+                Object.DestroyImmediate(tile);
+            }
+
+            Object.DestroyImmediate(idle);
+            EditorSettings.asyncShaderCompilation = prevAsync;
+        }
+
+        // Renders the six hero-building validation scenarios from the actual running
+        // camera pose (player at origin), mimicking what the director does at runtime:
+        // dress CBD props, then SetHero on a pooled hero. Confirms spawn, placeholder
+        // hide, release/restore, and façade visibility.
+        [MenuItem("Joburg Runner/Capture Hero Scenarios")]
+        public static void CaptureHeroScenarios()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            CreatePalette();
+            bool prevAsync = EditorSettings.asyncShaderCompilation;
+            EditorSettings.asyncShaderCompilation = false;
+
+            // Running camera pose: offset (0,2.05,-4.35) from the player, look height 1.05.
+            Camera cam = Camera.main;
+            Vector3 player = Vector3.zero;
+            cam.transform.position = player + new Vector3(0f, 2.05f, -4.35f);
+            cam.transform.rotation = Quaternion.LookRotation(player + Vector3.up * 1.05f - cam.transform.position);
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.55f, 0.72f, 0.88f);
+            cam.fieldOfView = 50f;
+            cam.farClipPlane = 400f;
+
+            GameObject roadPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(RoadPrefabPath);
+            var cbd = AssetDatabase.LoadAssetAtPath<DistrictDecorProfile>("Assets/Environment/Decor/District_CBD.asset");
+            var heroSet = AssetDatabase.LoadAssetAtPath<HeroBuildingSet>(HeroBuildingSetPath);
+
+            GameObject propIdle = new GameObject("PropIdle") { }; propIdle.SetActive(false);
+            GameObject heroIdle = new GameObject("HeroIdle") { }; heroIdle.SetActive(false);
+            var propPool = new DecorPool(propIdle.transform);
+            var heroPool = new DecorPool(heroIdle.transform);
+
+            HeroEntry a = heroSet != null && heroSet.Count > 0 ? heroSet.entries[0] : null;
+            HeroEntry b = heroSet != null && heroSet.Count > 1 ? heroSet.entries[1] : null;
+
+            (string name, HeroEntry entry, HeroSide side, bool release)[] scenarios =
+            {
+                ("Builds/preview_hero_0_none.png",     null, HeroSide.None,  false),
+                ("Builds/preview_hero_1_A_left.png",   a,    HeroSide.Left,  false),
+                ("Builds/preview_hero_2_A_right.png",  a,    HeroSide.Right, false),
+                ("Builds/preview_hero_3_B_left.png",   b,    HeroSide.Left,  false),
+                ("Builds/preview_hero_4_B_right.png",  b,    HeroSide.Right, false),
+                ("Builds/preview_hero_5_recycled.png", a,    HeroSide.Left,  true),
+            };
+
+            foreach (var s in scenarios)
+            {
+                GameObject tile = (GameObject)PrefabUtility.InstantiatePrefab(roadPrefab);
+                // Push the tile forward so its side buildings fall inside the narrow
+                // portrait horizontal FOV, as they do in-game when a CBD block is ahead.
+                tile.transform.position = new Vector3(0f, 0f, 30f);
+                tile.GetComponent<RoadSegmentVisuals>().SetDistrict(0);
+                var decorator = tile.GetComponent<SegmentDecorator>();
+                decorator.Decorate(cbd, seed: 7, isIntersection: true, propPool);
+
+                decorator.ClearHeroes(heroPool);
+                if (s.entry != null)
+                {
+                    decorator.SetHero(s.entry, s.side, heroPool);
+                    if (s.release)
+                    {
+                        // Simulate recycling to a non-CBD tile: hero released, placeholders restored.
+                        decorator.ClearHeroes(heroPool);
+                    }
+                }
+
+                foreach (var lg in tile.GetComponentsInChildren<LODGroup>(true))
+                {
+                    lg.ForceLOD(0);
+                }
+
+                RenderCameraToFile(cam, s.name);
+                Debug.Log($"HERO-CAPTURE {s.name}: {decorator.DebugState()}");
+                Object.DestroyImmediate(tile);
+            }
+
+            Object.DestroyImmediate(propIdle);
+            Object.DestroyImmediate(heroIdle);
+            EditorSettings.asyncShaderCompilation = prevAsync;
+        }
+
+        // Representative runner-camera capture: a row of real tiles (foreground + a CBD
+        // hero tile + backdrop) dressed by the real director, shot from the actual game
+        // camera pose. Produces the six required scenarios plus a forward-approach
+        // sequence to confirm the façade stays visible for ~2 s of movement.
+        [MenuItem("Joburg Runner/Capture Hero Runner View")]
+        public static void CaptureHeroRunnerView()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            CreatePalette();
+            bool prevAsync = EditorSettings.asyncShaderCompilation;
+            EditorSettings.asyncShaderCompilation = false;
+
+            var profiles = new[]
+            {
+                AssetDatabase.LoadAssetAtPath<DistrictDecorProfile>("Assets/Environment/Decor/District_CBD.asset"),
+                AssetDatabase.LoadAssetAtPath<DistrictDecorProfile>("Assets/Environment/Decor/District_Commissioner.asset"),
+                AssetDatabase.LoadAssetAtPath<DistrictDecorProfile>("Assets/Environment/Decor/District_Park.asset"),
+                AssetDatabase.LoadAssetAtPath<DistrictDecorProfile>("Assets/Environment/Decor/District_Business.asset"),
+                AssetDatabase.LoadAssetAtPath<DistrictDecorProfile>("Assets/Environment/Decor/District_Bridge.asset"),
+            };
+            var heroSet = AssetDatabase.LoadAssetAtPath<HeroBuildingSet>(HeroBuildingSetPath);
+
+            var go = new GameObject("EnvironmentDecorDirector");
+            var director = go.AddComponent<EnvironmentDecorDirector>();
+            SetField(director, "useSocketDecoration", true);
+            SetField(director, "profilesByDistrict", profiles);
+            SetField(director, "intersectionEvery", 3);
+            SetField(director, "prewarmPerPrefab", 16);
+            SetField(director, "heroSet", heroSet);
+            SetField(director, "heroPrewarm", 2);
+            SetField(director, "heroMinGap", 1);
+            SetField(director, "heroMaxGap", 2);
+            SetField(director, "heroEarlyGuaranteeWithin", 1);
+            SetField(director, "heroAvoidRecent", 1);
+            SetField(director, "heroBothSides", true);
+            InvokePrivate(director, "Awake");
+            InvokePrivate(director, "Start");
+
+            GameObject roadPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(RoadPrefabPath);
+
+            // Row of tiles: foreground non-CBD, CBD hero tile at Z=30, then backdrop.
+            int[] districts = { 2, 1, 5, 3, 4, 6 };  // index 2 (Z=30) is CBD (5 % 5 == 0)
+            var tiles = new GameObject[districts.Length];
+            SegmentDecorator target = null;
+            for (int i = 0; i < districts.Length; i++)
+            {
+                tiles[i] = (GameObject)PrefabUtility.InstantiatePrefab(roadPrefab);
+                tiles[i].transform.position = new Vector3(0f, 0f, -30f + i * 30f);
+                tiles[i].GetComponent<RoadSegmentVisuals>().SetDistrict(districts[i]);
+                var dec = tiles[i].GetComponent<SegmentDecorator>();
+                director.DecorateSegment(dec, districts[i]);
+                if (i == 2) target = dec;
+            }
+
+            Camera cam = Camera.main;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.55f, 0.72f, 0.88f);
+            cam.fieldOfView = 50f;
+            cam.farClipPlane = 400f;
+
+            HeroEntry a = heroSet != null && heroSet.Count > 0 ? heroSet.entries[0] : null;
+            HeroEntry b = heroSet != null && heroSet.Count > 1 ? heroSet.entries[1] : null;
+            var heroPoolField = typeof(EnvironmentDecorDirector).GetField("heroPool",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var heroPool = (DecorPool)heroPoolField.GetValue(director);
+
+            (string name, HeroEntry entry, HeroSide side, bool release)[] scenarios =
+            {
+                ("Builds/preview_runner_0_none.png",     null, HeroSide.None,  false),
+                ("Builds/preview_runner_1_A_left.png",   a,    HeroSide.Left,  false),
+                ("Builds/preview_runner_2_A_right.png",  a,    HeroSide.Right, false),
+                ("Builds/preview_runner_3_B_left.png",   b,    HeroSide.Left,  false),
+                ("Builds/preview_runner_4_B_right.png",  b,    HeroSide.Right, false),
+                ("Builds/preview_runner_5_recycled.png", a,    HeroSide.Left,  true),
+            };
+
+            foreach (var s in scenarios)
+            {
+                target.ClearHeroes(heroPool);
+                if (s.entry != null) target.SetHero(s.entry, s.side, heroPool);
+                if (s.release) target.ClearHeroes(heroPool);
+                ForceLod0(tiles[2]);
+                PlaceRunnerCamera(cam, 0f);
+                RenderCameraToFile(cam, s.name);
+            }
+
+            // Forward-approach sequence (Building A on the left): ~2 s of travel at 9 m/s.
+            target.ClearHeroes(heroPool);
+            target.SetHero(a, HeroSide.Left, heroPool);
+            ForceLod0(tiles[2]);
+            float[] playerZ = { 0f, 8f, 16f, 24f };
+            for (int i = 0; i < playerZ.Length; i++)
+            {
+                PlaceRunnerCamera(cam, playerZ[i]);
+                RenderCameraToFile(cam, $"Builds/preview_runner_approach_{i}.png");
+            }
+
+            for (int i = 0; i < tiles.Length; i++) Object.DestroyImmediate(tiles[i]);
+            Object.DestroyImmediate(go);
+            EditorSettings.asyncShaderCompilation = prevAsync;
+        }
+
+        static void PlaceRunnerCamera(Camera cam, float playerZ)
+        {
+            Vector3 playerPos = new Vector3(0f, 0f, playerZ);
+            cam.transform.position = playerPos + new Vector3(0f, 2.05f, -4.35f);
+            cam.transform.rotation = Quaternion.LookRotation(playerPos + Vector3.up * 1.05f - cam.transform.position);
+        }
+
+        static void ForceLod0(GameObject tile)
+        {
+            foreach (var lg in tile.GetComponentsInChildren<LODGroup>(true)) lg.ForceLOD(0);
+        }
+
+        // Headless simulation of the road treadmill: drives the real EnvironmentDecorDirector
+        // and real RoadSegment tiles through N recycled dresses, recording hero cadence,
+        // side alternation, no-repeat, placeholder hide/restore and overlap stats.
+        [MenuItem("Joburg Runner/Validate Hero Spawning")]
+        public static void ValidateHeroSpawning()
+        {
+            const int dresses = 120;      // >= 100 recycled segments
+            const int ringSize = 7;       // matches RoadSegmentSpawner.visibleSegments
+            const float segLen = 30f;
+
+            var warnings = new List<string>();
+            var errors = new List<string>();
+            Application.LogCallback cb = (msg, stack, type) =>
+            {
+                if (type == LogType.Warning && msg.Contains("DecorPool")) warnings.Add(msg);
+                if (type == LogType.Error || type == LogType.Exception) errors.Add(msg);
+            };
+            Application.logMessageReceived += cb;
+
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            // Real district profiles + hero set, exactly as the scene wires them.
+            var profiles = new[]
+            {
+                AssetDatabase.LoadAssetAtPath<DistrictDecorProfile>("Assets/Environment/Decor/District_CBD.asset"),
+                AssetDatabase.LoadAssetAtPath<DistrictDecorProfile>("Assets/Environment/Decor/District_Commissioner.asset"),
+                AssetDatabase.LoadAssetAtPath<DistrictDecorProfile>("Assets/Environment/Decor/District_Park.asset"),
+                AssetDatabase.LoadAssetAtPath<DistrictDecorProfile>("Assets/Environment/Decor/District_Business.asset"),
+                AssetDatabase.LoadAssetAtPath<DistrictDecorProfile>("Assets/Environment/Decor/District_Bridge.asset"),
+            };
+            var heroSet = AssetDatabase.LoadAssetAtPath<HeroBuildingSet>(HeroBuildingSetPath);
+
+            var go = new GameObject("EnvironmentDecorDirector");
+            var director = go.AddComponent<EnvironmentDecorDirector>();
+            SetField(director, "useSocketDecoration", true);
+            SetField(director, "profilesByDistrict", profiles);
+            SetField(director, "intersectionEvery", 3);
+            SetField(director, "prewarmPerPrefab", 16);
+            SetField(director, "heroSet", heroSet);
+            SetField(director, "heroPrewarm", 2);
+            SetField(director, "heroMinGap", 1);
+            SetField(director, "heroMaxGap", 2);
+            SetField(director, "heroEarlyGuaranteeWithin", 1);
+            SetField(director, "heroAvoidRecent", 1);
+            SetField(director, "heroBothSides", true);
+            InvokePrivate(director, "Awake");
+            InvokePrivate(director, "Start"); // builds prop + hero pools
+
+            GameObject roadPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(RoadPrefabPath);
+            var ring = new GameObject[ringSize];
+            for (int i = 0; i < ringSize; i++)
+            {
+                ring[i] = (GameObject)PrefabUtility.InstantiatePrefab(roadPrefab);
+                ring[i].transform.position = new Vector3(0f, 0f, i * segLen);
+            }
+
+            // Stats
+            int cbdCount = 0, heroCount = 0, leftCount = 0, rightCount = 0;
+            int consecutiveRepeat = 0, hideFailures = 0, restoreFailures = 0;
+            int permOverlaps = 0, propOverlaps = 0, maxActiveHeroes = 0;
+            int firstHeroStep = -1, firstHeroCbd = -1, lastHeroStep = -1;
+            string lastHeroPrefab = null;
+            var gapsTiles = new List<int>();
+            var prefabCounts = new Dictionary<string, int>();
+
+            for (int step = 0; step < dresses; step++)
+            {
+                int districtIndex = step + 1;            // spawner's nextDistrictIndex starts at 1
+                bool isCbd = districtIndex % profiles.Length == 0;
+                if (isCbd) cbdCount++;
+
+                GameObject tile = ring[step % ringSize];
+                tile.GetComponent<RoadSegmentVisuals>().SetDistrict(districtIndex);
+                var decorator = tile.GetComponent<SegmentDecorator>();
+                director.DecorateSegment(decorator, districtIndex);
+
+                // Observe the freshly-dressed tile (a hero block may fill both sides).
+                GameObject hL = decorator.EditorHeroLeft;
+                GameObject hR = decorator.EditorHeroRight;
+                var groups = tile.GetComponentsInChildren<HeroPlaceholderGroup>(true);
+                HeroPlaceholderGroup gL = null, gR = null;
+                foreach (var g in groups)
+                {
+                    if (g.name.EndsWith("_L")) gL = g; else if (g.name.EndsWith("_R")) gR = g;
+                }
+
+                // Left-then-right emission order (matches how the director places them).
+                foreach (var (hero, left, occ, other) in new[] {
+                    (hL, true, gL, gR), (hR, false, gR, gL) })
+                {
+                    if (hero == null)
+                    {
+                        continue;
+                    }
+
+                    heroCount++;
+                    if (left) leftCount++; else rightCount++;
+
+                    string prefab = hero.name.Replace("(Clone)", "").Trim();
+                    prefabCounts.TryGetValue(prefab, out int pc); prefabCounts[prefab] = pc + 1;
+                    if (lastHeroPrefab != null && prefab == lastHeroPrefab) consecutiveRepeat++;
+                    lastHeroPrefab = prefab;
+
+                    if (occ == null || !occ.HasHidden) hideFailures++;
+                    OverlapCounts(tile, hero, other, ref permOverlaps, ref propOverlaps);
+                }
+
+                // A side with no hero must have its placeholders fully restored.
+                if (hL == null && gL != null && gL.HasHidden) restoreFailures++;
+                if (hR == null && gR != null && gR.HasHidden) restoreFailures++;
+
+                if (hL != null || hR != null)
+                {
+                    if (firstHeroStep < 0) { firstHeroStep = step; firstHeroCbd = cbdCount; }
+                    if (lastHeroStep >= 0) gapsTiles.Add(step - lastHeroStep);
+                    lastHeroStep = step;
+                }
+
+                int activeNow = 0;
+                for (int r = 0; r < ringSize; r++)
+                {
+                    var d = ring[r].GetComponent<SegmentDecorator>();
+                    if (d.EditorHeroLeft != null) activeNow++;
+                    if (d.EditorHeroRight != null) activeNow++;
+                }
+                maxActiveHeroes = Mathf.Max(maxActiveHeroes, activeNow);
+            }
+
+            // Report
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("===== HERO SPAWNING VALIDATION =====");
+            sb.AppendLine($"config: minGap=1 maxGap=2 earlyGuarantee<=1 avoidRecent=1 heroPrewarm=2 bothSides=true ring={ringSize} segLen={segLen}m");
+            sb.AppendLine($"total road segments processed : {dresses}");
+            sb.AppendLine($"CBD appearances               : {cbdCount}");
+            sb.AppendLine($"hero appearances              : {heroCount}");
+            sb.AppendLine($"first hero: step {firstHeroStep} (CBD appearance #{firstHeroCbd}) = {firstHeroStep * segLen:F0} m");
+            if (gapsTiles.Count > 0)
+            {
+                float min = gapsTiles[0], max = gapsTiles[0], sum = 0;
+                foreach (int g in gapsTiles) { min = Mathf.Min(min, g); max = Mathf.Max(max, g); sum += g; }
+                sb.AppendLine($"hero gaps (tiles): min={min} max={max} avg={sum / gapsTiles.Count:F1}  " +
+                              $"=> metres: min={min * segLen:F0} max={max * segLen:F0} avg={sum / gapsTiles.Count * segLen:F0}");
+                // In CBD-appearance terms (CBD every {profiles.Length} tiles):
+                sb.AppendLine($"hero gaps (CBD appearances): min={min / profiles.Length:F0} max={max / profiles.Length:F0} (target 1-2)");
+            }
+            sb.AppendLine($"left / right spawns            : {leftCount} / {rightCount}");
+            sb.Append("prefab selection counts       : ");
+            foreach (var kv in prefabCounts) sb.Append($"{kv.Key}={kv.Value}  ");
+            sb.AppendLine();
+            sb.AppendLine($"consecutive-repeat violations : {consecutiveRepeat}");
+            sb.AppendLine($"placeholder hide failures     : {hideFailures}");
+            sb.AppendLine($"placeholder restore failures  : {restoreFailures}");
+            sb.AppendLine($"overlaps w/ other-side buildings: {permOverlaps}");
+            sb.AppendLine($"overlaps w/ trees/lights/props : {propOverlaps}");
+            sb.AppendLine($"max simultaneous active heroes : {maxActiveHeroes}");
+            sb.AppendLine($"pool growth warnings           : {warnings.Count}");
+            sb.AppendLine($"console errors / exceptions    : {errors.Count}");
+            foreach (var e in errors) sb.AppendLine("   ERROR: " + e);
+            Debug.Log(sb.ToString());
+            Directory.CreateDirectory("Builds");
+            File.WriteAllText("Builds/hero_validation_report.txt", sb.ToString());
+
+            Application.logMessageReceived -= cb;
+            for (int i = 0; i < ringSize; i++) Object.DestroyImmediate(ring[i]);
+            Object.DestroyImmediate(go);
+        }
+
+        static void OverlapCounts(GameObject tile, GameObject hero, HeroPlaceholderGroup otherSide,
+                                  ref int permOverlaps, ref int propOverlaps)
+        {
+            if (!TryBounds(hero, out Bounds hb)) return;
+
+            // Other-side placeholders (should never overlap a same-side hero).
+            if (otherSide != null)
+            {
+                foreach (Transform child in otherSide.transform)
+                {
+                    if (child.gameObject.activeSelf && TryBounds(child.gameObject, out Bounds ob) && hb.Intersects(ob))
+                    {
+                        permOverlaps++;
+                    }
+                }
+            }
+
+            // Pooled props (trees/lamps/traffic/etc.) parented under DecorSockets sockets.
+            Transform sockets = tile.transform.Find("DecorSockets");
+            if (sockets == null) return;
+            foreach (Transform socket in sockets)
+            {
+                var ds = socket.GetComponent<JoburgRunner.Environment.Decor.DecorSocket>();
+                if (ds == null || ds.SocketType == JoburgRunner.Environment.Decor.DecorSocketType.HeroBuilding) continue;
+                foreach (Transform prop in socket)
+                {
+                    if (prop.gameObject.activeSelf && TryBounds(prop.gameObject, out Bounds pb) && hb.Intersects(pb))
+                    {
+                        propOverlaps++;
+                    }
+                }
+            }
+        }
+
+        static bool TryBounds(GameObject go, out Bounds b)
+        {
+            var rends = go.GetComponentsInChildren<Renderer>(false);
+            b = default;
+            if (rends.Length == 0) return false;
+            b = rends[0].bounds;
+            for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+            return true;
+        }
+
+        static void InvokePrivate(object target, string method)
+        {
+            var m = target.GetType().GetMethod(method,
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Public);
+            m?.Invoke(target, null);
+        }
+
+        static void RenderCameraToFile(Camera cam, string path)
+        {
+            const int w = 720, h = 1280;
+            var rt = new RenderTexture(w, h, 24);
+            cam.targetTexture = rt;
+            cam.aspect = (float)w / h;
+            cam.Render();
+            cam.Render();
+
+            RenderTexture.active = rt;
+            var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0f, 0f, w, h), 0, 0);
+            tex.Apply();
+
+            cam.targetTexture = null;
+            cam.ResetAspect();
+            RenderTexture.active = null;
+
+            Directory.CreateDirectory("Builds");
+            File.WriteAllBytes(path, tex.EncodeToPNG());
+            Object.DestroyImmediate(tex);
+            Object.DestroyImmediate(rt);
+        }
+
+        [MenuItem("Joburg Runner/Capture Roadside Closeup")]
+        public static void CaptureRoadsideCloseup()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            CreatePalette();
+            GameObject holder = new GameObject("RoadsideCloseupHolder");
+            RoadsideModel(JacarandaTreeModelPath, holder.transform, new Vector3(-3f, 0f, 8f), 0f, 6.5f, "JacarandaTree");
+            RoadsideModel(TrafficLightModelPath, holder.transform, new Vector3(3f, 0f, 8f), 0f, 4.8f, "TrafficLight");
             CapturePreviewScreenshot();
             Object.DestroyImmediate(holder);
         }
@@ -389,6 +974,59 @@ namespace JoburgRunner.Editor
             }
 
             CapturePreviewScreenshot();
+        }
+
+        /// <summary>
+        /// Samples the split jumpandroll clips onto the live runner avatar and
+        /// screenshots the mid-jump (aerial flip) and mid-roll (ground tuck)
+        /// poses, proving the Beaded-Warrior mocap retargets onto Mgijimi. Writes
+        /// Builds/preview_jumppose.png and Builds/preview_rollpose.png. Edit mode
+        /// never ticks the animator, so SampleAnimation writes each pose directly.
+        /// The scene is not saved.
+        /// </summary>
+        [MenuItem("Joburg Runner/Capture Jump Roll Poses")]
+        public static void CaptureJumpRollPoses()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            Transform runnerVisual = null;
+            PlayerController controller = Object.FindAnyObjectByType<PlayerController>();
+            if (controller != null)
+            {
+                foreach (Transform child in controller.GetComponentsInChildren<Transform>(true))
+                {
+                    if (child.name == "RunnerVisual_Fbx") { runnerVisual = child; break; }
+                }
+            }
+
+            if (runnerVisual == null)
+            {
+                Debug.LogError("RunnerVisual_Fbx not found for jump/roll pose capture.");
+                return;
+            }
+
+            if (!LoadRunnerJumpRollClips(out AnimationClip jump, out AnimationClip roll, out AnimationClip _)
+                || jump == null || roll == null)
+            {
+                Debug.LogError("Jump/roll sub-clips unavailable for pose capture.");
+                return;
+            }
+
+            // Mid-air flip (~60% through the takeoff→landing Jump clip).
+            jump.SampleAnimation(runnerVisual.gameObject, jump.length * 0.6f);
+            CapturePreviewScreenshot();
+            File.Copy(PreviewPath, "Builds/preview_jumppose.png", true);
+
+            // Ground tuck (~45% through the landing→recovery Roll clip).
+            roll.SampleAnimation(runnerVisual.gameObject, roll.length * 0.45f);
+            CapturePreviewScreenshot();
+            File.Copy(PreviewPath, "Builds/preview_rollpose.png", true);
+
+            Debug.Log($"Captured jump pose (t={jump.length * 0.6f:0.00}s of {jump.length:0.00}s) " +
+                $"and roll pose (t={roll.length * 0.45f:0.00}s of {roll.length:0.00}s).");
         }
 
         /// <summary>
@@ -736,6 +1374,27 @@ namespace JoburgRunner.Editor
             Object.DestroyImmediate(instance);
         }
 
+        // Renders the fully BUILT board (flip + trim + scale) from a 3/4 angle,
+        // straight top and straight bottom, so the deck profile and which face
+        // rides up can be verified. Writes BuiltBoard*.png under Icons.
+        public static void CaptureBuiltBoardProfile()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            Vector3[] eulers = { new Vector3(28f, 18f, 0f), new Vector3(90f, 0f, 0f), new Vector3(-90f, 0f, 0f) };
+            string[] names = { "BuiltBoard34", "BuiltBoardTop", "BuiltBoardBottom" };
+            for (int i = 0; i < eulers.Length; i++)
+            {
+                GameObject holder = new GameObject("BuiltBoardHolder");
+                GameObject board = CreateIonCruiserBoard(holder.transform, 0);
+                board.SetActive(true);
+                RenderInstanceIcon(holder, names[i], eulers[i]);
+            }
+        }
+
         // Renders the raw hoverboard FBX from the three canonical axes into
         // Assets/Textures/Icons/BoardAxis*.png so its real layout can be seen
         // before deciding on an orientation correction.
@@ -797,6 +1456,155 @@ namespace JoburgRunner.Editor
             Object.DestroyImmediate(holder);
         }
 
+        // Diagnostic: samples the Drone Boost's Falling clip onto the active
+        // runner, lifted off the road as the drone carries him, to eyeball the
+        // retargeted flying pose without a device build.
+        public static void CaptureDroneFallPreview()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            Transform activeCharacter = null;
+            Transform leanPivot = null;
+            Transform flightPivot = null;
+            foreach (Transform child in Object.FindAnyObjectByType<PlayerController>()
+                .GetComponentsInChildren<Transform>(true))
+            {
+                if (child.name == "RunnerVisual_Fbx") activeCharacter = child;
+                else if (child.name == "ModelLeanPivot") leanPivot = child;
+                else if (child.name == "DroneFlightPivot") flightPivot = child;
+            }
+
+            if (activeCharacter == null || leanPivot == null || flightPivot == null)
+            {
+                Debug.LogError("Runner rig not found for drone fall preview.");
+                return;
+            }
+
+            Vector3 leanRest = leanPivot.localPosition;
+            Quaternion flightRest = flightPivot.localRotation;
+            AnimationClip fallClip = LoadRunnerFlyClip()
+                ?? LoadRunnerClipFromModel(RunnerFallModelPath, loop: true);
+            if (fallClip != null)
+            {
+                fallClip.SampleAnimation(activeCharacter.gameObject, fallClip.length * 0.5f);
+            }
+
+            // Mirror DroneFlightVisual: lift the runner into the air. The fly clip
+            // already bakes a flat horizontal pose, so no extra prone pitch is
+            // applied (proneDegrees is 0 for it).
+            leanPivot.localPosition = leanRest + Vector3.up * 1.6f;
+            flightPivot.localRotation = Quaternion.identity;
+
+            CapturePreviewScreenshot();
+
+            leanPivot.localPosition = leanRest;
+            flightPivot.localRotation = flightRest;
+        }
+
+        // Diagnostic: samples the swipe-down forward-roll clip at five points
+        // through the somersault and renders each from the SIDE, so the full
+        // 0→360° rotation (not just a tuck) can be confirmed. Writes
+        // Builds/preview_roll_0..4.png. Scene not saved.
+        [MenuItem("Joburg Runner/Capture Roll Forward Strip")]
+        public static void CaptureRollForwardStrip()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            Transform activeCharacter = null;
+            foreach (Transform child in Object.FindAnyObjectByType<PlayerController>()
+                .GetComponentsInChildren<Transform>(true))
+            {
+                if (child.name == "RunnerVisual_Fbx") { activeCharacter = child; break; }
+            }
+
+            if (activeCharacter == null)
+            {
+                Debug.LogError("RunnerVisual_Fbx not found for roll strip.");
+                return;
+            }
+
+            AnimationClip rollClip = LoadRunnerBakedRootClip(RunnerRollForwardModelPath, loop: false, bakeForwardTravel: false);
+            if (rollClip == null)
+            {
+                Debug.LogError("Roll clip unavailable for roll strip.");
+                return;
+            }
+
+            Camera camera = Camera.main;
+            Vector3 camPos = camera.transform.position;
+            Quaternion camRot = camera.transform.rotation;
+            Vector3 focus = activeCharacter.position + Vector3.up * 0.9f;
+            camera.transform.position = focus + new Vector3(5.5f, 0.3f, 0.4f);
+            camera.transform.rotation = Quaternion.LookRotation(focus - camera.transform.position);
+
+            float[] times = { 0.1f, 0.3f, 0.5f, 0.7f, 0.9f };
+            for (int i = 0; i < times.Length; i++)
+            {
+                rollClip.SampleAnimation(activeCharacter.gameObject, rollClip.length * times[i]);
+                CapturePreviewScreenshot();
+                File.Copy(PreviewPath, $"Builds/preview_roll_{i}.png", true);
+            }
+
+            camera.transform.position = camPos;
+            camera.transform.rotation = camRot;
+            Debug.Log($"Captured roll strip for '{rollClip.name}' ({rollClip.length:0.00}s).");
+        }
+
+        // Diagnostic: samples the drone fly clip onto the runner and renders him
+        // from the SIDE (the in-game camera only ever sees his back), so the
+        // horizontal glide orientation can be compared to the authoring
+        // fly_side.png. Writes Builds/preview_flyside.png. Scene not saved.
+        [MenuItem("Joburg Runner/Capture Drone Fly Profile")]
+        public static void CaptureDroneFlyProfile()
+        {
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                EditorSceneManager.OpenScene(ScenePath);
+            }
+
+            Transform activeCharacter = null;
+            foreach (Transform child in Object.FindAnyObjectByType<PlayerController>()
+                .GetComponentsInChildren<Transform>(true))
+            {
+                if (child.name == "RunnerVisual_Fbx") { activeCharacter = child; break; }
+            }
+
+            if (activeCharacter == null)
+            {
+                Debug.LogError("RunnerVisual_Fbx not found for fly profile.");
+                return;
+            }
+
+            AnimationClip flyClip = LoadRunnerFlyClip();
+            if (flyClip == null)
+            {
+                Debug.LogError("Fly clip unavailable for fly profile.");
+                return;
+            }
+            flyClip.SampleAnimation(activeCharacter.gameObject, flyClip.length * 0.5f);
+
+            Camera camera = Camera.main;
+            Vector3 camPos = camera.transform.position;
+            Quaternion camRot = camera.transform.rotation;
+
+            // Frame the character from his right side at torso height.
+            Vector3 focus = activeCharacter.position + Vector3.up * 1.1f;
+            camera.transform.position = focus + new Vector3(5.5f, 0.4f, 0.4f);
+            camera.transform.rotation = Quaternion.LookRotation(focus - camera.transform.position);
+
+            CapturePreviewScreenshot();
+            File.Copy(PreviewPath, "Builds/preview_flyside.png", true);
+
+            camera.transform.position = camPos;
+            camera.transform.rotation = camRot;
+        }
+
         // Shows the runner riding the selected board: enables Board_0 and
         // stages the runtime ride result manually — the character standing on
         // the board, both lifted off the road — since edit mode runs no
@@ -843,27 +1651,27 @@ namespace JoburgRunner.Editor
 
             board.gameObject.SetActive(true);
 
-            // Pose the character on the same frozen run frame HoverboardVisual
-            // holds at runtime, so the preview shows the true standing stance
-            // (edit mode never ticks the animator). SampleAnimation writes the
-            // clip's pose straight onto the transforms.
-            AnimationClip runClip = LoadRunnerClipFromModel(PlayableRunnerModelPath, loop: true);
-            if (runClip != null)
+            // Pose the character on the same frozen Idle stance HoverboardVisual
+            // holds at runtime, so the preview shows the true standing pose (edit
+            // mode never ticks the animator). SampleAnimation writes the clip's
+            // pose straight onto the transforms.
+            AnimationClip standClip = LoadRunnerClipFromModel(RunnerIdleModelPath, loop: false);
+            if (standClip != null)
             {
-                const float standPoseFrame = 0.02f;
-                runClip.SampleAnimation(activeCharacter.gameObject, standPoseFrame * runClip.length);
+                standClip.SampleAnimation(activeCharacter.gameObject, 0f);
             }
 
-            // Drop the board so its top surface meets the character's feet,
-            // then lift the whole pair off the road (runtime does this via the
-            // grounder + mount; in edit mode moving the lean pivot carries both
-            // together since neither system is ticking).
-            float feetY = CombinedRendererBounds(activeCharacter.gameObject).min.y;
-            Bounds boardBounds = CombinedRendererBounds(board.gameObject);
-            board.position += new Vector3(0f, feetY - boardBounds.max.y, 0f);
-
+            // Lift the whole rig off the road first (runtime does this via the
+            // grounder + mount), then seat the board so its deck top meets the
+            // lifted feet — measuring after the lift keeps the board planted
+            // under the stance regardless of the pose's foot spread.
             const float rideHeight = 0.5f;
             leanPivot.localPosition = leanRest + Vector3.up * rideHeight;
+
+            const float footPlant = 0.16f;
+            float feetY = CombinedRendererBounds(activeCharacter.gameObject).min.y;
+            Bounds boardBounds = CombinedRendererBounds(board.gameObject);
+            board.position += new Vector3(0f, feetY - boardBounds.max.y + footPlant, 0f);
 
             CapturePreviewScreenshot();
 
@@ -1346,6 +2154,13 @@ namespace JoburgRunner.Editor
         // Road segment
         // ------------------------------------------------------------------
 
+        // Imported FBX hero-building prefabs, spawned at runtime by the socket
+        // decoration system (see HeroBuildingSet + EnvironmentDecorDirector); no
+        // longer baked into the road prefab.
+        const string JhbBuilding02PrefabPath = "Assets/Environment/Buildings/JHB_Building02/Prefabs/PF_JHB_Building02.prefab";
+        const string JhbSkylinePop02PrefabPath = "Assets/Environment/Buildings/JHB_SkylinePop_02/Prefabs/PF_JHB_SkylinePop_02.prefab";
+        const string JhbCbdTowerPrefabPath = "Assets/Environment/Buildings/JHB_CBDTower/Prefabs/PF_JHB_CBDTower.prefab";
+
         static GameObject CreateRoadSegmentPrefab()
         {
             GameObject root = new GameObject("RoadSegment");
@@ -1358,29 +2173,45 @@ namespace JoburgRunner.Editor
             Transform trees = Category("Trees", t);
             Transform props = Category("Props", t);
             Transform signs = Category("Signs", t);
+            Transform legacyDecor = Category("LegacyDecor", t);
+            Transform decorSockets = Category("DecorSockets", t);
 
             BuildRoadSurface(road);
             BuildSidewalks(sidewalks);
-            BuildStreetFurniture(props, signs);
-            BuildVegetation(trees);
+            // LEGACY decoration (fixed trees + traffic lights on every tile). Kept
+            // under its own toggleable root so the runtime feature flag can hide it
+            // and use the new socket system instead. See SegmentDecorator.
+            BuildRoadsideModels(legacyDecor, legacyDecor);
+            // NEW: hand-placed, gameplay-safe sockets the runtime decorator fills
+            // from the active district profile.
+            BuildDecorSockets(decorSockets);
+
+            // Runtime decorator wiring: hide/show legacy vs socket decoration.
+            var decorator = root.AddComponent<JoburgRunner.Environment.Decor.SegmentDecorator>();
+            SetField(decorator, "legacyDecorRoot", legacyDecor.gameObject);
 
             GameObject[] districts =
             {
                 District("CBDOfficeStreet", buildings),
                 District("RetailCafeStreet", buildings),
                 District("BrickMuralStreet", buildings),
-                District("ApartmentMixedUseStreet", buildings)
+                District("ApartmentMixedUseStreet", buildings),
+                District("MandelaBridge", buildings)
             };
 
             BuildSuburbanStreet(districts[0].transform);
             BuildVendorMarketStreet(districts[1].transform);
             BuildTaxiStreet(districts[2].transform);
             BuildMixedCommercialStreet(districts[3].transform);
+            BuildMandelaBridge(districts[4].transform);
 
             foreach (GameObject district in districts)
             {
                 AddDistrictLod(district);
             }
+
+            // Link CBD hero sockets to their side's placeholder group (both now exist).
+            WireHeroPlaceholderSockets(root.transform, districts[0].transform);
 
             StripColliders(buildings.gameObject);
             StripColliders(trees.gameObject);
@@ -1393,6 +2224,63 @@ namespace JoburgRunner.Editor
             return SavePrefab(root, RoadPrefabPath);
         }
 
+        static void BuildMandelaBridge(Transform root)
+        {
+            Material steel = Mat("MetalDark");
+            Material concrete = Mat("Concrete");
+            Material cable = Mat("RoadMarkingWhite");
+            Material accent = Mat("PaintYellow");
+
+            // Deep bridge edges hide the normal pavement and sell the elevated
+            // deck, while remaining purely visual so obstacle gameplay is unchanged.
+            Cube("BridgeDeckLeft", root, new Vector3(-7.4f, 0.15f, 15f), new Vector3(4.1f, 0.55f, 30f), concrete);
+            Cube("BridgeDeckRight", root, new Vector3(7.4f, 0.15f, 15f), new Vector3(4.1f, 0.55f, 30f), concrete);
+            Cube("LeftSafetyBarrier", root, new Vector3(-5.65f, 0.75f, 15f), new Vector3(0.28f, 1.3f, 30f), steel);
+            Cube("RightSafetyBarrier", root, new Vector3(5.65f, 0.75f, 15f), new Vector3(0.28f, 1.3f, 30f), steel);
+
+            foreach (float z in new[] { 5f, 25f })
+            {
+                foreach (float x in new[] { -8.4f, 8.4f })
+                {
+                    Cube("BridgePylon", root, new Vector3(x, 7.2f, z), new Vector3(1.15f, 14.4f, 1.3f), concrete);
+                    Cube("PylonGoldBand", root, new Vector3(x, 10.2f, z), new Vector3(1.32f, 0.35f, 1.48f), accent);
+                }
+
+                Cube("BridgeCrossBeam", root, new Vector3(0f, 13.5f, z), new Vector3(17.4f, 0.8f, 1.15f), concrete);
+            }
+
+            BridgeCable(root, "LeftMainCable", -8.4f, cable);
+            BridgeCable(root, "RightMainCable", 8.4f, cable);
+
+            for (int z = 2; z <= 28; z += 3)
+            {
+                float archHeight = 3.2f + 8.5f * Mathf.Sin(Mathf.PI * z / 30f);
+                Cube("LeftSuspender", root, new Vector3(-8.4f, archHeight * 0.5f, z),
+                    new Vector3(0.07f, archHeight, 0.07f), cable);
+                Cube("RightSuspender", root, new Vector3(8.4f, archHeight * 0.5f, z),
+                    new Vector3(0.07f, archHeight, 0.07f), cable);
+            }
+
+            WorldText(root, "NELSON MANDELA BRIDGE", new Vector3(0f, 12.9f, 5.7f), 180f, 0.8f, new Color(1f, 0.78f, 0.2f));
+        }
+
+        static void BridgeCable(Transform parent, string name, float x, Material material)
+        {
+            GameObject cable = new GameObject(name);
+            cable.transform.SetParent(parent, false);
+            LineRenderer line = cable.AddComponent<LineRenderer>();
+            line.sharedMaterial = material;
+            line.useWorldSpace = false;
+            line.widthMultiplier = 0.16f;
+            line.positionCount = 17;
+            for (int i = 0; i < line.positionCount; i++)
+            {
+                float z = i * (30f / (line.positionCount - 1));
+                float y = 3.2f + 8.5f * Mathf.Sin(Mathf.PI * z / 30f);
+                line.SetPosition(i, new Vector3(x, y, z));
+            }
+        }
+
         static Transform Category(string name, Transform parent)
         {
             GameObject category = new GameObject(name);
@@ -1403,9 +2291,9 @@ namespace JoburgRunner.Editor
 
         static void BuildRoadSurface(Transform road)
         {
-            Cube("ThreeLaneAsphalt", road, new Vector3(0f, -0.08f, 15f), new Vector3(10.8f, 0.16f, 30f), Mat("Asphalt"));
-            Cube("LeftYellowShoulderLine", road, new Vector3(-5.18f, 0.055f, 15f), new Vector3(0.12f, 0.045f, 30f), Mat("PaintYellow"));
-            Cube("RightYellowShoulderLine", road, new Vector3(5.18f, 0.055f, 15f), new Vector3(0.12f, 0.045f, 30f), Mat("PaintYellow"));
+            Cube("ThreeLaneAsphalt", road, new Vector3(0f, -0.08f, 15f), new Vector3(9.6f, 0.16f, 30f), Mat("Asphalt"));
+            Cube("LeftYellowShoulderLine", road, new Vector3(-4.58f, 0.055f, 15f), new Vector3(0.12f, 0.045f, 30f), Mat("PaintYellow"));
+            Cube("RightYellowShoulderLine", road, new Vector3(4.58f, 0.055f, 15f), new Vector3(0.12f, 0.045f, 30f), Mat("PaintYellow"));
 
             for (int z = 2; z < 30; z += 6)
             {
@@ -1413,33 +2301,435 @@ namespace JoburgRunner.Editor
                 Cube("WhiteDashedLaneMark_Right", road, new Vector3(1.35f, 0.06f, z + 3f), new Vector3(0.12f, 0.045f, 2.45f), Mat("RoadMarkingWhite"));
             }
 
-            for (int z = 4; z < 30; z += 10)
-            {
-                StormDrain(road, new Vector3(-5.05f, 0.075f, z), 0f);
-                StormDrain(road, new Vector3(5.05f, 0.075f, z + 4f), 180f);
-            }
-
-            for (int z = 8; z < 30; z += 12)
-            {
-                Cylinder("RoundDrainCover", road, new Vector3(3.4f, 0.062f, z), new Vector3(0.55f, 0.014f, 0.55f), Mat("MetalDark"));
-            }
-
-            AsphaltCracks(road);
+            // Round drain covers, storm-drain grates, and asphalt crack/tar-repair
+            // patches removed by request: keep the road surface clean so nothing
+            // reads as a pothole or obstacle. Only lane markings remain.
         }
 
         static void BuildSidewalks(Transform sidewalks)
         {
-            Cube("LeftConcreteSidewalk", sidewalks, new Vector3(-7.35f, 0f, 15f), new Vector3(3.5f, 0.22f, 30f), Mat("Pavement"));
-            Cube("RightConcreteSidewalk", sidewalks, new Vector3(7.35f, 0f, 15f), new Vector3(3.5f, 0.22f, 30f), Mat("SidewalkConcrete"));
-            Cube("LeftCurb", sidewalks, new Vector3(-5.48f, 0.12f, 15f), new Vector3(0.38f, 0.28f, 30f), Mat("KerbStone"));
-            Cube("RightCurb", sidewalks, new Vector3(5.48f, 0.12f, 15f), new Vector3(0.38f, 0.28f, 30f), Mat("KerbStone"));
-            Cube("LeftGrassStrip", sidewalks, new Vector3(-9.15f, 0.03f, 15f), new Vector3(0.55f, 0.08f, 30f), Mat("Grass"));
-            Cube("RightGrassStrip", sidewalks, new Vector3(9.15f, 0.03f, 15f), new Vector3(0.55f, 0.08f, 30f), Mat("Grass"));
+            Cube("LeftConcreteSidewalk", sidewalks, new Vector3(-6.1f, 0f, 15f), new Vector3(2.4f, 0.22f, 30f), Mat("Pavement"));
+            Cube("RightConcreteSidewalk", sidewalks, new Vector3(6.1f, 0f, 15f), new Vector3(2.4f, 0.22f, 30f), Mat("SidewalkConcrete"));
+            Cube("LeftCurb", sidewalks, new Vector3(-4.98f, 0.12f, 15f), new Vector3(0.30f, 0.28f, 30f), Mat("KerbStone"));
+            Cube("RightCurb", sidewalks, new Vector3(4.98f, 0.12f, 15f), new Vector3(0.30f, 0.28f, 30f), Mat("KerbStone"));
+            Cube("LeftGrassStrip", sidewalks, new Vector3(-7.5f, 0.03f, 15f), new Vector3(0.45f, 0.08f, 30f), Mat("Grass"));
+            Cube("RightGrassStrip", sidewalks, new Vector3(7.5f, 0.03f, 15f), new Vector3(0.45f, 0.08f, 30f), Mat("Grass"));
 
             for (int z = 2; z < 30; z += 4)
             {
-                Cube("PavementExpansionJoint_Left", sidewalks, new Vector3(-7.35f, 0.13f, z), new Vector3(3.25f, 0.02f, 0.05f), Mat("Concrete"));
-                Cube("PavementExpansionJoint_Right", sidewalks, new Vector3(7.35f, 0.13f, z + 1f), new Vector3(3.25f, 0.02f, 0.05f), Mat("Concrete"));
+                Cube("PavementExpansionJoint_Left", sidewalks, new Vector3(-6.1f, 0.13f, z), new Vector3(2.2f, 0.02f, 0.05f), Mat("Concrete"));
+                Cube("PavementExpansionJoint_Right", sidewalks, new Vector3(6.1f, 0.13f, z + 1f), new Vector3(2.2f, 0.02f, 0.05f), Mat("Concrete"));
+            }
+        }
+
+        // Roadside props built from the supplied FBX models: jacaranda trees on
+        // the pavements and traffic lights at the kerb. Baked into the pooled
+        // RoadSegment prefab so they repeat consistently down the street.
+        static void BuildRoadsideModels(Transform trees, Transform signs)
+        {
+            foreach (float z in new[] { 6f, 16f, 26f })
+            {
+                RoadsideModel(JacarandaTreeModelPath, trees, new Vector3(-8.75f, 0f, z), 40f, 6.5f, "JacarandaTree");
+            }
+            foreach (float z in new[] { 11f, 21f, 29f })
+            {
+                RoadsideModel(JacarandaTreeModelPath, trees, new Vector3(8.75f, 0f, z), 210f, 6.5f, "JacarandaTree");
+            }
+
+            // Kerb-side traffic lights, arm facing across the road toward traffic.
+            RoadsideModel(TrafficLightModelPath, signs, new Vector3(-5.95f, 0f, 4f), 90f, 4.8f, "TrafficLight");
+            RoadsideModel(TrafficLightModelPath, signs, new Vector3(5.95f, 0f, 27f), -90f, 4.8f, "TrafficLight");
+        }
+
+        static void RoadsideModel(string modelPath, Transform parent, Vector3 position, float yRotation, float targetHeight, string keyPrefix)
+        {
+            GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+            if (model == null)
+            {
+                Debug.LogWarning($"Roadside model not found at {modelPath}; skipping.");
+                return;
+            }
+
+            EnsureModelMaterialsImported(modelPath);
+
+            GameObject root = new GameObject(keyPrefix);
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = position;
+            root.transform.localRotation = Quaternion.Euler(0f, yRotation, 0f);
+
+            GameObject visual = Object.Instantiate(model, root.transform);
+            visual.name = keyPrefix + "_FBX";
+            visual.transform.localPosition = Vector3.zero;
+            // Keep the FBX's authored import rotation/scale so the model stays
+            // upright as designed. Resetting rotation to identity drops Blender's
+            // Y-up conversion, and re-deriving orientation from world bounds fails
+            // once the parent's facing rotation swaps the X/Z axes — that tipped
+            // the traffic light onto its side and blew its scale up ~9x.
+
+            NormalizeStaticModelBounds(visual, root.transform, targetHeight);
+            ConvertImportedMaterialsToUrp(visual, keyPrefix);
+            StripColliders(root);
+        }
+
+        // FBX materials import as Standard (magenta under URP). Rebuild each one
+        // as a URP/Lit material that keeps the model's authored diffuse colour,
+        // so the tree's foliage/trunk and the light's lenses stay distinct.
+        static void ConvertImportedMaterialsToUrp(GameObject visual, string keyPrefix)
+        {
+            var cache = new Dictionary<Material, Material>();
+            foreach (Renderer renderer in visual.GetComponentsInChildren<Renderer>(true))
+            {
+                Material[] source = renderer.sharedMaterials;
+                Material[] converted = new Material[source.Length];
+                for (int i = 0; i < source.Length; i++)
+                {
+                    Material s = source[i];
+                    if (s == null)
+                    {
+                        continue;
+                    }
+
+                    if (!cache.TryGetValue(s, out Material urp))
+                    {
+                        Color color = s.HasProperty("_BaseColor") ? s.GetColor("_BaseColor")
+                            : s.HasProperty("_Color") ? s.GetColor("_Color")
+                            : s.color;
+                        string raw = s.name.Replace(" ", "").Replace(".", "").Replace("/", "").Replace(":", "");
+                        urp = CreateMaterial($"{keyPrefix}_{cache.Count}_{raw}", color);
+                        cache[s] = urp;
+                    }
+
+                    converted[i] = urp;
+                }
+
+                renderer.sharedMaterials = converted;
+            }
+        }
+
+        static void EnsureModelMaterialsImported(string path)
+        {
+            if (!(AssetImporter.GetAtPath(path) is ModelImporter importer))
+            {
+                return;
+            }
+
+            if (importer.materialImportMode == ModelImporterMaterialImportMode.None)
+            {
+                importer.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
+                importer.SaveAndReimport();
+            }
+        }
+
+        // ==================================================================
+        // Socket-based district decoration (Phase 1)
+        // ==================================================================
+        //
+        // Sockets are hand-placed anchors baked onto the shared road tile. All
+        // sit on the pavement (|x| >= 5.95 > the 4.6 m lane keep-out) so nothing
+        // the decorator spawns can intrude on the three gameplay lanes. The
+        // runtime SegmentDecorator fills them from the active DistrictDecorProfile.
+
+        static void BuildDecorSockets(Transform p)
+        {
+            // Trees – both pavements, staggered so probability + spacing never
+            // yields a perfect row.
+            DecorSocketPoint(p, "TreeSocket_L1", DecorSocketType.Tree, new Vector3(-7.1f, 0f, 5f), 0f, 1.7f);
+            DecorSocketPoint(p, "TreeSocket_L2", DecorSocketType.Tree, new Vector3(-7.1f, 0f, 16f), 0f, 1.7f);
+            DecorSocketPoint(p, "TreeSocket_L3", DecorSocketType.Tree, new Vector3(-7.1f, 0f, 27f), 0f, 1.7f);
+            DecorSocketPoint(p, "TreeSocket_R1", DecorSocketType.Tree, new Vector3(7.1f, 0f, 10f), 0f, 1.7f);
+            DecorSocketPoint(p, "TreeSocket_R2", DecorSocketType.Tree, new Vector3(7.1f, 0f, 21f), 0f, 1.7f);
+
+            // Lamps – kerb line, alternating left/right for a steady rhythm.
+            DecorSocketPoint(p, "LampSocket_L1", DecorSocketType.Lamp, new Vector3(-5.35f, 0f, 8f), 90f, 0.8f);
+            DecorSocketPoint(p, "LampSocket_R1", DecorSocketType.Lamp, new Vector3(5.35f, 0f, 22f), -90f, 0.8f);
+
+            // Stand-alone bench (parks only, via profile).
+            DecorSocketPoint(p, "BenchSocket_L1", DecorSocketType.Bench, new Vector3(-6.2f, 0.12f, 19f), 90f, 1.2f);
+
+            // Bin, billboard, bus stop.
+            DecorSocketPoint(p, "BinSocket_R1", DecorSocketType.Bin, new Vector3(5.8f, 0.15f, 26f), -90f, 0.6f);
+            DecorSocketPoint(p, "BillboardSocket_R1", DecorSocketType.Billboard, new Vector3(6.2f, 0f, 18.5f), -110f, 1.7f);
+            DecorSocketPoint(p, "BusStopSocket_R1", DecorSocketType.BusStop, new Vector3(6.2f, 0.1f, 13f), 180f, 2.5f);
+
+            // Traffic lights – four crossing corners, only used on intersection tiles.
+            DecorSocketPoint(p, "TrafficLightSocket_SW", DecorSocketType.TrafficLight, new Vector3(-5.35f, 0f, 3f), 90f, 1.0f);
+            DecorSocketPoint(p, "TrafficLightSocket_SE", DecorSocketType.TrafficLight, new Vector3(5.35f, 0f, 3f), -90f, 1.0f);
+            DecorSocketPoint(p, "TrafficLightSocket_NW", DecorSocketType.TrafficLight, new Vector3(-5.35f, 0f, 7f), 90f, 1.0f);
+            DecorSocketPoint(p, "TrafficLightSocket_NE", DecorSocketType.TrafficLight, new Vector3(5.35f, 0f, 7f), -90f, 1.0f);
+
+            // Hero-building anchors at the CBD building line (just beyond the ~±9.15 m
+            // pavement edge), centred along the tile and facing the road (left forward
+            // = +X, right forward = -X). Only CBD tiles the director flags eligible fill
+            // these; per-building offset/scale is authored in the HeroBuildingSet.
+            DecorSocketPoint(p, "HeroBuildingSocket_L", DecorSocketType.HeroBuilding, new Vector3(-11f, 0f, 15f), 90f, 9f);
+            DecorSocketPoint(p, "HeroBuildingSocket_R", DecorSocketType.HeroBuilding, new Vector3(11f, 0f, 15f), -90f, 9f);
+        }
+
+        // ---- Hero building catalogue (data-driven, scales to 20+) -----------
+
+        const string HeroBuildingSetPath = "Assets/Environment/Decor/HeroBuildingSet.asset";
+
+        static HeroBuildingSet CreateHeroBuildingSet()
+        {
+            EnsureAssetFolder("Assets/Environment", "Decor");
+
+            HeroBuildingSet set = AssetDatabase.LoadAssetAtPath<HeroBuildingSet>(HeroBuildingSetPath);
+            if (set == null)
+            {
+                set = ScriptableObject.CreateInstance<HeroBuildingSet>();
+                AssetDatabase.CreateAsset(set, HeroBuildingSetPath);
+            }
+
+            GameObject a = AssetDatabase.LoadAssetAtPath<GameObject>(JhbBuilding02PrefabPath);
+            GameObject b = AssetDatabase.LoadAssetAtPath<GameObject>(JhbSkylinePop02PrefabPath);
+            if (a == null || b == null)
+            {
+                Debug.LogWarning("Hero building prefab(s) missing; HeroBuildingSet left with null entries.");
+            }
+
+            // Footprint radii from the imported bounds (half of the larger planar axis):
+            // JHB_Building02 18.17 x 14.55 -> ~9.1; JHB_SkylinePop_02 22.4 x 15.45 -> ~11.2.
+            set.entries = new[]
+            {
+                new HeroEntry
+                {
+                    label = "JHB_Building02", prefab = a, weight = 1f, allowedSides = HeroSide.Both,
+                    localPositionOffset = new Vector3(0f, 0f, -2f), eulerOffset = Vector3.zero,
+                    facePlayerDegrees = 40f, uniformScale = 1f,
+                    footprintRadius = 10.5f, minRepeatDistance = 0f, enabled = true
+                },
+                new HeroEntry
+                {
+                    label = "JHB_SkylinePop_02", prefab = b, weight = 1f, allowedSides = HeroSide.Both,
+                    localPositionOffset = new Vector3(0f, 0f, -4f), eulerOffset = Vector3.zero,
+                    facePlayerDegrees = 40f, uniformScale = 1f,
+                    footprintRadius = 12.5f, minRepeatDistance = 0f, enabled = true
+                },
+            };
+
+            EditorUtility.SetDirty(set);
+            return set;
+        }
+
+        static void DecorSocketPoint(Transform parent, string name, DecorSocketType type, Vector3 localPos, float yaw, float clearance)
+        {
+            GameObject go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = localPos;
+            go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            DecorSocket socket = go.AddComponent<DecorSocket>();
+            SetField(socket, "socketType", type);
+            SetField(socket, "clearanceRadius", clearance);
+        }
+
+        // ---- Poolable decoration prefabs -----------------------------------
+
+        struct DecorPrefabSet
+        {
+            public GameObject[] Trees;
+            public GameObject[] TrafficLights;
+            public GameObject Lamp;
+            public GameObject Bench;
+            public GameObject Bin;
+            public GameObject Billboard;
+            public GameObject BusStopCluster;
+        }
+
+        static DecorPrefabSet CreateDecorPrefabs()
+        {
+            EnsureAssetFolder("Assets/Prefabs", "Decor");
+            const string dir = "Assets/Prefabs/Decor";
+
+            var set = new DecorPrefabSet
+            {
+                // Several tree / light variants (shared materials via a common key
+                // prefix) so random selection reads as hand-placed, not cloned.
+                Trees = new[]
+                {
+                    BuildFbxDecorPrefab(JacarandaTreeModelPath, $"{dir}/DecorTree_JacarandaA.prefab", 6.0f, "JacarandaTree"),
+                    BuildFbxDecorPrefab(JacarandaTreeModelPath, $"{dir}/DecorTree_JacarandaB.prefab", 6.9f, "JacarandaTree"),
+                },
+                TrafficLights = new[]
+                {
+                    BuildFbxDecorPrefab(TrafficLightModelPath, $"{dir}/DecorTrafficLight_A.prefab", 4.7f, "TrafficLight"),
+                    BuildFbxDecorPrefab(TrafficLightModelPath, $"{dir}/DecorTrafficLight_B.prefab", 5.1f, "TrafficLight"),
+                },
+                Lamp = BuildGeneratedDecorPrefab($"{dir}/DecorLamp.prefab", t => StreetLight(t, Vector3.zero, 1f)),
+                Bench = BuildGeneratedDecorPrefab($"{dir}/DecorBench.prefab", t => Bench(t, Vector3.zero, 0f)),
+                Bin = BuildGeneratedDecorPrefab($"{dir}/DecorBin.prefab", t => PublicBin(t, Vector3.zero)),
+                Billboard = BuildGeneratedDecorPrefab($"{dir}/DecorBillboard.prefab", t => RoadsideBillboard(t, Vector3.zero, 0f, "HF_Street")),
+                BusStopCluster = BuildGeneratedDecorPrefab($"{dir}/DecorBusStopCluster.prefab", t =>
+                {
+                    // Bus stop auto-clusters a bench, bin and lamp – one pooled unit.
+                    BusStop(t, Vector3.zero, 0f);
+                    Bench(t, new Vector3(2.4f, 0.12f, 0.2f), 0f);
+                    PublicBin(t, new Vector3(-1.4f, 0.15f, 0.3f));
+                    StreetLight(t, new Vector3(-0.2f, 0f, 2.6f), -1f);
+                }),
+            };
+
+            return set;
+        }
+
+        static GameObject BuildFbxDecorPrefab(string modelPath, string prefabPath, float targetHeight, string keyPrefix)
+        {
+            GameObject root = new GameObject(Path.GetFileNameWithoutExtension(prefabPath));
+            GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+            if (model != null)
+            {
+                EnsureModelMaterialsImported(modelPath);
+                GameObject visual = Object.Instantiate(model, root.transform);
+                visual.name = keyPrefix + "_FBX";
+                visual.transform.localPosition = Vector3.zero;
+                // Keep the FBX's authored import orientation (see RoadsideModel note).
+                NormalizeStaticModelBounds(visual, root.transform, targetHeight);
+                ConvertImportedMaterialsToUrp(visual, keyPrefix);
+            }
+            else
+            {
+                Debug.LogWarning($"Decor model missing at {modelPath}; prefab {prefabPath} will be empty.");
+            }
+
+            EnableInstancing(root);
+            StripColliders(root);
+            return SavePrefab(root, prefabPath);
+        }
+
+        static GameObject BuildGeneratedDecorPrefab(string prefabPath, System.Action<Transform> build)
+        {
+            GameObject root = new GameObject(Path.GetFileNameWithoutExtension(prefabPath));
+            build(root.transform);
+            EnableInstancing(root);
+            StripColliders(root);
+            return SavePrefab(root, prefabPath);
+        }
+
+        static void EnableInstancing(GameObject root)
+        {
+            foreach (Renderer renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                foreach (Material material in renderer.sharedMaterials)
+                {
+                    if (material != null)
+                    {
+                        material.enableInstancing = true;
+                    }
+                }
+            }
+        }
+
+        // ---- District profiles (data-driven, tunable in the Inspector) ------
+
+        static DistrictDecorProfile[] CreateDistrictDecorProfiles(DecorPrefabSet d)
+        {
+            EnsureAssetFolder("Assets/Environment", "Decor");
+
+            // [0] Johannesburg CBD – dense, few trees, more traffic lights.
+            var cbd = SaveDecorProfile("District_CBD", "Johannesburg CBD", new List<DecorRule>
+            {
+                MakeRule(DecorSocketType.Tree, 0.25f, 1, 15f, d.Trees, new Vector2(0.9f, 1.1f), new Vector2(0f, 360f), new Vector2(0.4f, 1.5f), 0f, 1.6f, 0.12f, false),
+                MakeRule(DecorSocketType.Lamp, 1f, 2, 12f, new[] { d.Lamp }, new Vector2(1f, 1.05f), new Vector2(0f, 0f), new Vector2(0f, 0.5f), 0f, 0.8f, 0f, false),
+                MakeRule(DecorSocketType.TrafficLight, 0.9f, 4, 3f, d.TrafficLights, new Vector2(0.95f, 1.05f), new Vector2(0f, 0f), new Vector2(0f, 0f), 0f, 1.0f, 0f, true),
+                MakeRule(DecorSocketType.Billboard, 0.35f, 1, 30f, new[] { d.Billboard }, new Vector2(1f, 1.1f), new Vector2(0f, 0f), new Vector2(0f, 1f), 0f, 1.6f, 0f, false),
+                MakeRule(DecorSocketType.BusStop, 0.15f, 1, 30f, new[] { d.BusStopCluster }, Vector2.one, new Vector2(0f, 0f), Vector2.zero, 0f, 2.5f, 0f, false),
+            });
+
+            // [1] Commissioner Street – medium density, many jacarandas, no lights.
+            var commissioner = SaveDecorProfile("District_Commissioner", "Commissioner Street", new List<DecorRule>
+            {
+                MakeRule(DecorSocketType.Tree, 0.7f, 3, 12f, d.Trees, new Vector2(0.9f, 1.15f), new Vector2(0f, 360f), new Vector2(0.5f, 2f), 0.2f, 1.6f, 0.15f, false),
+                MakeRule(DecorSocketType.Lamp, 0.8f, 2, 12f, new[] { d.Lamp }, new Vector2(1f, 1.05f), new Vector2(0f, 0f), new Vector2(0f, 0.5f), 0f, 0.8f, 0f, false),
+                MakeRule(DecorSocketType.Billboard, 0.4f, 1, 30f, new[] { d.Billboard }, new Vector2(1f, 1.1f), new Vector2(0f, 0f), new Vector2(0f, 1f), 0f, 1.6f, 0f, false),
+                MakeRule(DecorSocketType.BusStop, 0.3f, 1, 30f, new[] { d.BusStopCluster }, Vector2.one, new Vector2(0f, 0f), Vector2.zero, 0f, 2.5f, 0f, false),
+            });
+
+            // [2] Park District – lush, benches, very few lights.
+            var park = SaveDecorProfile("District_Park", "Park District", new List<DecorRule>
+            {
+                MakeRule(DecorSocketType.Tree, 0.9f, 4, 10f, d.Trees, new Vector2(0.9f, 1.15f), new Vector2(0f, 360f), new Vector2(0.6f, 2f), 0.3f, 1.6f, 0.15f, false),
+                MakeRule(DecorSocketType.Bench, 0.6f, 2, 12f, new[] { d.Bench }, Vector2.one, new Vector2(-8f, 8f), new Vector2(0.2f, 1f), 0f, 1.2f, 0f, false),
+                MakeRule(DecorSocketType.Lamp, 0.5f, 1, 15f, new[] { d.Lamp }, new Vector2(1f, 1.05f), new Vector2(0f, 0f), new Vector2(0f, 0.5f), 0f, 0.8f, 0f, false),
+                MakeRule(DecorSocketType.Bin, 0.4f, 1, 15f, new[] { d.Bin }, Vector2.one, new Vector2(0f, 360f), new Vector2(0f, 0.5f), 0f, 0.6f, 0f, false),
+                MakeRule(DecorSocketType.BusStop, 0.2f, 1, 30f, new[] { d.BusStopCluster }, Vector2.one, new Vector2(0f, 0f), Vector2.zero, 0f, 2.5f, 0f, false),
+            });
+
+            // [3] Business District – tall glass, modern lamps, more lights, few trees.
+            var business = SaveDecorProfile("District_Business", "Business District", new List<DecorRule>
+            {
+                MakeRule(DecorSocketType.Tree, 0.2f, 1, 15f, d.Trees, new Vector2(0.9f, 1.1f), new Vector2(0f, 360f), new Vector2(0.4f, 1.2f), 0f, 1.6f, 0.1f, false),
+                MakeRule(DecorSocketType.Lamp, 1f, 2, 12f, new[] { d.Lamp }, new Vector2(1f, 1.08f), new Vector2(0f, 0f), new Vector2(0f, 0.5f), 0f, 0.8f, 0f, false),
+                MakeRule(DecorSocketType.TrafficLight, 0.9f, 4, 3f, d.TrafficLights, new Vector2(0.95f, 1.05f), new Vector2(0f, 0f), new Vector2(0f, 0f), 0f, 1.0f, 0f, true),
+                MakeRule(DecorSocketType.Billboard, 0.3f, 1, 30f, new[] { d.Billboard }, new Vector2(1f, 1.1f), new Vector2(0f, 0f), new Vector2(0f, 1f), 0f, 1.6f, 0f, false),
+                MakeRule(DecorSocketType.BusStop, 0.15f, 1, 30f, new[] { d.BusStopCluster }, Vector2.one, new Vector2(0f, 0f), Vector2.zero, 0f, 2.5f, 0f, false),
+            });
+
+            // [4] Mandela Bridge – elevated deck, no roadside decoration.
+            var bridge = SaveDecorProfile("District_Bridge", "Mandela Bridge", new List<DecorRule>());
+
+            return new[] { cbd, commissioner, park, business, bridge };
+        }
+
+        static DecorRule MakeRule(DecorSocketType type, float prob, int maxCount, float minSpacing, GameObject[] prefabs,
+            Vector2 scaleRange, Vector2 yawJitter, Vector2 posJitter, float sidewalkOffset, float collisionRadius, float tint, bool requiresIntersection)
+        {
+            return new DecorRule
+            {
+                socketType = type,
+                spawnProbability = prob,
+                maxCountPerSegment = maxCount,
+                minSpacing = minSpacing,
+                maxSpacing = Mathf.Max(minSpacing, 30f),
+                allowedPrefabs = prefabs,
+                allowConsecutiveRepetition = false,
+                scaleRange = scaleRange,
+                yawJitterRange = yawJitter,
+                positionJitter = posJitter,
+                sidewalkOffset = sidewalkOffset,
+                tintVariation = tint,
+                collisionRadius = collisionRadius,
+                requiresIntersection = requiresIntersection,
+            };
+        }
+
+        static DistrictDecorProfile SaveDecorProfile(string fileName, string districtName, List<DecorRule> rules)
+        {
+            string path = $"Assets/Environment/Decor/{fileName}.asset";
+            var profile = AssetDatabase.LoadAssetAtPath<DistrictDecorProfile>(path);
+            if (profile == null)
+            {
+                profile = ScriptableObject.CreateInstance<DistrictDecorProfile>();
+                AssetDatabase.CreateAsset(profile, path);
+            }
+
+            profile.districtName = districtName;
+            profile.rules = rules.ToArray();
+            EditorUtility.SetDirty(profile);
+            return profile;
+        }
+
+        static void CreateDecorDirector(DistrictDecorProfile[] profiles, HeroBuildingSet heroSet)
+        {
+            GameObject go = new GameObject("EnvironmentDecorDirector");
+            var director = go.AddComponent<EnvironmentDecorDirector>();
+            SetField(director, "useSocketDecoration", true);
+            SetField(director, "profilesByDistrict", profiles);
+            SetField(director, "intersectionEvery", 3);
+            SetField(director, "prewarmPerPrefab", 16);
+            // Hero-building spawning: frequent, both sides, no-repeat.
+            SetField(director, "heroSet", heroSet);
+            SetField(director, "heroPrewarm", 2);       // two-sided + back-to-back tiles need up to 2 of each
+            SetField(director, "heroMinGap", 1);        // a hero block every 1-2 CBD appearances
+            SetField(director, "heroMaxGap", 2);
+            SetField(director, "heroEarlyGuaranteeWithin", 1);
+            SetField(director, "heroAvoidRecent", 1);
+            SetField(director, "heroBothSides", true);  // a (different) building on each side
+        }
+
+        static void EnsureAssetFolder(string parent, string child)
+        {
+            if (!AssetDatabase.IsValidFolder($"{parent}/{child}"))
+            {
+                AssetDatabase.CreateFolder(parent, child);
             }
         }
 
@@ -1570,15 +2860,48 @@ namespace JoburgRunner.Editor
 
         static void BuildSuburbanStreet(Transform parent)
         {
-            Building(parent, new Vector3(-12.4f, 0f, 5f), new Vector3(5.5f, 12f, 6f), Mat("Concrete"), BuildingStyle.Office, "CITY OFFICES");
-            Building(parent, new Vector3(-12.2f, 0f, 14f), new Vector3(5f, 8.5f, 5f), Mat("Brick"), BuildingStyle.BrickApartment, "LOFTS");
-            Building(parent, new Vector3(-12.5f, 0f, 24f), new Vector3(6f, 16f, 6f), Mat("Glass"), BuildingStyle.GlassTower, "BANK");
-            Building(parent, new Vector3(12.3f, 0f, 4f), new Vector3(5f, 9f, 5f), Mat("BrickWallTan"), BuildingStyle.Office, "WORKHUB");
-            Building(parent, new Vector3(12.5f, 0f, 13f), new Vector3(5.8f, 14f, 6f), Mat("GlassDark"), BuildingStyle.GlassTower, "TOWER");
-            Building(parent, new Vector3(12.1f, 0f, 24f), new Vector3(5f, 11f, 5f), Mat("SkyscraperConcrete"), BuildingStyle.Office, "CITY");
-            JohannesburgRoadSign(parent, new Vector3(-8.0f, 0f, 17f), 0f, "JOHANNESBURG", "M1 City", "M2 Newtown");
-            RoadsideBillboard(parent, new Vector3(7.0f, 0f, 15f), -20f, "HF_Taxi");
-            RoadsideBillboard(parent, new Vector3(-7.0f, 0f, 11f), 20f, "HF_Skyline");
+            // Permanent CBD buildings (may remain static-batched). Empty today — none of
+            // the current buildings sit clear of the hero footprints — but the root marks
+            // where future never-hidden buildings go.
+            Category("PermanentBuildings", parent);
+
+            // Hero placeholders, split by side and marked HeroPlaceholderGroup so they are
+            // excluded from static batching and can be hidden/restored individually when a
+            // hero building occupies that side's socket.
+            Transform phL = Category("HeroPlaceholders_L", parent);
+            Transform phR = Category("HeroPlaceholders_R", parent);
+            phL.gameObject.AddComponent<HeroPlaceholderGroup>();
+            phR.gameObject.AddComponent<HeroPlaceholderGroup>();
+
+            Building(phL, new Vector3(-12.4f, 0f, 5f), new Vector3(5.5f, 12f, 6f), Mat("Concrete"), BuildingStyle.Office, "CITY OFFICES");
+            Building(phL, new Vector3(-12.2f, 0f, 14f), new Vector3(5f, 8.5f, 5f), Mat("Brick"), BuildingStyle.BrickApartment, "LOFTS");
+            Building(phL, new Vector3(-12.5f, 0f, 24f), new Vector3(6f, 16f, 6f), Mat("Glass"), BuildingStyle.GlassTower, "BANK");
+            Building(phR, new Vector3(12.3f, 0f, 4f), new Vector3(5f, 9f, 5f), Mat("BrickWallTan"), BuildingStyle.Office, "WORKHUB");
+            Building(phR, new Vector3(12.5f, 0f, 13f), new Vector3(5.8f, 14f, 6f), Mat("GlassDark"), BuildingStyle.GlassTower, "TOWER");
+            Building(phR, new Vector3(12.1f, 0f, 24f), new Vector3(5f, 11f, 5f), Mat("SkyscraperConcrete"), BuildingStyle.Office, "CITY");
+            // Roadside signs and billboards removed by request.
+        }
+
+        // Links each hero socket to the placeholder group on its street side so the
+        // decorator can hide/restore the buildings a hero there overlaps.
+        static void WireHeroPlaceholderSockets(Transform segmentRoot, Transform cbdDistrict)
+        {
+            HeroPlaceholderGroup gL = cbdDistrict.Find("HeroPlaceholders_L")?.GetComponent<HeroPlaceholderGroup>();
+            HeroPlaceholderGroup gR = cbdDistrict.Find("HeroPlaceholders_R")?.GetComponent<HeroPlaceholderGroup>();
+            LinkHeroSocket(segmentRoot, "DecorSockets/HeroBuildingSocket_L", gL);
+            LinkHeroSocket(segmentRoot, "DecorSockets/HeroBuildingSocket_R", gR);
+        }
+
+        static void LinkHeroSocket(Transform segmentRoot, string path, HeroPlaceholderGroup group)
+        {
+            Transform socket = segmentRoot.Find(path);
+            if (socket == null)
+            {
+                Debug.LogWarning($"Hero socket not found for wiring: {path}");
+                return;
+            }
+            HeroBuildingSocket hbs = socket.gameObject.AddComponent<HeroBuildingSocket>();
+            SetField(hbs, "placeholderGroup", group);
         }
 
         static void BuildVendorMarketStreet(Transform parent)
@@ -1589,10 +2912,7 @@ namespace JoburgRunner.Editor
             Shopfront(parent, new Vector3(11.7f, 0f, 6f), -90f, "RESTAURANT", Mat("ShopAwningRed"));
             Shopfront(parent, new Vector3(11.7f, 0f, 15f), -90f, "CAFE", Mat("ShopAwningGreen"));
             Shopfront(parent, new Vector3(11.7f, 0f, 24f), -90f, "HAIR SALON", Mat("ShopAwningBlue"));
-            VendorStall(parent, new Vector3(-7.1f, 0f, 22f));
-            VendorStall(parent, new Vector3(7.1f, 0f, 10f));
-            BusStop(parent, new Vector3(7.2f, 0.1f, 20f), 180f);
-            RoadsideBillboard(parent, new Vector3(-7.0f, 0f, 12f), 20f, "HF_Street");
+            // Vendor stalls, bus stop, and billboard removed by request.
         }
 
         static void BuildTaxiStreet(Transform parent)
@@ -1603,9 +2923,7 @@ namespace JoburgRunner.Editor
             Building(parent, new Vector3(12.4f, 0f, 7f), new Vector3(5.6f, 10f, 5.5f), Mat("BrickWallRed"), BuildingStyle.BrickApartment, "LOFTS");
             Building(parent, new Vector3(12.2f, 0f, 26f), new Vector3(5f, 7f, 5f), Mat("PlasterCream"), BuildingStyle.Office, "STUDIO");
             ZebraCrossing(parent, 6f);
-            PedestrianCrossingSign(parent, new Vector3(-5.9f, 0f, 4f));
-            PedestrianCrossingSign(parent, new Vector3(5.9f, 0f, 8f));
-            RoadsideBillboard(parent, new Vector3(7.0f, 0f, 22f), -20f, "HF_Runner");
+            // Pedestrian crossing signs and billboard removed by request.
         }
 
         static void BuildMixedCommercialStreet(Transform parent)
@@ -1616,7 +2934,7 @@ namespace JoburgRunner.Editor
             Shopfront(parent, new Vector3(11.7f, 0f, 5f), -90f, "FOOD", Mat("ShopAwningRed"));
             Building(parent, new Vector3(12.5f, 0f, 14f), new Vector3(5f, 9.5f, 5f), Mat("Brick"), BuildingStyle.MixedUse, "ROOMS");
             Building(parent, new Vector3(12.3f, 0f, 24f), new Vector3(5.8f, 16f, 5.5f), Mat("Glass"), BuildingStyle.GlassTower, "OFFICES");
-            JohannesburgRoadSign(parent, new Vector3(7.5f, 0f, 17f), -8f, "M31 JEPPE ST", "M2 Newtown", "CITY");
+            // Road sign removed by request.
             ZebraCrossing(parent, 26f);
         }
 
@@ -1845,7 +3163,7 @@ namespace JoburgRunner.Editor
             tmp.fontSize = size;
             tmp.alignment = TextAlignmentOptions.Center;
             tmp.color = color;
-            tmp.enableWordWrapping = false;
+            tmp.textWrappingMode = TextWrappingModes.NoWrap;
         }
 
         static void Bench(Transform parent, Vector3 position, float yRotation)
@@ -3658,20 +4976,8 @@ namespace JoburgRunner.Editor
                     ChunkObstacle(t, taxi, 0, 11f, true);
                     ChunkCoinLine(t, coin, 2, 3f, 4);
                 }),
-                // Small, destructible hazards (not taxis): the only obstacles
-                // Ubuntu Pulse's shield can actually absorb and dissolve.
-                NewChunkPrefab("Chunk_Barrier", ChunkDifficulty.Easy, 22f, 0b111, 0b111, 14f, t =>
-                {
-                    ChunkObstacle(t, barrier, 1, 10f, false);
-                    ChunkCoinLine(t, coin, 0, 3f, 4);
-                    ChunkCoinLine(t, coin, 2, 3f, 4);
-                }),
-                NewChunkPrefab("Chunk_Pothole", ChunkDifficulty.Easy, 22f, 0b111, 0b111, 14f, t =>
-                {
-                    ChunkObstacle(t, pothole, 1, 10f, false);
-                    ChunkCoinLine(t, coin, 0, 3f, 4);
-                    ChunkCoinLine(t, coin, 2, 3f, 4);
-                }),
+                // Barricade and pothole obstacle chunks removed by request:
+                // taxis are now the only obstacle.
                 NewChunkPrefab("Chunk_TaxiRight", ChunkDifficulty.Easy, 24f, 0b011, 0b011, 14f, t =>
                 {
                     ChunkObstacle(t, taxi, 2, 11f, true);
@@ -4238,6 +5544,17 @@ namespace JoburgRunner.Editor
                 Cylinder("HillbrowTower_AntennaTip", t, towerBase + new Vector3(0f, 47.4f, 0f), new Vector3(0.28f, 1f, 0.28f), Mat("AntennaRed"));
             }
 
+            // Brutalist CBD tower landmark (ABSA-style, brand-neutral), centre-right of the
+            // horizon to balance the Telkom tower. Faceting is invisible at this distance.
+            CreateCbdTowerSkyline(t, new Vector3(13f, 0f, 16f), 1.3f);
+
+            // Reuse the two active roadside heroes as recognizable, collision-free skyline
+            // silhouettes. Opposite-side placement frames the road without blocking its vanishing point.
+            CreateHeroBackdropBuilding(t, JhbBuilding02PrefabPath, "Backdrop_JHB_Building02",
+                new Vector3(-27f, 0f, 13f), 1.25f);
+            CreateHeroBackdropBuilding(t, JhbSkylinePop02PrefabPath, "Backdrop_JHB_SkylinePop_02",
+                new Vector3(27f, 0f, 19f), 1.15f);
+
             // Photo billboard cropped from the reference video, behind the 3D towers
             CreateVideoSkylineBillboard(t);
 
@@ -4260,6 +5577,24 @@ namespace JoburgRunner.Editor
             CloudCluster(t, new Vector3(-40f, 40f, 38f), 1.2f);
             CloudCluster(t, new Vector3(46f, 44f, 45f), 1.0f);
             CloudCluster(t, new Vector3(18f, 48f, 52f), 0.8f);
+        }
+
+        static void CreateHeroBackdropBuilding(
+            Transform parent, string prefabPath, string name, Vector3 position, float scale)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (prefab == null) return;
+            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+            instance.name = name;
+            instance.transform.localPosition = position;
+            instance.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            instance.transform.localScale = Vector3.one * scale;
+            StripColliders(instance);
+            foreach (Renderer renderer in instance.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
         }
 
         static bool CreateTelkomTower(Transform parent, Vector3 position)
@@ -4287,6 +5622,28 @@ namespace JoburgRunner.Editor
             AssignMaterial(visual, GetTelkomTowerMaterial());
             SimplifyMeshes(visual, 60000);
             StripColliders(root);
+            return true;
+        }
+
+        // Places the imported PF_JHB_CBDTower as a distant horizon landmark (like the
+        // Telkom tower). Reuses the prefab's own LODGroup/materials — at skyline distance
+        // it renders a cheap LOD and the close-range window-grid faceting is not visible.
+        // Rotated 180° so the +Z façade faces back toward the oncoming player.
+        static bool CreateCbdTowerSkyline(Transform parent, Vector3 position, float scale)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(JhbCbdTowerPrefabPath);
+            if (prefab == null)
+            {
+                Debug.LogWarning($"CBD tower prefab not found at {JhbCbdTowerPrefabPath}; skipping skyline landmark.");
+                return false;
+            }
+
+            GameObject inst = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+            inst.name = "CBDTowerSkyline";
+            inst.transform.localPosition = position;
+            inst.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            inst.transform.localScale = Vector3.one * scale;
+            StripColliders(inst); // skyline decoration: no collision
             return true;
         }
 
@@ -4431,24 +5788,35 @@ namespace JoburgRunner.Editor
             GameObject root = new GameObject($"Board_{index}");
             root.transform.SetParent(mount, false);
 
-            Mesh deckMesh = GetHoverboardDeckMesh();
-            if (deckMesh != null)
+            GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(HoverboardModelPath);
+            if (model != null)
             {
-                GameObject visual = new GameObject("BoardModel");
-                visual.transform.SetParent(root.transform, false);
-                visual.AddComponent<MeshFilter>().sharedMesh = deckMesh;
-                visual.AddComponent<MeshRenderer>().sharedMaterial = GetHoverboardMaterial();
-                // The FBX imports at global scale 100; the deck slab is thin in
-                // mesh +Z (its top — the carry frame attached there) with its
-                // length along X. Stand it flat with the length down the road.
-                visual.transform.localScale = Vector3.one * 100f;
-                visual.transform.localRotation = Quaternion.Euler(0f, 90f, 0f) * Quaternion.Euler(-90f, 0f, 0f);
-                NormalizeBoardBounds(visual, root.transform, 1.7f);
+                GameObject visual = Object.Instantiate(model, root.transform);
+                visual.name = "BoardModel";
+                visual.transform.localPosition = Vector3.zero;
+                // The Meshy export stands the deck on edge (its thin dimension —
+                // the deck thickness — runs along Z), so tip it -90° about X to
+                // lie flat with the clean Z-emblem deck face up to ride on and
+                // the glowing turbine face pointing down (reads as hover thrust).
+                // The chrome carry handle is trimmed separately by
+                // TrimBoardKickstand.
+                visual.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
+                visual.transform.localScale = Vector3.one;
+                AssignMaterial(visual, GetHoverboardMaterial());
+                // Trim first: the kickstand cut keys off world-X, which is only
+                // valid before the board is yawed. Then spin the flat deck
+                // clockwise (viewed from above) about world-up so it rides at
+                // the desired heading.
+                TrimBoardKickstand(visual);
+                visual.transform.localRotation =
+                    Quaternion.Euler(0f, BoardYawDegrees, 0f) * visual.transform.localRotation;
                 SimplifyMeshes(visual, 16000);
+                StripColliders(visual);
+                NormalizeBoardBounds(visual, root.transform, 1.7f);
             }
             else
             {
-                Debug.LogWarning($"Hoverboard deck mesh unavailable ({HoverboardModelPath}); using primitive deck fallback.");
+                Debug.LogWarning($"Hoverboard model unavailable ({HoverboardModelPath}); using primitive deck fallback.");
                 Cube("BoardDeck", root.transform, new Vector3(0f, -0.06f, 0f), new Vector3(0.6f, 0.1f, 1.7f),
                     UnlitColorMaterial("HoverboardFallback", new Color(0.25f, 0.7f, 1f)));
                 StripColliders(root);
@@ -4458,6 +5826,94 @@ namespace JoburgRunner.Editor
             // while the shield runs, and editor previews shouldn't show it.
             root.SetActive(false);
             return root;
+        }
+
+        // The U-shaped carry handle occupies the leftmost ~35% of the model's
+        // X span. Cut by spatial extent (not vertex percentile—the dense handle
+        // has disproportionate vertex count) so the complete deck remains.
+        const float BoardHandleCutFraction = 0.35f;
+
+        // Cuts the chrome kickstand/handle off the deck. After the board is
+        // flipped the hook curves out to one side (world -X), beyond the deck
+        // footprint, so triangles whose centre sits past an -X threshold are
+        // removed. SimplifyMeshes runs afterwards and persists the result.
+        static void TrimBoardKickstand(GameObject visual)
+        {
+            MeshFilter filter = visual.GetComponentInChildren<MeshFilter>();
+            if (filter == null || filter.sharedMesh == null)
+            {
+                return;
+            }
+
+            Mesh src = filter.sharedMesh;
+            Matrix4x4 toWorld = filter.transform.localToWorldMatrix;
+            Vector3[] vertices = src.vertices;
+            float[] worldX = new float[vertices.Length];
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                worldX[i] = toWorld.MultiplyPoint3x4(vertices[i]).x;
+            }
+
+            float minX = Mathf.Min(worldX);
+            float maxX = Mathf.Max(worldX);
+            float cutX = Mathf.Lerp(minX, maxX, BoardHandleCutFraction);
+            Debug.Log($"[BOARD] handle cut: x={minX:0.#####}..{maxX:0.#####}, cutX={cutX:0.#####}");
+
+            Vector3[] normals = src.normals;
+            Vector4[] tangents = src.tangents;
+            Vector2[] uv = src.uv;
+            int[] triangles = src.triangles;
+
+            var indexMap = new Dictionary<int, int>();
+            var nv = new List<Vector3>();
+            var nn = new List<Vector3>();
+            var nt = new List<Vector4>();
+            var nu = new List<Vector2>();
+            var ntri = new List<int>();
+
+            for (int t = 0; t < triangles.Length; t += 3)
+            {
+                float centreX = (worldX[triangles[t]] + worldX[triangles[t + 1]] + worldX[triangles[t + 2]]) / 3f;
+                if (centreX < cutX)
+                {
+                    continue;
+                }
+
+                for (int c = 0; c < 3; c++)
+                {
+                    int si = triangles[t + c];
+                    if (!indexMap.TryGetValue(si, out int ni))
+                    {
+                        ni = nv.Count;
+                        indexMap[si] = ni;
+                        nv.Add(vertices[si]);
+                        if (normals.Length > si) nn.Add(normals[si]);
+                        if (tangents.Length > si) nt.Add(tangents[si]);
+                        if (uv.Length > si) nu.Add(uv[si]);
+                    }
+
+                    ntri.Add(ni);
+                }
+            }
+
+            if (ntri.Count == 0 || ntri.Count == triangles.Length)
+            {
+                return;
+            }
+
+            Mesh trimmed = new Mesh
+            {
+                name = src.name + "_Deck",
+                indexFormat = UnityEngine.Rendering.IndexFormat.UInt32,
+            };
+            trimmed.SetVertices(nv);
+            if (nn.Count == nv.Count) trimmed.SetNormals(nn);
+            if (nt.Count == nv.Count) trimmed.SetTangents(nt);
+            if (nu.Count == nv.Count) trimmed.SetUVs(0, nu);
+            trimmed.SetTriangles(ntri, 0);
+            trimmed.RecalculateBounds();
+            filter.sharedMesh = trimmed;
+            Debug.Log($"[BOARD] kickstand trim: {src.vertexCount} -> {trimmed.vertexCount} verts");
         }
 
         /// <summary>
@@ -4584,12 +6040,18 @@ namespace JoburgRunner.Editor
             }
 
             Bounds bounds = CombinedRendererBounds(visual);
-            if (bounds.size.z < 0.0001f)
+            // Size by the board's longest horizontal (planar) axis. The deck
+            // lies flat, so its up axis (Y) is the thin deck thickness; sizing
+            // by that (or by a near-square minor axis) would blow the board up
+            // to many metres. Guarding on the planar span keeps a squarish or
+            // oddly-proportioned Meshy deck at a sane on-road footprint.
+            float planarLength = Mathf.Max(bounds.size.x, bounds.size.z);
+            if (planarLength < 0.0001f)
             {
                 return;
             }
 
-            visual.transform.localScale *= targetLength / bounds.size.z;
+            visual.transform.localScale *= targetLength / planarLength;
 
             bounds = CombinedRendererBounds(visual);
             visual.transform.position += new Vector3(
@@ -4957,6 +6419,10 @@ namespace JoburgRunner.Editor
 
             DroneFlightVisual droneVisual = player.AddComponent<DroneFlightVisual>();
             SetField(droneVisual, "flightPivot", flightPivot);
+            // The horizontal fly clip already bakes a flat superman pose, so the
+            // legacy forward-dive pitch (needed by the old upright Falling clip)
+            // is zeroed — otherwise it would over-rotate past horizontal.
+            SetField(droneVisual, "proneDegrees", 0f);
 
             // Hoverboard boosters: one board visual per catalog entry, mounted
             // under the lean pivot so the deck leans into lane changes with
@@ -5113,6 +6579,11 @@ namespace JoburgRunner.Editor
             ParticleSystem.VelocityOverLifetimeModule velocity = system.velocityOverLifetime;
             velocity.enabled = true;
             velocity.space = ParticleSystemSimulationSpace.World;
+            // Unity requires all three velocity axes to use the same curve
+            // mode. Explicit zero ranges keep X/Y stationary while matching
+            // Z's TwoConstants mode on Android players.
+            velocity.x = new ParticleSystem.MinMaxCurve(0f, 0f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0f, 0f);
             velocity.z = new ParticleSystem.MinMaxCurve(-1.4f, -0.5f);
 
             ParticleSystem.ColorOverLifetimeModule colorOverLifetime = system.colorOverLifetime;
@@ -5628,14 +7099,44 @@ namespace JoburgRunner.Editor
 
             bool hasTextures = ExtractEmbeddedTextures(importer, modelPath);
 
-            AnimationClip runClip = null;
+            // Pick the run take. A single-animation export has one clip, but a
+            // merged-animation export bundles several (run, walk, idle, and a
+            // few-frame base pose); grabbing the first would sometimes land on
+            // the base pose or a walk. Prefer a clip that reads as a run, else
+            // the longest meaningful clip.
+            var animClips = new List<AnimationClip>();
             foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(modelPath))
             {
                 if (asset is AnimationClip clip && !clip.name.StartsWith("__preview"))
                 {
+                    animClips.Add(clip);
+                }
+            }
+
+            AnimationClip runClip = null;
+            foreach (AnimationClip clip in animClips)
+            {
+                if (clip.length > 0.2f && clip.name.ToLowerInvariant().Contains("run"))
+                {
                     runClip = clip;
                     break;
                 }
+            }
+
+            if (runClip == null)
+            {
+                foreach (AnimationClip clip in animClips)
+                {
+                    if (clip.length > 0.2f && (runClip == null || clip.length > runClip.length))
+                    {
+                        runClip = clip;
+                    }
+                }
+            }
+
+            if (runClip == null && animClips.Count > 0)
+            {
+                runClip = animClips[0];
             }
 
             GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
@@ -6079,13 +7580,35 @@ namespace JoburgRunner.Editor
             // Idle plays the real Meshy dance clip (looping) as the pre-run showcase.
             AnimationClip idleClip = LoadRunnerClipFromModel(RunnerIdleModelPath, loop: true)
                 ?? CreateGeneratedClip(RunnerIdleClipPath, 1f);
-            // Jump and air-roll play the real Meshy clips (same rig, retargeted);
-            // the generated stubs remain as a fallback if a model goes missing.
+            // Jump, roll and air-roll come from the combined jumpandroll.fbx take,
+            // carved into a takeoff→landing Jump clip, a landing→recovery Roll clip
+            // and the whole dodge for AirRoll (same rig, retargeted). Each falls
+            // back to the previous per-clip source (or a generated stub) if the
+            // combined model or a sub-clip is missing.
+            LoadRunnerJumpRollClips(out AnimationClip jumpRollJump, out AnimationClip jumpRollRoll, out AnimationClip jumpRollFull);
+            // Plain jump (swipe up) uses the dedicated clean jump-over clip — NOT
+            // the jumpandroll aerial flip, whose mid-air somersault reads as a roll.
+            // The combined jump+roll take is reserved for the AirRoll state (swipe
+            // down while airborne), so a plain hop shows a plain jump and only a
+            // deliberate jump-and-roll shows the somersault.
             AnimationClip jumpClip = LoadRunnerClipFromModel(RunnerJumpModelPath, loop: false)
+                ?? jumpRollJump
                 ?? CreateGeneratedClip(RunnerJumpClipPath, 0.45f);
-            AnimationClip airRollClip = LoadRunnerClipFromModel(RunnerAirRollModelPath, loop: false)
+            AnimationClip airRollClip = jumpRollFull
+                ?? LoadRunnerClipFromModel(RunnerAirRollModelPath, loop: false)
                 ?? CreateGeneratedClip(RunnerRollClipPath, 0.7f);
-            AnimationClip rollClip = CreateGeneratedClip(RunnerRollClipPath, 0.7f);
+            // Swipe-down roll: the dedicated forward-roll clip (its 0→360°
+            // somersault baked into the pose). Falls back to the jumpandroll roll
+            // portion, then a generated stub.
+            AnimationClip rollClip = LoadRunnerBakedRootClip(RunnerRollForwardModelPath, loop: false, bakeForwardTravel: false)
+                ?? jumpRollRoll
+                ?? CreateGeneratedClip(RunnerRollClipPath, 0.7f);
+            // Looping horizontal fly clip held while the Drone Boost is active
+            // (the runner soars superman-style). Falls back to the old Falling
+            // clip, then the jump pose, if the source model is unavailable.
+            AnimationClip fallClip = LoadRunnerFlyClip()
+                ?? LoadRunnerClipFromModel(RunnerFallModelPath, loop: true)
+                ?? jumpClip;
 
             AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(controllerPath);
             controller.AddParameter("isRunning", AnimatorControllerParameterType.Bool);
@@ -6100,12 +7623,33 @@ namespace JoburgRunner.Editor
             AnimatorState jumpState = stateMachine.AddState("Jump", new Vector3(520f, 150f, 0f));
             AnimatorState rollState = stateMachine.AddState("Roll", new Vector3(260f, 300f, 0f));
             AnimatorState airRollState = stateMachine.AddState("AirRoll", new Vector3(520f, 300f, 0f));
+            // Island state entered/exited only by DroneFlightVisual via a direct
+            // Animator.Play — no parameter transitions so it loops undisturbed
+            // while the drone carries the runner.
+            AnimatorState fallState = stateMachine.AddState("Fall", new Vector3(780f, 50f, 0f));
 
             idleState.motion = idleClip;
             runState.motion = runClip;
             jumpState.motion = jumpClip;
             rollState.motion = rollClip;
             airRollState.motion = airRollClip;
+            fallState.motion = fallClip;
+
+            // Sync the Jump clip's playback to the physics airtime so its landing
+            // pose arrives exactly at touchdown. The hop keeps the runner airborne
+            // ~0.79s (PlayerController jumpHeight 2.2, gravity -28:
+            // airtime = 2·√(h·2·|g|)/|g|); at state speed 1 a clip longer than that
+            // has the runner touch down mid-air-pose and snap into the run — a hitch
+            // on landing. Scale so clip length maps onto the airtime. Clamp so a
+            // short clip is never slowed below 1×.
+            const float jumpHeight = 2.2f; // mirrors PlayerController.jumpHeight
+            const float jumpGravity = 28f; // |PlayerController.gravity|
+            float jumpAirtime = 2f * Mathf.Sqrt(jumpHeight * 2f * jumpGravity) / jumpGravity;
+            if (jumpClip != null && jumpClip.length > 0.01f && jumpAirtime > 0.01f)
+            {
+                jumpState.speed = Mathf.Clamp(jumpClip.length / jumpAirtime, 1f, 2f);
+            }
+
             // Start in Idle (the dance) before the run; Idle→Run fires when the
             // player controller sets isRunning true on the first PLAY.
             stateMachine.defaultState = idleState;
@@ -6122,10 +7666,21 @@ namespace JoburgRunner.Editor
             AddTriggerTransition(jumpState, airRollState, "AirRoll", 0.05f);
             AddTriggerTransition(runState, airRollState, "AirRoll", 0.05f);
 
+            // Return to the run as the roll's recovery finishes, not after the
+            // whole clip: Roll_Forward's last frames settle into a near-standing
+            // recovery pose, so the old exitTime 0.95 + 0.05s snap left the runner
+            // briefly static after the somersault before the run picked back up —
+            // the pause felt after a roll. RollController's gameplay roll lasts
+            // 0.7s, so begin the cross-fade to Run at that point and blend over a
+            // wider window so the run overlaps the recovery tail instead of
+            // waiting it out.
+            const float rollGameplayDuration = 0.7f; // mirrors RollController.rollDuration
             AnimatorStateTransition rollToRun = rollState.AddTransition(runState);
             rollToRun.hasExitTime = true;
-            rollToRun.exitTime = 0.95f;
-            rollToRun.duration = 0.05f;
+            rollToRun.exitTime = (rollClip != null && rollClip.length > 0.01f)
+                ? Mathf.Clamp01(rollGameplayDuration / rollClip.length)
+                : 0.75f;
+            rollToRun.duration = 0.18f;
 
             AnimatorStateTransition airRollToRun = airRollState.AddTransition(runState);
             airRollToRun.hasExitTime = true;
@@ -6134,7 +7689,9 @@ namespace JoburgRunner.Editor
 
             Debug.Log($"Runner animator clips — idle: '{idleClip.name}' ({idleClip.length:0.00}s), " +
                 $"jump: '{jumpClip.name}' ({jumpClip.length:0.00}s), " +
-                $"airRoll: '{airRollClip.name}' ({airRollClip.length:0.00}s).");
+                $"roll: '{rollClip.name}' ({rollClip.length:0.00}s), " +
+                $"airRoll: '{airRollClip.name}' ({airRollClip.length:0.00}s), " +
+                $"fall: '{fallClip.name}' ({fallClip.length:0.00}s).");
             return controller;
         }
 
@@ -6177,6 +7734,151 @@ namespace JoburgRunner.Editor
 
             Debug.LogWarning($"No animation clip found in {modelPath}; using generated fallback.");
             return null;
+        }
+
+        /// <summary>
+        /// Imports the horizontal fly loop (Humanoid, looping) for the Drone Boost.
+        /// The clip authors its flat body orientation into the skeleton (Hips
+        /// pitched 90°), so its root rotation must be baked into the pose to survive
+        /// the runner's root-motion-off Animator. It hovers in place, so forward
+        /// travel is baked too (there is none to speak of).
+        /// </summary>
+        static AnimationClip LoadRunnerFlyClip()
+        {
+            return LoadRunnerBakedRootClip(RunnerFlyModelPath, loop: true, bakeForwardTravel: true);
+        }
+
+        /// <summary>
+        /// Imports a Humanoid clip whose body rotation is authored into the Hips
+        /// (the humanoid root), baking that root rotation into the pose so it shows
+        /// on the runner's Animator (which has no applyRootMotion — without the bake
+        /// the root rotation is discarded and the body snaps upright). Used for the
+        /// fly loop (constant horizontal pose) and the forward roll (an animated
+        /// 0→360° somersault). Root Y is baked so height stays put; forward XZ
+        /// travel is baked only when <paramref name="bakeForwardTravel"/> is set —
+        /// the roll leaves it as discarded root motion so it somersaults in place
+        /// while the world scrolls under it. Returns null when the model is missing.
+        /// </summary>
+        static AnimationClip LoadRunnerBakedRootClip(string modelPath, bool loop, bool bakeForwardTravel)
+        {
+            ModelImporter importer = AssetImporter.GetAtPath(modelPath) as ModelImporter;
+            if (importer == null)
+            {
+                Debug.LogWarning($"Baked-root clip model not found at {modelPath}; caller will fall back.");
+                return null;
+            }
+
+            ModelImporterClipAnimation[] clips = importer.clipAnimations;
+            if (clips == null || clips.Length == 0)
+            {
+                clips = importer.defaultClipAnimations;
+            }
+
+            foreach (ModelImporterClipAnimation clip in clips)
+            {
+                clip.loopTime = loop;
+                clip.lockRootRotation = true;        // Bake Into Pose (rotation)
+                clip.keepOriginalOrientation = true; // Based Upon: Original
+                clip.lockRootHeightY = true;         // Bake Into Pose (position Y)
+                clip.keepOriginalPositionY = true;
+                clip.lockRootPositionXZ = bakeForwardTravel; // Bake Into Pose (position XZ)
+                clip.keepOriginalPositionXZ = bakeForwardTravel;
+            }
+
+            importer.animationType = ModelImporterAnimationType.Human;
+            importer.clipAnimations = clips;
+            importer.SaveAndReimport();
+
+            foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(modelPath))
+            {
+                if (asset is AnimationClip clip && !clip.name.StartsWith("__preview"))
+                {
+                    return clip;
+                }
+            }
+
+            Debug.LogWarning($"No animation clip found in {modelPath}; caller will fall back.");
+            return null;
+        }
+
+        /// <summary>
+        /// Imports the combined jump-into-roll FBX (Humanoid, so it retargets onto
+        /// the runner avatar) as three sub-clips carved from the single take by
+        /// frame range: "Jump" (takeoff→landing), "Roll" (landing→recovery), and
+        /// "JumpRollFull" (the whole dodge, for the AirRoll state). The Blender
+        /// authoring range is remapped proportionally onto whatever frame range
+        /// Unity assigns the imported take, so the split tracks the real IMPACT
+        /// frame regardless of how the FBX is re-based on import. Returns false
+        /// (leaving the out clips null) when the model or its take is missing.
+        /// </summary>
+        static bool LoadRunnerJumpRollClips(out AnimationClip jumpClip, out AnimationClip rollClip, out AnimationClip fullClip)
+        {
+            jumpClip = null;
+            rollClip = null;
+            fullClip = null;
+
+            ModelImporter importer = AssetImporter.GetAtPath(RunnerJumpRollModelPath) as ModelImporter;
+            if (importer == null)
+            {
+                Debug.LogWarning($"Jump/roll model not found at {RunnerJumpRollModelPath}; using per-clip fallbacks.");
+                return false;
+            }
+
+            // Read the take's actual imported frame range from the default (take)
+            // clip; this is the frame span the sub-clip ranges must live within.
+            ModelImporterClipAnimation[] takes = importer.defaultClipAnimations;
+            if (takes == null || takes.Length == 0)
+            {
+                Debug.LogWarning($"No animation take found in {RunnerJumpRollModelPath}; using per-clip fallbacks.");
+                return false;
+            }
+
+            float takeStart = takes[0].firstFrame;
+            float takeEnd = takes[0].lastFrame;
+            float authorSpan = JumpRollAuthorEndFrame - JumpRollAuthorStartFrame;
+            float impactNorm = (JumpRollAuthorImpactFrame - JumpRollAuthorStartFrame) / authorSpan;
+            float splitFrame = Mathf.Lerp(takeStart, takeEnd, impactNorm);
+
+            ModelImporterClipAnimation full = MakeClip("JumpRollFull", takeStart, takeEnd);
+            ModelImporterClipAnimation jump = MakeClip("Jump", takeStart, splitFrame);
+            ModelImporterClipAnimation roll = MakeClip("Roll", splitFrame, takeEnd);
+
+            importer.animationType = ModelImporterAnimationType.Human;
+            importer.clipAnimations = new[] { full, jump, roll };
+            importer.SaveAndReimport();
+
+            foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(RunnerJumpRollModelPath))
+            {
+                if (!(asset is AnimationClip clip) || clip.name.StartsWith("__preview"))
+                {
+                    continue;
+                }
+
+                if (clip.name == "Jump") jumpClip = clip;
+                else if (clip.name == "Roll") rollClip = clip;
+                else if (clip.name == "JumpRollFull") fullClip = clip;
+            }
+
+            if (jumpClip == null || rollClip == null || fullClip == null)
+            {
+                Debug.LogWarning($"Jump/roll sub-clips missing after reimport of {RunnerJumpRollModelPath} " +
+                    $"(jump={jumpClip != null}, roll={rollClip != null}, full={fullClip != null}); using fallbacks for any missing.");
+            }
+            return true;
+        }
+
+        static ModelImporterClipAnimation MakeClip(string name, float firstFrame, float lastFrame)
+        {
+            return new ModelImporterClipAnimation
+            {
+                name = name,
+                firstFrame = firstFrame,
+                lastFrame = lastFrame,
+                loopTime = false,
+                lockRootRotation = false,
+                keepOriginalOrientation = false,
+                keepOriginalPositionY = false
+            };
         }
 
         static AnimationClip CreateGeneratedClip(string path, float length)
@@ -6453,6 +8155,10 @@ namespace JoburgRunner.Editor
             {
                 SetField(perfectDodge, "dodgeLabel", dodgeLabel);
             }
+
+            // Zone/level banner ("LEVEL 1 · JOBURG CBD") intentionally not
+            // created — route legs still change the environment, just without
+            // the on-screen announcement.
 
             // Ubuntu Pulse HUD icon: hidden until active, then shows a
             // pulsing blue glow and a radial countdown ring. UbuntuPulseUI
@@ -6780,17 +8486,17 @@ namespace JoburgRunner.Editor
 
             // One card per character visual actually built on the player.
             CharacterSelector characterSelector = Object.FindAnyObjectByType<CharacterSelector>();
-            string[] characterNames = { "Mgijimi", "Jabu" };
+            string[] characterNames = { "Mgijimi", "Themba" };
             string[] characterTaglines =
             {
                 "The original Jozi street runner",
-                "Braamfontein tech speedster",
+                "Soweto marathon breakaway",
             };
             // Portraits are rendered from the scene visuals — the raw FBX assets
             // have Meshy's blank materials; only the built visuals carry the real
             // textures. Non-default visuals are saved inactive, so search the
             // player hierarchy including inactive objects.
-            var characterIconSources = new GameObject[2];
+            var characterIconSources = new GameObject[characterNames.Length];
             PlayerController playerForIcons = Object.FindAnyObjectByType<PlayerController>();
             if (playerForIcons != null)
             {
@@ -7071,12 +8777,28 @@ namespace JoburgRunner.Editor
 
             Directory.CreateDirectory("Assets/Textures/Icons");
             string pngPath = $"Assets/Textures/Icons/{iconName}.png";
-            File.WriteAllBytes(pngPath, texture.EncodeToPNG());
+            // Camera.Render() produces a flat placeholder when Unity is run
+            // with -nographics. Never let an automated headless build replace
+            // a previously valid UI icon with that blank image.
+            bool hasVisibleContent = HasVisibleIconContent(texture);
+            if (hasVisibleContent)
+            {
+                File.WriteAllBytes(pngPath, texture.EncodeToPNG());
+            }
+            else
+            {
+                Debug.LogWarning($"Icon '{iconName}' rendered blank; preserving the existing icon asset.");
+            }
 
             Object.DestroyImmediate(texture);
             Object.DestroyImmediate(renderTexture);
             Object.DestroyImmediate(cameraObject);
             Object.DestroyImmediate(instance);
+
+            if (!File.Exists(pngPath))
+            {
+                return null;
+            }
 
             AssetDatabase.ImportAsset(pngPath);
             TextureImporter importer = AssetImporter.GetAtPath(pngPath) as TextureImporter;
@@ -7089,6 +8811,32 @@ namespace JoburgRunner.Editor
             }
 
             return AssetDatabase.LoadAssetAtPath<Sprite>(pngPath);
+        }
+
+        static bool HasVisibleIconContent(Texture2D texture)
+        {
+            Color32[] pixels = texture.GetPixels32();
+            if (pixels.Length == 0)
+            {
+                return false;
+            }
+
+            Color32 background = pixels[0];
+            int differentPixels = 0;
+            foreach (Color32 pixel in pixels)
+            {
+                int difference = Mathf.Abs(pixel.r - background.r)
+                    + Mathf.Abs(pixel.g - background.g)
+                    + Mathf.Abs(pixel.b - background.b);
+                if (difference > 18)
+                {
+                    differentPixels++;
+                }
+            }
+
+            // Ignore tiny render artifacts; a real model occupies a meaningful
+            // portion of the 256px card image.
+            return differentPixels > pixels.Length / 200;
         }
 
         /// <summary>

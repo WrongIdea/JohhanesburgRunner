@@ -412,6 +412,11 @@ namespace JoburgRunner
 
         void SelectCharacter(int index)
         {
+            if (characterSelectButtons == null || index < 0 || index >= characterSelectButtons.Length)
+            {
+                return;
+            }
+
             if (index == CharacterSelector.SelectedIndex)
             {
                 return;
@@ -428,11 +433,12 @@ namespace JoburgRunner
 
         void RefreshMe()
         {
-            int selected = CharacterSelector.SelectedIndex;
             if (characterSelectButtons == null)
             {
                 return;
             }
+
+            int selected = Mathf.Clamp(CharacterSelector.SelectedIndex, 0, characterSelectButtons.Length - 1);
 
             for (int i = 0; i < characterSelectButtons.Length; i++)
             {

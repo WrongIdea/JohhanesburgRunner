@@ -30,9 +30,10 @@ namespace JoburgRunner.Editor
 
             EnvironmentZoneProfile cbd = BuildCbdProfile();
             EnvironmentZoneProfile soweto = BuildSowetoProfile();
+            EnvironmentZoneProfile mandelaBridge = BuildMandelaBridgeProfile();
 
             ZoneCatalog catalog = LoadOrCreate<ZoneCatalog>($"{ZoneFolder}/ZoneCatalog.asset");
-            catalog.zones = new[] { cbd, soweto };
+            catalog.zones = new[] { cbd, soweto, mandelaBridge };
             catalog.openingZone = cbd;
             catalog.metresPerZone = 800f;
             catalog.avoidRecentZones = 1;
@@ -40,7 +41,7 @@ namespace JoburgRunner.Editor
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log($"Generated example zone profiles: {cbd.displayName}, {soweto.displayName} + ZoneCatalog at {ZoneFolder}.");
+            Debug.Log($"Generated route profiles: {cbd.displayName}, {soweto.displayName}, {mandelaBridge.displayName} + ZoneCatalog at {ZoneFolder}.");
         }
 
         static EnvironmentZoneProfile BuildCbdProfile()
@@ -85,6 +86,7 @@ namespace JoburgRunner.Editor
 
             p.routeWeight = 1.5f;
             p.minRunDistance = 0f;
+            p.routeLeg = 0;
             EditorUtility.SetDirty(p);
             return p;
         }
@@ -131,6 +133,50 @@ namespace JoburgRunner.Editor
 
             p.routeWeight = 1f;
             p.minRunDistance = 800f; // unlocks after the opening CBD leg
+            p.routeLeg = 1;
+            EditorUtility.SetDirty(p);
+            return p;
+        }
+
+        static EnvironmentZoneProfile BuildMandelaBridgeProfile()
+        {
+            EnvironmentZoneProfile p = LoadOrCreate<EnvironmentZoneProfile>($"{ZoneFolder}/Zone_MandelaBridge.asset");
+            p.displayName = "Nelson Mandela Bridge";
+            p.zoneId = EnvironmentZoneId.MandelaBridge;
+            p.palette = new EnvironmentZoneProfile.ColorPalette
+            {
+                buildingColors = new[] { new Color(0.28f, 0.34f, 0.42f), new Color(0.55f, 0.62f, 0.70f) },
+                accentColors = new[] { new Color(0.12f, 0.55f, 0.90f), new Color(1f, 0.72f, 0.18f) },
+                skyTint = new Color(0.40f, 0.62f, 0.84f),
+                hazeColor = new Color(0.55f, 0.68f, 0.80f),
+                roadWearTint = new Color(0.72f, 0.76f, 0.82f),
+                weatherTint = new Color(0.86f, 0.94f, 1f),
+            };
+            p.lighting = new EnvironmentZoneProfile.LightingProfile
+            {
+                overrideLighting = true,
+                sunColor = new Color(1f, 0.88f, 0.70f),
+                sunIntensity = 1.2f,
+                ambientTint = new Color(0.42f, 0.52f, 0.66f),
+                enableFog = true,
+                fogColor = new Color(0.55f, 0.68f, 0.80f),
+                fogDensity = 0.004f,
+            };
+            p.difficulty = new EnvironmentZoneProfile.DifficultyModifiers
+            {
+                forwardSpeedMultiplier = 1.12f,
+                easyWeightScale = 0.6f,
+                mediumWeightScale = 1.2f,
+                hardWeightScale = 1.35f,
+                specialWeightScale = 1.2f,
+            };
+            p.buildings = new EnvironmentZoneProfile.WeightedPrefab[0];
+            p.props = WeightedPrefabs(("StreetLight", 2f), ("RoadSign", 1f));
+            p.variation = DefaultVariation(p.palette.buildingColors,
+                new[] { "MANDELA BRIDGE", "NEWTOWN", "BRAAMFONTEIN" });
+            p.routeWeight = 1f;
+            p.minRunDistance = 1600f;
+            p.routeLeg = 2;
             EditorUtility.SetDirty(p);
             return p;
         }
