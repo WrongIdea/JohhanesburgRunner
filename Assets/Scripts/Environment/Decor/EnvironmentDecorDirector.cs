@@ -20,13 +20,17 @@ namespace JoburgRunner.Environment.Decor
         [SerializeField] bool useSocketDecoration = true;
 
         [Tooltip("Suppress district buildings and all street furniture except Jacaranda trees.")]
-        [SerializeField] bool heroOnlyMode = true;
+        [SerializeField] bool heroOnlyMode = false;
 
         [Header("District profiles")]
         [Tooltip("One profile per RoadSegmentVisuals district index (0..N). " +
                  "Index maps to the same district the building groups use, so decoration " +
                  "density follows the district. A null entry leaves that district undecorated.")]
         [SerializeField] DistrictDecorProfile[] profilesByDistrict;
+
+        [Tooltip("Dedicated five-tile Jacaranda Avenue recipe. Kept outside the normal " +
+                 "district rotation so the canopy always appears as one continuous section.")]
+        [SerializeField] DistrictDecorProfile jacarandaAvenueProfile;
 
         [Header("Intersections")]
         [Tooltip("Every Nth tile is flagged an intersection (the only tiles that may " +
@@ -120,24 +124,30 @@ namespace JoburgRunner.Environment.Decor
             var seen = new HashSet<GameObject>();
             foreach (DistrictDecorProfile profile in profilesByDistrict)
             {
-                if (profile == null || profile.rules == null)
+                PrewarmProfile(profile, seen);
+            }
+            PrewarmProfile(jacarandaAvenueProfile, seen);
+        }
+
+        void PrewarmProfile(DistrictDecorProfile profile, HashSet<GameObject> seen)
+        {
+            if (profile == null || profile.rules == null)
+            {
+                return;
+            }
+
+            foreach (DecorRule rule in profile.rules)
+            {
+                if (rule?.allowedPrefabs == null)
                 {
                     continue;
                 }
 
-                foreach (DecorRule rule in profile.rules)
+                foreach (GameObject prefab in rule.allowedPrefabs)
                 {
-                    if (rule?.allowedPrefabs == null)
+                    if (prefab != null && seen.Add(prefab))
                     {
-                        continue;
-                    }
-
-                    foreach (GameObject prefab in rule.allowedPrefabs)
-                    {
-                        if (prefab != null && seen.Add(prefab))
-                        {
-                            pool.Prewarm(prefab, prewarmPerPrefab);
-                        }
+                        pool.Prewarm(prefab, prewarmPerPrefab);
                     }
                 }
             }
@@ -148,7 +158,10 @@ namespace JoburgRunner.Environment.Decor
         /// segment is placed or recycled. Generates a stable per-tile seed and the
         /// intersection flag, then defers to the tile's <see cref="SegmentDecorator"/>.
         /// </summary>
-        public void DecorateSegment(SegmentDecorator decorator, int districtIndex)
+        public void DecorateSegment(
+            SegmentDecorator decorator, int districtIndex,
+            JunctionType junctionType = JunctionType.None,
+            bool faceHeroBuildingsTowardRunner = false)
         {
             if (decorator == null || pool == null)
             {
@@ -164,13 +177,41 @@ namespace JoburgRunner.Environment.Decor
 
             DistrictDecorProfile profile = ProfileFor(districtIndex);
             int seed = unchecked(placedSegmentCount * 73856093 + districtIndex * 19349663 + 12345);
-            bool isIntersection = placedSegmentCount % intersectionEvery == 0;
+            bool isIntersection = junctionType != JunctionType.None ||
+                                  placedSegmentCount % intersectionEvery == 0;
+            bool hasTrafficLights = profile?.GetRule(DecorSocketType.TrafficLight) != null;
+            // Only alternating eligible intersections receive zebra markings, so
+            // traffic lights remain common without every robot looking identical.
+            bool showPedestrianCrossing = isIntersection && hasTrafficLights &&
+                                          (placedSegmentCount / intersectionEvery) % 2 == 0;
+            int decorationSequence = placedSegmentCount;
             placedSegmentCount++;
 
             decorator.Decorate(
                 profile, seed, isIntersection, pool,
-                heroOnlyMode ? DecorSocketType.Tree : (DecorSocketType?)null);
-            ResolveHero(decorator, districtIndex);
+                heroOnlyMode ? DecorSocketType.Tree : (DecorSocketType?)null,
+                showPedestrianCrossing, decorationSequence, junctionType);
+            if (junctionType == JunctionType.None)
+            {
+                ResolveHero(decorator, districtIndex, faceHeroBuildingsTowardRunner);
+            }
+            else
+            {
+                decorator.ClearHeroes(heroPool);
+            }
+        }
+
+        public void DecorateJacarandaSegment(SegmentDecorator decorator)
+        {
+            if (decorator == null || pool == null)
+            {
+                return;
+            }
+
+            int seed = unchecked(placedSegmentCount * 73856093 + 0x4A4341);
+            placedSegmentCount++;
+            decorator.Decorate(jacarandaAvenueProfile, seed, false, pool);
+            decorator.ClearHeroes(heroPool);
         }
 
         // ---------------------------------------------------------------- hero buildings
@@ -214,7 +255,9 @@ namespace JoburgRunner.Environment.Decor
         /// spawner calls DecorateSegment exactly once per newly-dressed tile, the counter
         /// advances at most once per real CBD block (recycling cannot double-count).
         /// </summary>
-        void ResolveHero(SegmentDecorator decorator, int districtIndex)
+        void ResolveHero(
+            SegmentDecorator decorator, int districtIndex,
+            bool faceBuildingsTowardRunner = false)
         {
             if (heroPool == null)
             {
@@ -251,8 +294,8 @@ namespace JoburgRunner.Environment.Decor
                 // while avoidRecent >= 1, so the two sides never show the same prefab.
                 HeroEntry el = PickEntry(HeroSide.Left);
                 HeroEntry er = PickEntry(HeroSide.Right);
-                if (el != null) decorator.SetHero(el, HeroSide.Left, heroPool);
-                if (er != null) decorator.SetHero(er, HeroSide.Right, heroPool);
+                if (el != null) decorator.SetHero(el, HeroSide.Left, heroPool, faceBuildingsTowardRunner);
+                if (er != null) decorator.SetHero(er, HeroSide.Right, heroPool, faceBuildingsTowardRunner);
             }
             else
             {
@@ -265,7 +308,7 @@ namespace JoburgRunner.Environment.Decor
                 }
                 if (entry != null)
                 {
-                    decorator.SetHero(entry, side, heroPool);
+                    decorator.SetHero(entry, side, heroPool, faceBuildingsTowardRunner);
                     lastHeroSide = side;
                 }
             }

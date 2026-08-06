@@ -1,4 +1,5 @@
 using UnityEngine;
+using JoburgRunner.Environment.Decor;
 
 namespace JoburgRunner
 {
@@ -85,7 +86,17 @@ namespace JoburgRunner
                 SceneryVehicle marker = vehicle.GetComponent<SceneryVehicle>();
                 if (marker != null)
                 {
-                    vehicle.position += Vector3.forward * marker.Speed * Time.deltaTime;
+                    float direction = Mathf.Sign(marker.Speed);
+                    float nextZ = vehicle.position.z + marker.Speed * Time.deltaTime;
+                    if (CrossingPedestrian.TryGetTaxiStopZ(vehicle.position.z, direction, out float stopZ))
+                    {
+                        nextZ = direction > 0f
+                            ? Mathf.Min(nextZ, stopZ)
+                            : Mathf.Max(nextZ, stopZ);
+                    }
+                    Vector3 position = vehicle.position;
+                    position.z = nextZ;
+                    vehicle.position = position;
                 }
 
                 float cullZ = marker != null && marker.Speed < 0f

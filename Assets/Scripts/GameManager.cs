@@ -247,6 +247,21 @@ namespace JoburgRunner
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
 
+        /// <summary>
+        /// Dismisses the Game Over overlay so the player can inspect the finished
+        /// scene. The run remains over and paused; Restart and Menu are not invoked.
+        /// </summary>
+        public void CloseGameOverMenu()
+        {
+            if (!IsGameOver || gameOverPanel == null)
+            {
+                return;
+            }
+
+            gameOverPanel.SetActive(false);
+            canRestart = false;
+        }
+
         public void BackToMenu()
         {
             SkipMenuOnce = false;

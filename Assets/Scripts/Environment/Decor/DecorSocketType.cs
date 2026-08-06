@@ -36,6 +36,26 @@ namespace JoburgRunner.Environment.Decor
         /// a sparse, no-repeat, side-alternating spawn from a HeroBuildingSet and hides
         /// only the placeholders this socket overlaps.
         /// </summary>
-        HeroBuilding = 7
+        HeroBuilding = 7,
+
+        /// <summary>Visual-only pedestrian crossing an active zebra crossing.</summary>
+        Pedestrian = 8,
+
+        /// <summary>Waving pedestrian beside a traffic light without zebra markings.</summary>
+        WavingPedestrian = 9,
+
+        /// <summary>Concrete planter placed on either pavement.</summary>
+        Planter = 10,
+
+        /// <summary>Roadside electrical utility cabinet placed on either pavement.</summary>
+        UtilityBox = 11,
+
+        /// <summary>
+        /// Pedestrian walking along the pavement in the opposite direction to the
+        /// player (world -Z). Driven by a <see cref="PavementWalker"/> mover rather
+        /// than standing still. Purely visual and off-lane, so it never collides
+        /// with the runner.
+        /// </summary>
+        WalkingPedestrian = 12
     }
 }

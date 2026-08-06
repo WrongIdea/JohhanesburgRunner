@@ -11,7 +11,7 @@ namespace JoburgRunner
     public class CameraFollow : MonoBehaviour
     {
         [SerializeField] Transform target;
-        [SerializeField] Vector3 offset = new Vector3(0f, 2.05f, -4.35f);
+        [SerializeField] Vector3 offset = new Vector3(0f, 2.25f, -5.15f);
         [SerializeField] float followSpeed = 8f;
         [Header("Pre-run idle showcase")]
         [SerializeField] GameManager gameManager;

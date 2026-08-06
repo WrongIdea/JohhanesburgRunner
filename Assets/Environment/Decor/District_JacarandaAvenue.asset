@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d97dafc3c22304e46b87c1f797558f52, type: 3}
+  m_Name: District_JacarandaAvenue
+  m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.Environment.Decor.DistrictDecorProfile
+  districtName: Jacaranda Avenue
+  rules:
+  - socketType: 0
+    spawnProbability: 1
+    maxCountPerSegment: 3
+    minSpacing: 14
+    maxSpacing: 22
+    allowedPrefabs:
+    - {fileID: 4138888706231468647, guid: 55e17487889f54f06b5332b26db3262b, type: 3}
+    - {fileID: 7239938856138146246, guid: cc398db3236c14f5ea0fd7b5095aa5e5, type: 3}
+    sideMatchedPrefabPair: 1
+    allowConsecutiveRepetition: 1
+    scaleRange: {x: 0.95, y: 1.02}
+    yawJitterRange: {x: 180, y: 180}
+    positionJitter: {x: 0.15, y: 0.35}
+    sidewalkOffset: -2
+    tintVariation: 0
+    useJacarandaPalette: 1
+    minimumDecorationSequence: 0
+    requiresIntersection: 0
+    requiresPedestrianCrossing: 0
+    requiresNoPedestrianCrossing: 0
+    collisionRadius: 1

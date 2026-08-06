@@ -20,11 +20,11 @@ namespace JoburgRunner
     public class PerfectDodge : MonoBehaviour
     {
         [Header("Detection")]
-        // Lanes sit 2.5m apart: a centred adjacent-lane pass gaps ~1.2m, so
-        // 0.9 rewards passes while drifting toward the vehicle (mid lane
-        // change) and barrier-edge shaves, without firing on every pass.
-        [SerializeField] float perfectDodgeDistance = 0.9f;
-        [SerializeField] float perfectDodgeCooldown = 0.35f;
+        // The narrowed 2.38 m lanes leave about a metre during an ordinary
+        // adjacent-lane taxi pass. Require a genuinely close edge shave so
+        // normal centred running never awards Perfect Dodge.
+        [SerializeField] float perfectDodgeDistance = 0.5f;
+        [SerializeField] float perfectDodgeCooldown = 0.75f;
         [SerializeField] float trackAheadMeters = 3f;
         [SerializeField] float passedBehindMeters = 0.6f;
 

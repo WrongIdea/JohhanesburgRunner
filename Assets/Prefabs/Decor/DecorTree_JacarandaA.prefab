@@ -42,6 +42,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8263156551170926264}
+  - component: {fileID: 6618022522512909754}
   m_Layer: 0
   m_Name: DecorTree_JacarandaA
   m_TagString: Untagged
@@ -65,6 +66,19 @@ Transform:
   - {fileID: 6784091623600348153}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6618022522512909754
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1805258652435262161}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82ccd81876aa54fcfb2c36309c2ffbf6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.Environment.Decor.RoadsidePropOrientation
+  rotationOffset: {x: 0, y: 0, z: 0}
 --- !u!1 &2201501590346937130
 GameObject:
   m_ObjectHideFlags: 0

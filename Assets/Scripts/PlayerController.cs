@@ -14,7 +14,8 @@ namespace JoburgRunner
     {
         [Header("Lane Settings")]
         [Tooltip("Fixed X positions for Left, Center, Right lanes.")]
-        [SerializeField] float[] laneXPositions = { -2.7f, 0f, 2.7f };
+        [SerializeField] float[] laneXPositions =
+            { -RoadMetrics.LaneSpacing, 0f, RoadMetrics.LaneSpacing };
         [Tooltip("Seconds to settle into the target lane; ease-in/ease-out, no first-frame jerk.")]
         [SerializeField] float laneChangeSmoothTime = 0.12f;
 
@@ -416,7 +417,7 @@ namespace JoburgRunner
 
             // Landing on a roof is survivable: the controller stands on the
             // collider like ground. Only side and front impacts crash.
-            if (hit.normal.y > 0.5f)
+            if (hit.normal.y > 0.5f && !obstacle.AlwaysFatalContact)
             {
                 return;
             }

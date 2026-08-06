@@ -14,7 +14,19 @@ namespace JoburgRunner
         [SerializeField] int visibleSegments = 7;
         [SerializeField] float segmentLength = 30f;
         [SerializeField] float recycleBehindDistance = 35f;
+        [Header("Jacaranda Avenue")]
+        [SerializeField, Min(0)] int jacarandaFirstSegment = 17;
+        [SerializeField, Min(1)] int jacarandaLengthSegments = 5;
+        [SerializeField, Min(6)] int jacarandaRepeatEverySegments = 60;
+        [Header("Decorative Junctions")]
+        [SerializeField] JunctionSpawnSettings junctionSettings;
         int nextDistrictIndex = 1;
+        int dressedSegmentCount;
+        int straightSegmentsSinceJunction;
+        int junctionOrdinal;
+        JunctionType lastJunctionType;
+        bool firstJunctionSpawned;
+        bool previousDressedSegmentWasJunction;
 
         void Start()
         {
@@ -82,23 +94,114 @@ namespace JoburgRunner
         void ApplyNextDistrict(GameObject segment)
         {
             RoadSegmentVisuals visuals = segment.GetComponent<RoadSegmentVisuals>();
+            JunctionVisuals junctionVisuals = segment.GetComponent<JunctionVisuals>();
             if (visuals != null)
             {
+                int segmentIndex = dressedSegmentCount++;
+                bool jacaranda = IsJacarandaSegment(segmentIndex);
+                if (jacaranda)
+                {
+                    junctionVisuals?.SetType(JunctionType.None);
+                    previousDressedSegmentWasJunction = false;
+                    // Keep the park visual family beneath the dedicated canopy recipe.
+                    visuals.SetDistrict(2);
+                    EnvironmentDecorDirector.Instance?.DecorateJacarandaSegment(
+                        segment.GetComponent<SegmentDecorator>());
+                    return;
+                }
+
                 int district = EnvironmentDirector.Instance != null &&
                     EnvironmentDirector.Instance.ActiveZone != null &&
                     EnvironmentDirector.Instance.ActiveZone.zoneId == EnvironmentZoneId.MandelaBridge
                         ? 4
                         : nextDistrictIndex;
+                JunctionType junction = PickJunction(segmentIndex, district, false);
+                bool faceBuildingsTowardRunner =
+                    previousDressedSegmentWasJunction && district != 4;
+                junctionVisuals?.SetType(junction);
                 visuals.SetDistrict(district);
 
                 // Decoration is data-driven and district-keyed; the director dresses
                 // this tile from its socket layout. Purely visual – it never touches
                 // obstacles, coins, power-ups, lanes or the road geometry.
                 EnvironmentDecorDirector.Instance?.DecorateSegment(
-                    segment.GetComponent<SegmentDecorator>(), district);
+                    segment.GetComponent<SegmentDecorator>(), district, junction,
+                    faceBuildingsTowardRunner);
 
                 nextDistrictIndex++;
+                previousDressedSegmentWasJunction = junction != JunctionType.None;
             }
+        }
+
+        JunctionType PickJunction(int segmentIndex, int district, bool jacaranda)
+        {
+            if (junctionSettings == null || district == 4 ||
+                segmentIndex < junctionSettings.openingSegmentCount ||
+                (jacaranda && !junctionSettings.allowInJacarandaAvenue) ||
+                straightSegmentsSinceJunction < junctionSettings.minimumStraightSegments)
+            {
+                IncrementStraightCount();
+                return JunctionType.None;
+            }
+
+            if (!firstJunctionSpawned && junctionSettings.guaranteeFirstJunctionAfterOpening)
+            {
+                firstJunctionSpawned = true;
+                lastJunctionType = JunctionType.Crossroad;
+                straightSegmentsSinceJunction = 0;
+                return JunctionType.Crossroad;
+            }
+
+            float total = junctionSettings.straightWeight +
+                          junctionSettings.crossroadWeight +
+                          junctionSettings.tJunctionWeight;
+            if (total <= 0f)
+            {
+                IncrementStraightCount();
+                return JunctionType.None;
+            }
+
+            var rng = new System.Random(unchecked(
+                junctionSettings.deterministicSeed + segmentIndex * 73856093));
+            float roll = (float)rng.NextDouble() * total;
+            if (roll < junctionSettings.straightWeight)
+            {
+                IncrementStraightCount();
+                return JunctionType.None;
+            }
+
+            JunctionType type = roll < junctionSettings.straightWeight +
+                                      junctionSettings.crossroadWeight
+                ? JunctionType.Crossroad
+                : ((junctionOrdinal++ & 1) == 0 ? JunctionType.TLeft : JunctionType.TRight);
+            if (type == lastJunctionType && type == JunctionType.Crossroad)
+            {
+                type = (junctionOrdinal++ & 1) == 0 ? JunctionType.TLeft : JunctionType.TRight;
+            }
+
+            lastJunctionType = type;
+            firstJunctionSpawned = true;
+            straightSegmentsSinceJunction = 0;
+            return type;
+        }
+
+        void IncrementStraightCount()
+        {
+            if (straightSegmentsSinceJunction < int.MaxValue)
+            {
+                straightSegmentsSinceJunction++;
+            }
+        }
+
+        bool IsJacarandaSegment(int segmentIndex)
+        {
+            if (segmentIndex < jacarandaFirstSegment)
+            {
+                return false;
+            }
+
+            int cycle = Mathf.Max(jacarandaLengthSegments + 1, jacarandaRepeatEverySegments);
+            return (segmentIndex - jacarandaFirstSegment) % cycle < jacarandaLengthSegments;
         }
     }
 }

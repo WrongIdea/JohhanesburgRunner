@@ -12,6 +12,11 @@ namespace JoburgRunner
     {
         public static readonly List<RunnerObstacle> ActiveObstacles = new List<RunnerObstacle>();
 
+        [SerializeField, Tooltip("Contact from above is also fatal. Used by moving pedestrians, which must never act as platforms.")]
+        bool alwaysFatalContact;
+
+        public bool AlwaysFatalContact => alwaysFatalContact;
+
         /// <summary>
         /// True once this pass can no longer earn a dodge reward: the player
         /// touched the obstacle, or the reward was already granted. Reset on

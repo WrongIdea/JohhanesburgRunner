@@ -90,6 +90,10 @@ namespace JoburgRunner.Environment.Decor
         [Tooltip("Uniform scale applied to the instance. Imported prefabs are authored at 1.")]
         [Min(0.01f)] public float uniformScale = 1f;
 
+        [Tooltip("Per-instance façade tint applied with a MaterialPropertyBlock. Keep near white " +
+                 "for subtle variation without creating duplicate materials.")]
+        public Color colorTint = Color.white;
+
         [Tooltip("Ground half-extent (metres) of the building footprint. Used to decide which " +
                  "placeholders it overlaps and to keep nearby props clear of the façade.")]
         [Min(0f)] public float footprintRadius = 9f;

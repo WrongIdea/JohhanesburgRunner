@@ -15,51 +15,67 @@ MonoBehaviour:
   districtName: Park District
   rules:
   - socketType: 0
-    spawnProbability: 0.9
-    maxCountPerSegment: 4
+    spawnProbability: 0.65
+    maxCountPerSegment: 3
     minSpacing: 10
     maxSpacing: 30
     allowedPrefabs:
     - {fileID: 1805258652435262161, guid: dcd06803b70cb48788bd2cb98b957b28, type: 3}
     - {fileID: 8137604048660939268, guid: cb0ddf0ad15e44a8d8c5c467306cf68e, type: 3}
+    sideMatchedPrefabPair: 0
     allowConsecutiveRepetition: 0
-    scaleRange: {x: 0.9, y: 1.15}
+    scaleRange: {x: 0.8, y: 1}
     yawJitterRange: {x: 0, y: 360}
     positionJitter: {x: 0.6, y: 2}
     sidewalkOffset: 0.3
     tintVariation: 0.15
+    useJacarandaPalette: 0
+    minimumDecorationSequence: 0
     requiresIntersection: 0
+    requiresPedestrianCrossing: 0
+    requiresNoPedestrianCrossing: 0
     collisionRadius: 1.6
-  - socketType: 2
-    spawnProbability: 0.6
-    maxCountPerSegment: 2
-    minSpacing: 12
+  - socketType: 1
+    spawnProbability: 0.2
+    maxCountPerSegment: 1
+    minSpacing: 20
     maxSpacing: 30
     allowedPrefabs:
-    - {fileID: 6516367699630537901, guid: 9bf1139fbb83d4efa903a53ef5b8e9fc, type: 3}
+    - {fileID: 4459363654784079985, guid: 1ea22cb5a047f435c87820cc793a7028, type: 3}
+    sideMatchedPrefabPair: 0
     allowConsecutiveRepetition: 0
     scaleRange: {x: 1, y: 1}
-    yawJitterRange: {x: -8, y: 8}
-    positionJitter: {x: 0.2, y: 1}
-    sidewalkOffset: 0
-    tintVariation: 0
-    requiresIntersection: 0
-    collisionRadius: 1.2
-  - socketType: 1
-    spawnProbability: 0.5
-    maxCountPerSegment: 1
-    minSpacing: 15
-    maxSpacing: 30
-    allowedPrefabs:
-    - {fileID: 7005477920021505675, guid: 6beac78a71374430f91ca06d4a63161c, type: 3}
-    allowConsecutiveRepetition: 0
-    scaleRange: {x: 1, y: 1.05}
     yawJitterRange: {x: 0, y: 0}
     positionJitter: {x: 0, y: 0.5}
     sidewalkOffset: 0
     tintVariation: 0
+    useJacarandaPalette: 0
+    minimumDecorationSequence: 0
     requiresIntersection: 0
+    requiresPedestrianCrossing: 0
+    requiresNoPedestrianCrossing: 0
     collisionRadius: 0.8
+  - socketType: 12
+    spawnProbability: 0.4
+    maxCountPerSegment: 2
+    minSpacing: 30
+    maxSpacing: 30
+    allowedPrefabs:
+    - {fileID: 8250836554918925591, guid: ac206a9be43a847fbbe23f6a438161aa, type: 3}
+    - {fileID: 4967020333557773500, guid: c9e4b282a8cae460593f5bf4a96875aa, type: 3}
+    sideMatchedPrefabPair: 0
+    allowConsecutiveRepetition: 0
+    scaleRange: {x: 0.95, y: 1.05}
+    yawJitterRange: {x: 0, y: 0}
+    positionJitter: {x: 0, y: 0}
+    sidewalkOffset: 0
+    tintVariation: 0
+    useJacarandaPalette: 0
+    minimumDecorationSequence: 0
+    requiresIntersection: 0
+    requiresPedestrianCrossing: 0
+    requiresNoPedestrianCrossing: 0
+    collisionRadius: 0.3
   - socketType: 3
     spawnProbability: 0.4
     maxCountPerSegment: 1
@@ -67,26 +83,56 @@ MonoBehaviour:
     maxSpacing: 30
     allowedPrefabs:
     - {fileID: 9202174539902639476, guid: 11afa52682c5147fd9455aa7f56c082a, type: 3}
+    sideMatchedPrefabPair: 0
     allowConsecutiveRepetition: 0
     scaleRange: {x: 1, y: 1}
     yawJitterRange: {x: 0, y: 360}
     positionJitter: {x: 0, y: 0.5}
     sidewalkOffset: 0
     tintVariation: 0
+    useJacarandaPalette: 0
+    minimumDecorationSequence: 0
     requiresIntersection: 0
+    requiresPedestrianCrossing: 0
+    requiresNoPedestrianCrossing: 0
     collisionRadius: 0.6
-  - socketType: 6
-    spawnProbability: 0.2
-    maxCountPerSegment: 1
-    minSpacing: 30
+  - socketType: 10
+    spawnProbability: 0.75
+    maxCountPerSegment: 2
+    minSpacing: 9
     maxSpacing: 30
     allowedPrefabs:
-    - {fileID: 6091276841563584042, guid: 5fb93354f46d84c29a7fb9b1f9b2c462, type: 3}
+    - {fileID: 5015168669180497715, guid: b39921d3b9695437f9b1bb6baf9d874e, type: 3}
+    sideMatchedPrefabPair: 0
     allowConsecutiveRepetition: 0
-    scaleRange: {x: 1, y: 1}
+    scaleRange: {x: 0.9, y: 1.1}
     yawJitterRange: {x: 0, y: 0}
-    positionJitter: {x: 0, y: 0}
+    positionJitter: {x: 0, y: 0.8}
     sidewalkOffset: 0
     tintVariation: 0
+    useJacarandaPalette: 0
+    minimumDecorationSequence: 0
     requiresIntersection: 0
-    collisionRadius: 2.5
+    requiresPedestrianCrossing: 0
+    requiresNoPedestrianCrossing: 0
+    collisionRadius: 1.1
+  - socketType: 11
+    spawnProbability: 0.2
+    maxCountPerSegment: 1
+    minSpacing: 12
+    maxSpacing: 30
+    allowedPrefabs:
+    - {fileID: 5657507999706261505, guid: d97bae760c9d74781ad1c1dcf673192b, type: 3}
+    sideMatchedPrefabPair: 0
+    allowConsecutiveRepetition: 0
+    scaleRange: {x: 0.95, y: 1.05}
+    yawJitterRange: {x: -5, y: 5}
+    positionJitter: {x: 0, y: 0.5}
+    sidewalkOffset: 0
+    tintVariation: 0
+    useJacarandaPalette: 0
+    minimumDecorationSequence: 0
+    requiresIntersection: 0
+    requiresPedestrianCrossing: 0
+    requiresNoPedestrianCrossing: 0
+    collisionRadius: 0.9

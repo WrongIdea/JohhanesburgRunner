@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using JoburgRunner.Environment.Decor;
 using UnityEngine;
 
 namespace JoburgRunner
@@ -16,7 +17,8 @@ namespace JoburgRunner
     /// </summary>
     public class MovingObstacle : MonoBehaviour
     {
-        static readonly float[] LaneCenters = { -2.7f, 0f, 2.7f };
+        static readonly float[] LaneCenters =
+            { -RoadMetrics.LaneSpacing, 0f, RoadMetrics.LaneSpacing };
         static readonly List<MovingObstacle> Active = new List<MovingObstacle>();
 
         [Header("Speed")]
@@ -83,6 +85,12 @@ namespace JoburgRunner
         /// </summary>
         public void ResetMotion()
         {
+            TaxiObstacleVisualVariants visualVariants = GetComponent<TaxiObstacleVisualVariants>();
+            if (visualVariants != null)
+            {
+                visualVariants.ChooseVariant();
+            }
+
             isStopped = false;
             currentSpeed = 0f;
             drive = Drive.Cruise;
@@ -158,7 +166,16 @@ namespace JoburgRunner
             }
 
             Vector3 position = transform.position;
-            position.z -= currentSpeed * dt;                                  // travel toward the player
+            float nextZ = position.z - currentSpeed * dt;
+            if (CrossingPedestrian.TryGetTaxiStopZ(position.z, -1f, out float crossingStopZ))
+            {
+                nextZ = Mathf.Max(nextZ, crossingStopZ);
+                if (Mathf.Approximately(nextZ, crossingStopZ))
+                {
+                    currentSpeed = 0f;
+                }
+            }
+            position.z = nextZ;                                               // travel toward the player
             position.x = Mathf.MoveTowards(position.x, LaneCenters[targetLane], laneChangeSpeed * dt); // steer to lane
             transform.position = position;
         }

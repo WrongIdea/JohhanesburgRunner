@@ -18,10 +18,11 @@ MonoBehaviour:
       type: 3}
     weight: 1
     allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -2}
+    localPositionOffset: {x: -1.5, y: 0, z: -2}
     eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 40
-    uniformScale: 1
+    facePlayerDegrees: 0
+    uniformScale: 0.92
+    colorTint: {r: 1, g: 0.96, b: 0.9, a: 1}
     footprintRadius: 10.5
     minRepeatDistance: 0
     enabled: 1
@@ -30,119 +31,12 @@ MonoBehaviour:
       type: 3}
     weight: 1
     allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -4}
+    localPositionOffset: {x: 1.5, y: 0, z: -3}
     eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 40
-    uniformScale: 1
+    facePlayerDegrees: 0
+    uniformScale: 1.02
+    colorTint: {r: 0.9, g: 0.96, b: 1, a: 1}
     footprintRadius: 12.5
-    minRepeatDistance: 0
-    enabled: 1
-  - label: JHB_MidRise01
-    prefab: {fileID: 3573868134528600623, guid: 81778079b09b04dc983f9d9e29d28006,
-      type: 3}
-    weight: 4
-    allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -2}
-    eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 40
-    uniformScale: 1
-    footprintRadius: 8.5
-    minRepeatDistance: 0
-    enabled: 0
-  - label: JHB_MidRise02
-    prefab: {fileID: 7390026807154721815, guid: 0106c0920563640158abc46a1a6472fc,
-      type: 3}
-    weight: 4
-    allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -2}
-    eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 40
-    uniformScale: 1
-    footprintRadius: 8.5
-    minRepeatDistance: 0
-    enabled: 0
-  - label: JHB_MidRise03
-    prefab: {fileID: 1166921877766365808, guid: f974e76a037ec4fe0a7fe0cd0aeaf105,
-      type: 3}
-    weight: 4
-    allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -2}
-    eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 40
-    uniformScale: 1
-    footprintRadius: 8.5
-    minRepeatDistance: 0
-    enabled: 0
-  - label: JHB_MidRise04
-    prefab: {fileID: 2414863987298687667, guid: 80e07124669e54ea094ba1f2dcf23e9f,
-      type: 3}
-    weight: 4
-    allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -2}
-    eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 40
-    uniformScale: 1
-    footprintRadius: 8.5
-    minRepeatDistance: 0
-    enabled: 0
-  - label: JHB_MidRise05
-    prefab: {fileID: 2388292111161095322, guid: 2ce017eb1ec3a4ea69ea7ef9c421fce4,
-      type: 3}
-    weight: 4
-    allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -2}
-    eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 40
-    uniformScale: 1
-    footprintRadius: 8.5
-    minRepeatDistance: 0
-    enabled: 0
-  - label: JHB_Building02_Close
-    prefab: {fileID: 3747004421356106737, guid: 7172c26c790964ba2afd1a49d0ad52e8,
-      type: 3}
-    weight: 1
-    allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -1}
-    eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 30
-    uniformScale: 1.1
-    footprintRadius: 11.5
-    minRepeatDistance: 0
-    enabled: 1
-  - label: JHB_Building02_Compact
-    prefab: {fileID: 3747004421356106737, guid: 7172c26c790964ba2afd1a49d0ad52e8,
-      type: 3}
-    weight: 1
-    allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -1.5}
-    eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 55
-    uniformScale: 0.9
-    footprintRadius: 9.5
-    minRepeatDistance: 0
-    enabled: 1
-  - label: JHB_SkylinePop_02_Close
-    prefab: {fileID: 2772312973052275331, guid: de37e042d888d44e593f2d44332b685c,
-      type: 3}
-    weight: 1
-    allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -2.5}
-    eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 30
-    uniformScale: 1.08
-    footprintRadius: 13.5
-    minRepeatDistance: 0
-    enabled: 1
-  - label: JHB_SkylinePop_02_Compact
-    prefab: {fileID: 2772312973052275331, guid: de37e042d888d44e593f2d44332b685c,
-      type: 3}
-    weight: 1
-    allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -3}
-    eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 55
-    uniformScale: 0.9
-    footprintRadius: 11.25
     minRepeatDistance: 0
     enabled: 1
   - label: JHB_HeroBuilding03
@@ -150,11 +44,12 @@ MonoBehaviour:
       type: 3}
     weight: 1
     allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -1.5}
+    localPositionOffset: {x: -2, y: 0, z: -1}
     eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 40
-    uniformScale: 1
-    footprintRadius: 8
+    facePlayerDegrees: 0
+    uniformScale: 0.95
+    colorTint: {r: 1, g: 0.93, b: 0.82, a: 1}
+    footprintRadius: 5.6
     minRepeatDistance: 0
     enabled: 1
   - label: JHB_HeroBuilding04
@@ -162,11 +57,12 @@ MonoBehaviour:
       type: 3}
     weight: 1
     allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -1.5}
+    localPositionOffset: {x: 2.5, y: 0, z: -1.5}
     eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 40
-    uniformScale: 1
-    footprintRadius: 8
+    facePlayerDegrees: 0
+    uniformScale: 0.9
+    colorTint: {r: 0.78, g: 0.9, b: 1, a: 1}
+    footprintRadius: 5.6
     minRepeatDistance: 0
     enabled: 1
   - label: JHB_HeroBuilding05
@@ -174,11 +70,12 @@ MonoBehaviour:
       type: 3}
     weight: 1
     allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -1.5}
+    localPositionOffset: {x: -1, y: 0, z: -1}
     eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 40
-    uniformScale: 1
-    footprintRadius: 8
+    facePlayerDegrees: 0
+    uniformScale: 1.05
+    colorTint: {r: 1, g: 0.88, b: 0.78, a: 1}
+    footprintRadius: 5.6
     minRepeatDistance: 0
     enabled: 1
   - label: JHB_HeroBuilding06
@@ -186,11 +83,12 @@ MonoBehaviour:
       type: 3}
     weight: 1
     allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -1.5}
+    localPositionOffset: {x: 1, y: 0, z: -1}
     eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 40
-    uniformScale: 1
-    footprintRadius: 8
+    facePlayerDegrees: 0
+    uniformScale: 1.1
+    colorTint: {r: 0.9, g: 1, b: 0.9, a: 1}
+    footprintRadius: 4.4
     minRepeatDistance: 0
     enabled: 1
   - label: JHB_HeroBuilding07
@@ -198,10 +96,11 @@ MonoBehaviour:
       type: 3}
     weight: 1
     allowedSides: 3
-    localPositionOffset: {x: 0, y: 0, z: -1.5}
+    localPositionOffset: {x: -2.5, y: 0, z: -2}
     eulerOffset: {x: 0, y: 0, z: 0}
-    facePlayerDegrees: 40
-    uniformScale: 1
-    footprintRadius: 8
+    facePlayerDegrees: 0
+    uniformScale: 0.98
+    colorTint: {r: 1, g: 1, b: 1, a: 1}
+    footprintRadius: 6.9
     minRepeatDistance: 0
     enabled: 1

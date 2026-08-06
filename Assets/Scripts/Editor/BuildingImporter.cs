@@ -66,35 +66,35 @@ namespace JoburgRunner.Editor
             GameObject root = PrefabUtility.LoadPrefabContents(path);
             try
             {
-                SetChild(root, "Road/ThreeLaneAsphalt", 0f, 9.6f);
-                SetChild(root, "Road/LeftYellowShoulderLine", -4.58f);
-                SetChild(root, "Road/RightYellowShoulderLine", 4.58f);
-                SetChild(root, "Sidewalks/LeftConcreteSidewalk", -6.1f, 2.4f);
-                SetChild(root, "Sidewalks/RightConcreteSidewalk", 6.1f, 2.4f);
-                SetChild(root, "Sidewalks/LeftCurb", -4.98f, 0.30f);
-                SetChild(root, "Sidewalks/RightCurb", 4.98f, 0.30f);
+                SetChild(root, "Road/ThreeLaneAsphalt", 0f, RoadMetrics.RoadWidth);
+                SetChild(root, "Road/LeftYellowShoulderLine", -4.0f);
+                SetChild(root, "Road/RightYellowShoulderLine", 4.0f);
+                SetChild(root, "Sidewalks/LeftConcreteSidewalk", -5.82f, 2.95f);
+                SetChild(root, "Sidewalks/RightConcreteSidewalk", 5.82f, 2.95f);
+                SetChild(root, "Sidewalks/LeftCurb", -4.38f, 0.30f);
+                SetChild(root, "Sidewalks/RightCurb", 4.38f, 0.30f);
                 SetChild(root, "Sidewalks/LeftGrassStrip", -7.5f, 0.45f);
                 SetChild(root, "Sidewalks/RightGrassStrip", 7.5f, 0.45f);
 
                 foreach (Transform tr in root.GetComponentsInChildren<Transform>(true))
                 {
-                    if (tr.name == "PavementExpansionJoint_Left") SetTransformX(tr, -6.1f, 2.2f);
-                    else if (tr.name == "PavementExpansionJoint_Right") SetTransformX(tr, 6.1f, 2.2f);
+                    if (tr.name == "PavementExpansionJoint_Left") SetTransformX(tr, -5.82f, 2.7f);
+                    else if (tr.name == "PavementExpansionJoint_Right") SetTransformX(tr, 5.82f, 2.7f);
                 }
 
                 SetChild(root, "DecorSockets/HeroBuildingSocket_L", -11f);
                 SetChild(root, "DecorSockets/HeroBuildingSocket_R", 11f);
                 foreach (Transform tr in root.GetComponentsInChildren<Transform>(true))
                 {
-                    if (tr.name.StartsWith("TreeSocket_L")) SetTransformX(tr, -7.1f);
-                    else if (tr.name.StartsWith("TreeSocket_R")) SetTransformX(tr, 7.1f);
+                    if (tr.name.StartsWith("TreeSocket_L")) SetTransformX(tr, -6.55f);
+                    else if (tr.name.StartsWith("TreeSocket_R")) SetTransformX(tr, 6.55f);
                     else if (tr.name.StartsWith("LampSocket_L") || tr.name.StartsWith("TrafficLightSocket_S") && tr.name.EndsWith("W") ||
-                             tr.name.StartsWith("TrafficLightSocket_N") && tr.name.EndsWith("W")) SetTransformX(tr, -5.35f);
+                             tr.name.StartsWith("TrafficLightSocket_N") && tr.name.EndsWith("W")) SetTransformX(tr, -4.8f);
                     else if (tr.name.StartsWith("LampSocket_R") || tr.name.StartsWith("TrafficLightSocket_S") && tr.name.EndsWith("E") ||
-                             tr.name.StartsWith("TrafficLightSocket_N") && tr.name.EndsWith("E")) SetTransformX(tr, 5.35f);
-                    else if (tr.name == "BenchSocket_L1") SetTransformX(tr, -6.2f);
-                    else if (tr.name == "BinSocket_R1") SetTransformX(tr, 5.8f);
-                    else if (tr.name == "BillboardSocket_R1" || tr.name == "BusStopSocket_R1") SetTransformX(tr, 6.2f);
+                             tr.name.StartsWith("TrafficLightSocket_N") && tr.name.EndsWith("E")) SetTransformX(tr, 4.8f);
+                    else if (tr.name == "BenchSocket_L1") SetTransformX(tr, -5.65f);
+                    else if (tr.name == "BinSocket_R1") SetTransformX(tr, 5.25f);
+                    else if (tr.name == "BillboardSocket_R1" || tr.name == "BusStopSocket_R1") SetTransformX(tr, 5.65f);
                 }
                 PrefabUtility.SaveAsPrefabAsset(root, path);
             }

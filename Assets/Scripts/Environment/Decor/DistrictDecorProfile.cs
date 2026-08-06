@@ -75,6 +75,10 @@ namespace JoburgRunner.Environment.Decor
                  "traffic-light or tree variants read as hand-placed rather than cloned.")]
         public GameObject[] allowedPrefabs = Array.Empty<GameObject>();
 
+        [Tooltip("Treat allowedPrefabs as an intentional [Left, Right] pair. Used by " +
+                 "asymmetrical canopy trees so both crowns lean toward the road.")]
+        public bool sideMatchedPrefabPair = false;
+
         [Tooltip("If false, the same prefab index will not be used twice in a row on a tile " +
                  "(when more than one variant exists), further breaking up repetition.")]
         public bool allowConsecutiveRepetition = true;
@@ -102,10 +106,25 @@ namespace JoburgRunner.Environment.Decor
                  "0 = no tint.")]
         [Range(0f, 0.5f)] public float tintVariation = 0f;
 
+        [Tooltip("Use the weighted Jacaranda blossom palette: purple, lavender, violet, " +
+                 "soft pink and pale blossom. Applied per instance without material copies.")]
+        public bool useJacarandaPalette = false;
+
         [Header("Placement gates")]
+        [Tooltip("Do not spawn this prop during the first N segment dress operations. " +
+                 "Use 7 to keep it out of the seven-tile opening ring, so it is first " +
+                 "prepared off-camera on a recycled segment ahead of the runner.")]
+        [Min(0)] public int minimumDecorationSequence = 0;
+
         [Tooltip("If true, this prop only spawns when the tile is flagged an intersection. " +
                  "Traffic lights must set this so they never appear on straight tiles.")]
         public bool requiresIntersection = false;
+
+        [Tooltip("If true, this prop spawns only when the optional zebra crossing is visible.")]
+        public bool requiresPedestrianCrossing = false;
+
+        [Tooltip("If true, this prop spawns only at an intersection where the zebra crossing is hidden.")]
+        public bool requiresNoPedestrianCrossing = false;
 
         [Tooltip("Collision radius (metres) this prop occupies, tested against other props " +
                  "already placed on the tile to prevent overlap (e.g. a lamp beside a trunk).")]

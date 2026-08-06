@@ -250,6 +250,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0855007b60e194714b00a34d40c7b7d6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.RunnerObstacle
+  alwaysFatalContact: 0
 --- !u!114 &1443702929112406080
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -267,7 +268,8 @@ MonoBehaviour:
   dissolveGlowIntensity: 2.2
   particleCount: 36
   dissolveEndScale: 0.05
-  dissolveParticlePrefab: {fileID: 0}
+  dissolveParticlePrefab: {fileID: 1364051974168075340, guid: aac3b447004b24c12a4ac1161620c693,
+    type: 3}
 --- !u!1 &9072393120950913638
 GameObject:
   m_ObjectHideFlags: 0

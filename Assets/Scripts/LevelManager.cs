@@ -21,7 +21,8 @@ namespace JoburgRunner
         [SerializeField] float destroyBehindCameraDistance = 35f;
 
         [Header("Lanes")]
-        [SerializeField] float[] laneXPositions = { -2.7f, 0f, 2.7f };
+        [SerializeField] float[] laneXPositions =
+            { -RoadMetrics.LaneSpacing, 0f, RoadMetrics.LaneSpacing };
 
         [Header("Obstacles")]
         [SerializeField] GameObject[] obstaclePrefabs;

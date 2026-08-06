@@ -27,6 +27,29 @@ namespace JoburgRunner.Editor
         const string ScenePath = "Assets/Scenes/JoburgEndlessRunner.unity";
         const string RoadPrefabPath = "Assets/Prefabs/RoadSegment.prefab";
         const string TaxiPrefabPath = "Assets/Prefabs/SouthAfricanTaxiObstacle.prefab";
+        const string Taxi2ModelPath = "Assets/Art/Generated/Incoming/Optimized/taxi2/taxi2_production.fbx";
+        const string Taxi2MaterialPath = "Assets/Materials/Taxi2_URP.mat";
+        const string Taxi2AlbedoPath = "Assets/Art/Generated/Incoming/Optimized/taxi2/Meshy_AI_Low_poly_1980s_South__0731072049_texture.png";
+        const string Taxi2NormalPath = "Assets/Art/Generated/Incoming/Optimized/taxi2/Meshy_AI_Low_poly_1980s_South__0731072049_texture_normal.png";
+        const string DustbinModelPath = "Assets/Art/Generated/Incoming/Optimized/dustbin/dustbin_upright.fbx";
+        const string BusStopStandModelPath = "Assets/Art/Generated/Incoming/Optimized/bus_stop_stand/bus_stop_stand_right_side_up.fbx";
+        const string DustbinAlbedoPath = "Assets/Art/Generated/Incoming/Optimized/dustbin/Meshy_AI_Low_poly_modern_Johan_0731082557_texture.png";
+        const string DustbinNormalPath = "Assets/Art/Generated/Incoming/Optimized/dustbin/Meshy_AI_Low_poly_modern_Johan_0731082557_texture_normal.png";
+        const string BusStopStandAlbedoPath = "Assets/Art/Generated/Incoming/Optimized/bus_stop_stand/Meshy_AI_Create_a_game_ready_J_0731074501_texture.png";
+        const string BusStopStandNormalPath = "Assets/Art/Generated/Incoming/Optimized/bus_stop_stand/Meshy_AI_Create_a_game_ready_J_0731074501_texture_normal.png";
+        const string ConcretePotplantModelPath = "Assets/Art/Generated/Incoming/Optimized/concrete_potplant/concrete_potplant_production.fbx";
+        const string ConcretePotplantAlbedoPath = "Assets/Art/Generated/Incoming/Optimized/concrete_potplant/Meshy_AI_Low_poly_rectangular__0731084256_texture.png";
+        const string ConcretePotplantNormalPath = "Assets/Art/Generated/Incoming/Optimized/concrete_potplant/Meshy_AI_Low_poly_rectangular__0731084256_texture_normal.png";
+        const string ElectricBoxModelPath = "Assets/Art/Generated/Incoming/Optimized/electric_box/electric_box_upright.fbx";
+        const string ElectricBoxAlbedoPath = "Assets/Art/Generated/Incoming/Optimized/electric_box/Meshy_AI_Low_poly_roadside_ele_0731085731_texture.png";
+        const string ElectricBoxNormalPath = "Assets/Art/Generated/Incoming/Optimized/electric_box/Meshy_AI_Low_poly_roadside_ele_0731085731_texture_normal.png";
+        const string DirectionSignModelPath = "Assets/Art/Generated/Incoming/road_sign_new/road_sign_unity.fbx";
+        // NB: copied to a clean name — the original PNG shares the FBX's base name
+        // (..._texture.fbx / ..._texture.png), so Unity's FBX importer claims it and
+        // LoadAssetAtPath<Texture2D> returns null (the sign rendered white).
+        const string DirectionSignAlbedoPath = "Assets/Art/Generated/Incoming/road_sign_new/roadsign_base_albedo.png";
+        const string DirectionSignNormalPath = "Assets/Art/Generated/Incoming/road_sign_new/Meshy_AI_Create_a_low_poly_mod_0802182911_texture_fbx/Meshy_AI_Create_a_low_poly_mod_0802182911_texture_normal.png";
+        const string DirectionSignPrefabPath = "Assets/Prefabs/Decor/DecorDirectionSign.prefab";
         // Higgsfield-generated taxi: a wheel-less body GLB plus a separate wheel
         // GLB, assembled into one prefab so the wheels are real spinning children.
         const string TaxiBodyModelPath = "Assets/Models/Higgsfield/Taxi/TaxiBody.glb";
@@ -120,12 +143,13 @@ namespace JoburgRunner.Editor
         const string TelkomTowerMaterialPath = "Assets/Environment/TelkomTower/TelkomTower_URP.mat";
         const string JacarandaTreeModelPath = "Assets/Environment/Roadside/Jacaranda_Tree.fbx";
         const string TrafficLightModelPath = "Assets/Environment/Roadside/Traffic_Light.fbx";
+        const string ApprovedTrafficLightPrefabPath = "Assets/Art/Props/PF_traffic_light_optimized.prefab";
         const string ApkPath = "Builds/JoburgEndlessRunner.apk";
         const string PreviewPath = "Builds/preview.png";
         const string RunnerPbrMaterialPath = "Assets/Materials/RunnerExternalPbr.mat";
         // Runner is measured at its real extents now, so this is a true world
         // height: ~1.8 units reads as human next to the 2.3-unit taxis and
-        // 2.7-unit lane spacing. (It was 6.0 to counter the old inflated-bounds
+        // Production lane spacing. (It was 6.0 to counter the old inflated-bounds
         // measurement, which never produced a 6-unit runner on screen.)
         const float RunnerVisualTargetHeight = 1.85f;
         const float RunnerGroundSink = 0.35f;
@@ -136,17 +160,21 @@ namespace JoburgRunner.Editor
         const float CoinTriggerRadius = 0.65f;
 
         static readonly Dictionary<string, Material> Palette = new Dictionary<string, Material>();
+        static CartoonVisualSettings CartoonSettings;
 
         [MenuItem("Joburg Runner/Build Minimum Playable Scene")]
         public static void BuildMinimumPlayableScene()
         {
             EnsureFolders();
+            CartoonSettings = CreateCartoonVisualSettings();
             CreatePalette();
             CreateEnvironmentLibraryPrefabs();
             EnvironmentZoneProfileBuilder.GenerateExampleZoneProfiles();
             TuneRenderPipelineForMobile();
             CompressTextures();
 
+            JunctionSpawnSettings junctionSettings = CreateJunctionSpawnSettings();
+            CreateJunctionVariantPrefabs();
             GameObject roadPrefab = CreateRoadSegmentPrefab();
             GameObject taxiPrefab = CreateTaxiObstaclePrefab();
             GameObject coinPopPrefab = CreateCoinPopPrefab();
@@ -161,8 +189,16 @@ namespace JoburgRunner.Editor
             TrackChunk[] chunkPrefabs = CreateTrackChunkPrefabs(taxiPrefab, coinPrefab, rareCoinPrefab, powerUpPrefabs, barrierPrefab, potholePrefab);
 
             // Phase 1 socket decoration: poolable prop prefabs + tunable district profiles.
+            WomanNpcBuilder.CreatePrefab();
+            GameObject fruitsStallPrefab = FruitsStallPrefabBuilder.CreatePrefab();
+            GameObject gentlemanPrefab = GentlemanNpcBuilder.CreatePrefab();
+            GameObject wavingGentlemanPrefab = GentlemanWaveNpcBuilder.CreatePrefab();
+            GameObject walkingWomanPrefab = PavementWalkerNpcBuilder.CreatePrefab();
+            GameObject walkingManPrefab = PavementWalkerManNpcBuilder.CreatePrefab();
             DecorPrefabSet decorPrefabs = CreateDecorPrefabs();
-            DistrictDecorProfile[] decorProfiles = CreateDistrictDecorProfiles(decorPrefabs);
+            DistrictDecorProfile[] decorProfiles = CreateDistrictDecorProfiles(
+                decorPrefabs, fruitsStallPrefab, gentlemanPrefab, wavingGentlemanPrefab,
+                walkingWomanPrefab, walkingManPrefab);
             // Hero-building catalogue asset, wired into the decor director below.
             HeroBuildingSet heroSet = CreateHeroBuildingSet();
 
@@ -172,12 +208,14 @@ namespace JoburgRunner.Editor
             CreateLighting();
             GameObject player = CreatePlayer();
             CreateCamera(player.transform);
+            CreateRoadsideSpawnHaze(player.transform);
             CreateSkyline(player.transform);
             // Taxis are the only obstacle: they come head-on across the three lanes.
-            CreateSystems(player.transform, roadPrefab, chunkPrefabs);
+            CreateSystems(player.transform, roadPrefab, chunkPrefabs, junctionSettings);
             CreateUi(player.GetComponent<PlayerController>());
             CreateGameSystems(player);
             CreateDecorDirector(decorProfiles, heroSet);
+            CreatePigeonSystem(player.transform);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
@@ -398,6 +436,171 @@ namespace JoburgRunner.Editor
             EditorSettings.asyncShaderCompilation = prevAsync;
         }
 
+        // Renders the walking-woman pedestrian up close to confirm she imports
+        // upright at human scale, stands on the pavement, and — under a yaw-180
+        // socket like the runtime one — faces world -Z (toward the camera behind
+        // the player). Writes Builds/preview_walker.png and logs her bounds.
+        [MenuItem("Joburg Runner/Capture Pavement Walker Preview")]
+        public static void CapturePavementWalkerPreview()
+        {
+            CaptureWalkerPrefab(PavementWalkerNpcBuilder.PrefabPath, "Builds/preview_walker.png");
+        }
+
+        [MenuItem("Joburg Runner/Capture Pavement Walker Man Preview")]
+        public static void CapturePavementWalkerManPreview()
+        {
+            CaptureWalkerPrefab(PavementWalkerManNpcBuilder.PrefabPath, "Builds/preview_walker_man.png");
+        }
+
+        static void CaptureWalkerPrefab(string prefabPath, string outPath)
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            CreatePalette();
+
+            bool prevAsync = EditorSettings.asyncShaderCompilation;
+            EditorSettings.asyncShaderCompilation = false;
+
+            Camera cam = Camera.main;
+            // Camera behind the player looking +Z; they face -Z, so we see the front.
+            // Kept low so the feet/ground contact is clearly in frame.
+            cam.transform.position = new Vector3(1.2f, 0.9f, -3.6f);
+            cam.transform.rotation = Quaternion.Euler(2f, -16f, 0f);
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.55f, 0.72f, 0.88f);
+            cam.fieldOfView = 45f;
+            cam.farClipPlane = 200f;
+
+            // Grey ground quad at y=0 so grounding is verifiable against pavement level.
+            GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            ground.name = "GroundRef";
+            ground.transform.localScale = new Vector3(2f, 1f, 2f);
+
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (prefab == null)
+            {
+                Debug.LogError($"Walker prefab missing at {prefabPath}; run the scene build first.");
+                EditorSettings.asyncShaderCompilation = prevAsync;
+                return;
+            }
+
+            // Replicate the runtime socket: yaw 180 so the root's forward is world -Z.
+            GameObject socket = new GameObject("SocketSim");
+            socket.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+            GameObject inst = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            inst.transform.SetParent(socket.transform, false);
+            inst.transform.localPosition = Vector3.zero;
+            inst.transform.localRotation = Quaternion.identity;
+
+            Transform visual = inst.transform.childCount > 0
+                ? inst.transform.GetChild(0)
+                : inst.transform;
+            Animator animator = visual.GetComponent<Animator>();
+            AnimationClip walk = animator != null && animator.runtimeAnimatorController != null
+                && animator.runtimeAnimatorController.animationClips.Length > 0
+                ? animator.runtimeAnimatorController.animationClips[0]
+                : null;
+            if (walk != null)
+            {
+                walk.SampleAnimation(visual.gameObject, walk.length * 0.3f);
+            }
+
+            Renderer[] renderers = inst.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length > 0)
+            {
+                Bounds b = renderers[0].bounds;
+                for (int i = 1; i < renderers.Length; i++)
+                {
+                    b.Encapsulate(renderers[i].bounds);
+                }
+                Debug.Log($"WALKER-DEBUG center={b.center} size={b.size} minY={b.min.y:0.###} " +
+                          $"clip={(walk != null ? walk.name : "none")}");
+            }
+
+            RenderCameraToFile(cam, outPath); // warm-up
+            RenderCameraToFile(cam, outPath);
+            EditorSettings.asyncShaderCompilation = prevAsync;
+        }
+
+        // Renders the pigeon (tight, mid-flap, on a ground plane) and the swapped
+        // junction road sign, to verify scale/orientation/texture and clip import.
+        // Writes Builds/preview_pigeon.png and Builds/preview_roadsign.png + logs.
+        [MenuItem("Joburg Runner/Capture Pigeon Preview")]
+        public static void CapturePigeonPreview()
+        {
+            EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            CreatePalette();
+            bool prevAsync = EditorSettings.asyncShaderCompilation;
+            EditorSettings.asyncShaderCompilation = false;
+
+            GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            ground.name = "GroundRef";
+            ground.transform.localScale = new Vector3(2f, 1f, 2f);
+
+            Camera cam = Camera.main;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.55f, 0.72f, 0.88f);
+            cam.farClipPlane = 200f;
+
+            // --- Pigeon (tight) ---
+            GameObject pigeonPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                PigeonBuilder.PigeonPrefabPath);
+            if (pigeonPrefab != null)
+            {
+                GameObject pigeon = (GameObject)PrefabUtility.InstantiatePrefab(pigeonPrefab);
+                pigeon.transform.SetPositionAndRotation(Vector3.zero, Quaternion.Euler(0f, 35f, 0f));
+                Animator animator = pigeon.GetComponentInChildren<Animator>();
+                AnimationClip pose = null;
+                if (animator != null && animator.runtimeAnimatorController != null)
+                {
+                    foreach (AnimationClip c in animator.runtimeAnimatorController.animationClips)
+                    {
+                        if (c.name.Contains("Idle")) { pose = c; break; }
+                    }
+                }
+                if (pose != null)
+                {
+                    pose.SampleAnimation(animator.gameObject, 0f);
+                }
+                Renderer[] rs = pigeon.GetComponentsInChildren<Renderer>(true);
+                Bounds b = rs.Length > 0 ? rs[0].bounds : default;
+                for (int i = 1; i < rs.Length; i++) b.Encapsulate(rs[i].bounds);
+                int clipCount = animator != null && animator.runtimeAnimatorController != null
+                    ? animator.runtimeAnimatorController.animationClips.Length : 0;
+                Debug.Log($"PIGEON-DEBUG bounds size={b.size} center={b.center} clips={clipCount} " +
+                          $"renderers={rs.Length}");
+
+                cam.transform.position = new Vector3(0.48f, 0.24f, 0.44f);
+                cam.transform.LookAt(new Vector3(0f, 0.13f, 0f));
+                cam.fieldOfView = 34f;
+                RenderCameraToFile(cam, "Builds/preview_pigeon.png"); // warm-up
+                RenderCameraToFile(cam, "Builds/preview_pigeon.png");
+            }
+            else
+            {
+                Debug.LogError("Pigeon prefab missing; run the scene build first.");
+            }
+
+            // --- Swapped road sign (wider) ---
+            GameObject signPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(DirectionSignPrefabPath);
+            if (signPrefab != null)
+            {
+                GameObject sign = (GameObject)PrefabUtility.InstantiatePrefab(signPrefab);
+                sign.transform.SetPositionAndRotation(Vector3.zero, Quaternion.Euler(0f, 30f, 0f));
+                Renderer[] srs = sign.GetComponentsInChildren<Renderer>(true);
+                Bounds sb = srs.Length > 0 ? srs[0].bounds : default;
+                for (int i = 1; i < srs.Length; i++) sb.Encapsulate(srs[i].bounds);
+                Debug.Log($"ROADSIGN-DEBUG size={sb.size} center={sb.center}");
+                float h = Mathf.Max(sb.size.y, 0.5f);
+                cam.transform.position = new Vector3(0f, sb.center.y, -(h * 2.2f + 2f));
+                cam.transform.LookAt(sb.center);
+                cam.fieldOfView = 45f;
+                RenderCameraToFile(cam, "Builds/preview_roadsign.png"); // warm-up
+                RenderCameraToFile(cam, "Builds/preview_roadsign.png");
+            }
+
+            EditorSettings.asyncShaderCompilation = prevAsync;
+        }
+
         // Renders the six hero-building validation scenarios from the actual running
         // camera pose (player at origin), mimicking what the director does at runtime:
         // dress CBD props, then SetHero on a pooled hero. Confirms spawn, placeholder
@@ -410,10 +613,10 @@ namespace JoburgRunner.Editor
             bool prevAsync = EditorSettings.asyncShaderCompilation;
             EditorSettings.asyncShaderCompilation = false;
 
-            // Running camera pose: offset (0,2.05,-4.35) from the player, look height 1.05.
+            // Running camera pose: pulled back slightly to show more of the street.
             Camera cam = Camera.main;
             Vector3 player = Vector3.zero;
-            cam.transform.position = player + new Vector3(0f, 2.05f, -4.35f);
+            cam.transform.position = player + new Vector3(0f, 2.25f, -5.15f);
             cam.transform.rotation = Quaternion.LookRotation(player + Vector3.up * 1.05f - cam.transform.position);
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.55f, 0.72f, 0.88f);
@@ -503,13 +706,15 @@ namespace JoburgRunner.Editor
             var go = new GameObject("EnvironmentDecorDirector");
             var director = go.AddComponent<EnvironmentDecorDirector>();
             SetField(director, "useSocketDecoration", true);
+            SetField(director, "heroOnlyMode", false);
             SetField(director, "profilesByDistrict", profiles);
             SetField(director, "intersectionEvery", 3);
             SetField(director, "prewarmPerPrefab", 16);
             SetField(director, "heroSet", heroSet);
+            SetField(director, "heroAllDistricts", true);
             SetField(director, "heroPrewarm", 2);
             SetField(director, "heroMinGap", 1);
-            SetField(director, "heroMaxGap", 2);
+            SetField(director, "heroMaxGap", 1);
             SetField(director, "heroEarlyGuaranteeWithin", 1);
             SetField(director, "heroAvoidRecent", 1);
             SetField(director, "heroBothSides", true);
@@ -1772,7 +1977,7 @@ namespace JoburgRunner.Editor
         [MenuItem("Joburg Runner/Build Android APK")]
         public static void BuildAndroidApk()
         {
-            BuildAndroidApk(BuildOptions.None);
+            BuildAndroidApk(BuildOptions.None, ApkPath);
         }
 
         /// <summary>
@@ -1783,19 +1988,41 @@ namespace JoburgRunner.Editor
         [MenuItem("Joburg Runner/Build Android APK (Development)")]
         public static void BuildAndroidApkDevelopment()
         {
-            BuildAndroidApk(BuildOptions.Development);
+            BuildAndroidApk(BuildOptions.Development, ApkPath);
         }
 
-        static void BuildAndroidApk(BuildOptions options)
+        [MenuItem("Joburg Runner/Build Intersection Roads Test APK")]
+        public static void BuildIntersectionRoadsTestApk()
+        {
+            BuildAndroidApk(
+                BuildOptions.Development,
+                "Builds/JoziRunner_IntersectionRoads_Test.apk");
+        }
+
+        static void BuildAndroidApk(BuildOptions options, string outputPath)
         {
             BuildMinimumPlayableScene();
+            JunctionSegmentValidator.ValidateOrThrow();
             Directory.CreateDirectory("Builds");
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.Portrait;
+
+            // Release-size profile for mobile. The project is content-heavy, so keep
+            // only code and mesh channels reachable from the production scene, ask
+            // IL2CPP to optimise for size, minify Java bytecode/resources, and store
+            // textures in a GPU-native ASTC format rather than expanding them on disk.
+            PlayerSettings.stripEngineCode = true;
+            PlayerSettings.stripUnusedMeshComponents = true;
+            PlayerSettings.SetManagedStrippingLevel(
+                NamedBuildTarget.Android, ManagedStrippingLevel.High);
+            PlayerSettings.SetIl2CppCodeGeneration(
+                NamedBuildTarget.Android, Il2CppCodeGeneration.OptimizeSize);
+            PlayerSettings.Android.minifyRelease = true;
+            EditorUserBuildSettings.androidBuildSubtarget = MobileTextureSubtarget.ASTC;
 
             BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
                 scenes = new[] { ScenePath },
-                locationPathName = ApkPath,
+                locationPathName = outputPath,
                 target = BuildTarget.Android,
                 options = options
             });
@@ -1994,12 +2221,12 @@ namespace JoburgRunner.Editor
             Palette.Clear();
 
             // Street surfaces
-            Pal("RoadAsphalt", new Color(0.24f, 0.24f, 0.245f));
-            Pal("Asphalt", new Color(0.17f, 0.17f, 0.16f));
+            Pal("RoadAsphalt", new Color(0.13f, 0.15f, 0.20f));
+            Pal("Asphalt", new Color(0.10f, 0.12f, 0.16f));
             Pal("AsphaltCrack", new Color(0.1f, 0.1f, 0.105f));
-            Pal("PaintYellow", new Color(0.95f, 0.72f, 0.1f));
-            Pal("PaintWhite", new Color(0.92f, 0.92f, 0.88f));
-            Pal("RoadMarkingWhite", new Color(0.94f, 0.94f, 0.9f));
+            Pal("PaintYellow", new Color(1f, 0.78f, 0.06f));
+            Pal("PaintWhite", new Color(1f, 0.99f, 0.92f));
+            Pal("RoadMarkingWhite", new Color(1f, 0.99f, 0.94f));
             Pal("SidewalkConcrete", new Color(0.63f, 0.61f, 0.56f));
             Pal("Concrete", new Color(0.58f, 0.58f, 0.54f));
             Pal("Pavement", new Color(0.52f, 0.5f, 0.45f));
@@ -2098,20 +2325,32 @@ namespace JoburgRunner.Editor
         {
             string path = $"Assets/Materials/{name}.mat";
             Material material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            bool cartoon = !emissive && CartoonStyleIsEnabled();
+            Shader desiredShader = cartoon
+                ? Shader.Find("Jozi Runner/Mobile Toon")
+                : Shader.Find("Universal Render Pipeline/Lit");
+            if (desiredShader == null)
+            {
+                desiredShader = Shader.Find("Standard");
+            }
+
             if (material == null)
             {
-                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
-                if (shader == null)
-                {
-                    shader = Shader.Find("Standard");
-                }
-
-                material = new Material(shader);
+                material = new Material(desiredShader);
                 AssetDatabase.CreateAsset(material, path);
             }
 
             material.name = name;
+            material.shader = desiredShader;
+            color = cartoon ? StylizeColor(color) : color;
             material.color = color;
+            material.enableInstancing = true;
+            if (cartoon)
+            {
+                material.SetColor("_ShadowColor", new Color(0.42f, 0.48f, 0.64f, 1f));
+                material.SetColor("_RimColor", new Color(0.82f, 0.9f, 1f, 1f));
+                material.SetFloat("_RimStrength", 0.075f);
+            }
             if (emissive)
             {
                 material.EnableKeyword("_EMISSION");
@@ -2121,6 +2360,43 @@ namespace JoburgRunner.Editor
 
             EditorUtility.SetDirty(material);
             return material;
+        }
+
+        static CartoonVisualSettings CreateCartoonVisualSettings()
+        {
+            const string path = "Assets/Environment/CartoonVisualSettings.asset";
+            CartoonVisualSettings settings =
+                AssetDatabase.LoadAssetAtPath<CartoonVisualSettings>(path);
+            if (settings == null)
+            {
+                settings = ScriptableObject.CreateInstance<CartoonVisualSettings>();
+                AssetDatabase.CreateAsset(settings, path);
+            }
+            settings.enabled = false;
+            settings.saturationBoost = 0f;
+            EditorUtility.SetDirty(settings);
+            return settings;
+        }
+
+        static bool CartoonStyleIsEnabled()
+        {
+            if (CartoonSettings == null)
+            {
+                CartoonSettings = AssetDatabase.LoadAssetAtPath<CartoonVisualSettings>(
+                    "Assets/Environment/CartoonVisualSettings.asset");
+            }
+            return CartoonSettings == null || CartoonSettings.enabled;
+        }
+
+        static Color StylizeColor(Color color)
+        {
+            Color.RGBToHSV(color, out float h, out float s, out float v);
+            float boost = CartoonSettings != null ? CartoonSettings.saturationBoost : 0.18f;
+            s = Mathf.Clamp01(s + boost * (1f - s));
+            v = Mathf.Clamp01(Mathf.Lerp(v, v > 0.55f ? 0.9f : 0.62f, 0.08f));
+            Color result = Color.HSVToRGB(h, s, v);
+            result.a = color.a;
+            return result;
         }
 
         static void CreateEnvironmentLibraryPrefabs()
@@ -2159,7 +2435,11 @@ namespace JoburgRunner.Editor
         // longer baked into the road prefab.
         const string JhbBuilding02PrefabPath = "Assets/Environment/Buildings/JHB_Building02/Prefabs/PF_JHB_Building02.prefab";
         const string JhbSkylinePop02PrefabPath = "Assets/Environment/Buildings/JHB_SkylinePop_02/Prefabs/PF_JHB_SkylinePop_02.prefab";
-        const string JhbCbdTowerPrefabPath = "Assets/Environment/Buildings/JHB_CBDTower/Prefabs/PF_JHB_CBDTower.prefab";
+        const string JhbHeroBuilding03PrefabPath = "Assets/Environment/Buildings/ImportedHeroes/JHB_HeroBuilding03/Prefabs/JHB_HeroBuilding03.prefab";
+        const string JhbHeroBuilding04PrefabPath = "Assets/Environment/Buildings/ImportedHeroes/JHB_HeroBuilding04/Prefabs/JHB_HeroBuilding04.prefab";
+        const string JhbHeroBuilding05PrefabPath = "Assets/Environment/Buildings/ImportedHeroes/JHB_HeroBuilding05/Prefabs/JHB_HeroBuilding05.prefab";
+        const string JhbHeroBuilding06PrefabPath = "Assets/Environment/Buildings/ImportedHeroes/JHB_HeroBuilding06/Prefabs/JHB_HeroBuilding06.prefab";
+        const string JhbHeroBuilding07PrefabPath = "Assets/Environment/Buildings/ImportedHeroes/JHB_HeroBuilding07/Prefabs/JHB_HeroBuilding07.prefab";
 
         static GameObject CreateRoadSegmentPrefab()
         {
@@ -2175,9 +2455,17 @@ namespace JoburgRunner.Editor
             Transform signs = Category("Signs", t);
             Transform legacyDecor = Category("LegacyDecor", t);
             Transform decorSockets = Category("DecorSockets", t);
+            Transform pedestrianCrossing = Category("PedestrianCrossing", t);
+            Transform junctions = Category("JunctionVisuals", t);
 
             BuildRoadSurface(road);
             BuildSidewalks(sidewalks);
+            BuildJunctionVisuals(root, junctions);
+            // The active traffic-light pair resolves to the NW/NE sockets at z=7.
+            // Centre the zebra stripes on that same line so both poles frame the
+            // middle of the crossing rather than sitting beyond its far edge.
+            PedestrianCrossingTreatment(pedestrianCrossing, 7f);
+            pedestrianCrossing.gameObject.SetActive(false);
             // LEGACY decoration (fixed trees + traffic lights on every tile). Kept
             // under its own toggleable root so the runtime feature flag can hide it
             // and use the new socket system instead. See SegmentDecorator.
@@ -2189,6 +2477,7 @@ namespace JoburgRunner.Editor
             // Runtime decorator wiring: hide/show legacy vs socket decoration.
             var decorator = root.AddComponent<JoburgRunner.Environment.Decor.SegmentDecorator>();
             SetField(decorator, "legacyDecorRoot", legacyDecor.gameObject);
+            SetField(decorator, "pedestrianCrossingRoot", pedestrianCrossing.gameObject);
 
             GameObject[] districts =
             {
@@ -2217,6 +2506,7 @@ namespace JoburgRunner.Editor
             StripColliders(trees.gameObject);
             StripColliders(props.gameObject);
             StripColliders(signs.gameObject);
+            StripColliders(junctions.gameObject);
 
             SetField(visuals, "districtRoots", districts);
             visuals.SetDistrict(0);
@@ -2291,14 +2581,14 @@ namespace JoburgRunner.Editor
 
         static void BuildRoadSurface(Transform road)
         {
-            Cube("ThreeLaneAsphalt", road, new Vector3(0f, -0.08f, 15f), new Vector3(9.6f, 0.16f, 30f), Mat("Asphalt"));
-            Cube("LeftYellowShoulderLine", road, new Vector3(-4.58f, 0.055f, 15f), new Vector3(0.12f, 0.045f, 30f), Mat("PaintYellow"));
-            Cube("RightYellowShoulderLine", road, new Vector3(4.58f, 0.055f, 15f), new Vector3(0.12f, 0.045f, 30f), Mat("PaintYellow"));
+            Cube("ThreeLaneAsphalt", road, new Vector3(0f, -0.08f, 15f), new Vector3(RoadMetrics.RoadWidth, 0.16f, 30f), Mat("Asphalt"));
+            Cube("LeftYellowShoulderLine", road, new Vector3(-4.0f, 0.055f, 15f), new Vector3(0.12f, 0.045f, 30f), Mat("PaintYellow"));
+            Cube("RightYellowShoulderLine", road, new Vector3(4.0f, 0.055f, 15f), new Vector3(0.12f, 0.045f, 30f), Mat("PaintYellow"));
 
             for (int z = 2; z < 30; z += 6)
             {
-                Cube("WhiteDashedLaneMark_Left", road, new Vector3(-1.35f, 0.06f, z), new Vector3(0.12f, 0.045f, 2.45f), Mat("RoadMarkingWhite"));
-                Cube("WhiteDashedLaneMark_Right", road, new Vector3(1.35f, 0.06f, z + 3f), new Vector3(0.12f, 0.045f, 2.45f), Mat("RoadMarkingWhite"));
+                Cube("WhiteDashedLaneMark_Left", road, new Vector3(-RoadMetrics.LaneSpacing * 0.5f, 0.06f, z), new Vector3(0.12f, 0.045f, 2.45f), Mat("RoadMarkingWhite"));
+                Cube("WhiteDashedLaneMark_Right", road, new Vector3(RoadMetrics.LaneSpacing * 0.5f, 0.06f, z + 3f), new Vector3(0.12f, 0.045f, 2.45f), Mat("RoadMarkingWhite"));
             }
 
             // Round drain covers, storm-drain grates, and asphalt crack/tar-repair
@@ -2308,18 +2598,377 @@ namespace JoburgRunner.Editor
 
         static void BuildSidewalks(Transform sidewalks)
         {
-            Cube("LeftConcreteSidewalk", sidewalks, new Vector3(-6.1f, 0f, 15f), new Vector3(2.4f, 0.22f, 30f), Mat("Pavement"));
-            Cube("RightConcreteSidewalk", sidewalks, new Vector3(6.1f, 0f, 15f), new Vector3(2.4f, 0.22f, 30f), Mat("SidewalkConcrete"));
-            Cube("LeftCurb", sidewalks, new Vector3(-4.98f, 0.12f, 15f), new Vector3(0.30f, 0.28f, 30f), Mat("KerbStone"));
-            Cube("RightCurb", sidewalks, new Vector3(4.98f, 0.12f, 15f), new Vector3(0.30f, 0.28f, 30f), Mat("KerbStone"));
+            Cube("LeftConcreteSidewalk", sidewalks, new Vector3(-5.82f, 0f, 15f), new Vector3(2.95f, 0.22f, 30f), Mat("Pavement"));
+            Cube("RightConcreteSidewalk", sidewalks, new Vector3(5.82f, 0f, 15f), new Vector3(2.95f, 0.22f, 30f), Mat("SidewalkConcrete"));
+            Cube("LeftCurb", sidewalks, new Vector3(-4.38f, 0.12f, 15f), new Vector3(0.30f, 0.28f, 30f), Mat("KerbStone"));
+            Cube("RightCurb", sidewalks, new Vector3(4.38f, 0.12f, 15f), new Vector3(0.30f, 0.28f, 30f), Mat("KerbStone"));
             Cube("LeftGrassStrip", sidewalks, new Vector3(-7.5f, 0.03f, 15f), new Vector3(0.45f, 0.08f, 30f), Mat("Grass"));
             Cube("RightGrassStrip", sidewalks, new Vector3(7.5f, 0.03f, 15f), new Vector3(0.45f, 0.08f, 30f), Mat("Grass"));
 
             for (int z = 2; z < 30; z += 4)
             {
-                Cube("PavementExpansionJoint_Left", sidewalks, new Vector3(-6.1f, 0.13f, z), new Vector3(2.2f, 0.02f, 0.05f), Mat("Concrete"));
-                Cube("PavementExpansionJoint_Right", sidewalks, new Vector3(6.1f, 0.13f, z + 1f), new Vector3(2.2f, 0.02f, 0.05f), Mat("Concrete"));
+                Cube("PavementExpansionJoint_Left", sidewalks, new Vector3(-5.82f, 0.13f, z), new Vector3(2.7f, 0.02f, 0.05f), Mat("Concrete"));
+                Cube("PavementExpansionJoint_Right", sidewalks, new Vector3(5.82f, 0.13f, z + 1f), new Vector3(2.7f, 0.02f, 0.05f), Mat("Concrete"));
             }
+        }
+
+        static void BuildJunctionVisuals(GameObject segmentRoot, Transform parent)
+        {
+            GameObject crossroad = InstantiateJunctionVariant(
+                "Assets/Prefabs/Road/Junctions/RoadSegment_CrossIntersection.prefab", parent);
+            GameObject tLeft = InstantiateJunctionVariant(
+                "Assets/Prefabs/Road/Junctions/RoadSegment_TJunction_Left.prefab", parent);
+            GameObject tRight = InstantiateJunctionVariant(
+                "Assets/Prefabs/Road/Junctions/RoadSegment_TJunction_Right.prefab", parent);
+
+            JunctionVisuals junctionVisuals = segmentRoot.AddComponent<JunctionVisuals>();
+            SetField(junctionVisuals, "crossroadRoot", crossroad);
+            SetField(junctionVisuals, "tLeftRoot", tLeft);
+            SetField(junctionVisuals, "tRightRoot", tRight);
+            junctionVisuals.SetType(JunctionType.None);
+        }
+
+        static GameObject InstantiateJunctionVariant(string path, Transform parent)
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null)
+            {
+                throw new System.InvalidOperationException($"Missing junction variant prefab: {path}");
+            }
+
+            GameObject instance = PrefabUtility.InstantiatePrefab(prefab, parent) as GameObject;
+            instance.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            instance.transform.localScale = Vector3.one;
+            return instance;
+        }
+
+        static void CreateJunctionVariantPrefabs()
+        {
+            EnsureAssetFolder("Assets/Prefabs", "Road");
+            EnsureAssetFolder("Assets/Prefabs/Road", "Junctions");
+            EnsureAssetFolder("Assets/Prefabs/Road", "Modules");
+            CreateDirectionSignPrefab();
+            CreateJunctionModulePrefabs();
+            CreateJunctionVariantPrefab("RoadSegment_CrossIntersection", true, true);
+            CreateJunctionVariantPrefab("RoadSegment_TJunction_Left", true, false);
+            CreateJunctionVariantPrefab("RoadSegment_TJunction_Right", false, true);
+        }
+
+        static void CreateJunctionModulePrefabs()
+        {
+            CreateSideRoadModule("MOD_SideRoad_Left", true);
+            CreateSideRoadModule("MOD_SideRoad_Right", false);
+            CreateMarkingModule("MOD_CrossIntersectionMarkings", true, true);
+            CreateMarkingModule("MOD_TJunctionLeftMarkings", true, false);
+            CreateMarkingModule("MOD_TJunctionRightMarkings", false, true);
+        }
+
+        static void CreateSideRoadModule(string name, bool left)
+        {
+            GameObject root = new GameObject(name);
+            Transform road = Category("SideRoad", root.transform);
+            Transform corners = Category("CornerPavements", root.transform);
+            BuildSideRoadArm(road, left);
+            BuildJunctionCorners(corners, left);
+            StripColliders(root);
+            root.transform.localScale = Vector3.one;
+            SavePrefab(root, $"Assets/Prefabs/Road/Modules/{name}.prefab");
+        }
+
+        static void CreateMarkingModule(string name, bool left, bool right)
+        {
+            GameObject root = new GameObject(name);
+            BuildIntersectionMarkings(root.transform, left, right);
+            StripColliders(root);
+            root.transform.localScale = Vector3.one;
+            SavePrefab(root, $"Assets/Prefabs/Road/Modules/{name}.prefab");
+        }
+
+        static JunctionSpawnSettings CreateJunctionSpawnSettings()
+        {
+            const string path = "Assets/Environment/JunctionSpawnSettings.asset";
+            JunctionSpawnSettings settings =
+                AssetDatabase.LoadAssetAtPath<JunctionSpawnSettings>(path);
+            if (settings == null)
+            {
+                settings = ScriptableObject.CreateInstance<JunctionSpawnSettings>();
+                AssetDatabase.CreateAsset(settings, path);
+            }
+
+            settings.straightWeight = 70f;
+            settings.crossroadWeight = 20f;
+            settings.tJunctionWeight = 10f;
+            settings.minimumStraightSegments = 4;
+            settings.openingSegmentCount = 9;
+            settings.guaranteeFirstJunctionAfterOpening = true;
+            settings.allowInJacarandaAvenue = false;
+            settings.deterministicSeed = 2407;
+            EditorUtility.SetDirty(settings);
+            return settings;
+        }
+
+        static void CreateJunctionVariantPrefab(string name, bool left, bool right)
+        {
+            GameObject root = new GameObject(name);
+            Transform visualLayout = Category("VisualRoadLayout", root.transform);
+            Transform decoration = Category("IntersectionDecoration", root.transform);
+
+            if (left)
+            {
+                InstantiateModule("MOD_SideRoad_Left", visualLayout);
+                BuildJunctionDecorationSockets(decoration, true);
+            }
+            if (right)
+            {
+                InstantiateModule("MOD_SideRoad_Right", visualLayout);
+                BuildJunctionDecorationSockets(decoration, false);
+            }
+            InstantiateModule(
+                left && right ? "MOD_CrossIntersectionMarkings" :
+                left ? "MOD_TJunctionLeftMarkings" : "MOD_TJunctionRightMarkings",
+                visualLayout);
+
+            GameObject directionSign = AssetDatabase.LoadAssetAtPath<GameObject>(DirectionSignPrefabPath);
+            if (directionSign != null)
+            {
+                GameObject sign = PrefabUtility.InstantiatePrefab(directionSign, decoration) as GameObject;
+                sign.name = "ApproachDirectionSign";
+                sign.transform.localPosition = new Vector3(-6.65f, 0f, 0.75f);
+                sign.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                sign.transform.localScale = Vector3.one;
+            }
+
+            StripColliders(root);
+            root.transform.localScale = Vector3.one;
+            SavePrefab(root, $"Assets/Prefabs/Road/Junctions/{name}.prefab");
+        }
+
+        [MenuItem("Joburg Runner/Debug Direction Sign Textures")]
+        public static void DebugDirectionSignTextures()
+        {
+            Texture2D albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(DirectionSignAlbedoPath);
+            Texture2D normal = AssetDatabase.LoadAssetAtPath<Texture2D>(DirectionSignNormalPath);
+            Debug.Log($"SIGNTEX-DEBUG albedoPath='{DirectionSignAlbedoPath}' loaded={(albedo != null)} " +
+                      $"normalPath loaded={(normal != null)}");
+            AssetDatabase.DeleteAsset("Assets/Materials/DirectionSignGenerated_URP.mat");
+            CreateDirectionSignPrefab();
+            Material m = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/DirectionSignGenerated_URP.mat");
+            Debug.Log($"SIGNTEX-DEBUG after rebuild baseMap={(m != null ? (m.GetTexture("_BaseMap") != null).ToString() : "no mat")}");
+        }
+
+        static GameObject CreateDirectionSignPrefab()
+        {
+            GameObject sign = BuildFbxDecorPrefab(
+                DirectionSignModelPath, DirectionSignPrefabPath, 4.0f, "DirectionSign",
+                resetImportedRotation: true);
+            ApplyGeneratedDecorTextures(
+                sign, "DirectionSignGenerated_URP",
+                DirectionSignAlbedoPath, DirectionSignNormalPath);
+            return sign;
+        }
+
+        static void InstantiateModule(string name, Transform parent)
+        {
+            string path = $"Assets/Prefabs/Road/Modules/{name}.prefab";
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null)
+            {
+                throw new System.InvalidOperationException($"Missing road module: {path}");
+            }
+            GameObject instance = PrefabUtility.InstantiatePrefab(prefab, parent) as GameObject;
+            instance.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            instance.transform.localScale = Vector3.one;
+        }
+
+        static void BuildJunctionDecorationSockets(Transform parent, bool left)
+        {
+            float sign = left ? -1f : 1f;
+            JunctionSocket(parent, $"TrafficLight_{(left ? "L" : "R")}_Near",
+                JunctionDecorSocketType.TrafficLight, new Vector3(sign * 5.25f, 0f, 2f));
+            JunctionSocket(parent, $"TrafficLight_{(left ? "L" : "R")}_Far",
+                JunctionDecorSocketType.TrafficLight, new Vector3(sign * 5.25f, 0f, 12f));
+            JunctionSocket(parent, $"PedestrianLight_{(left ? "L" : "R")}",
+                JunctionDecorSocketType.PedestrianTrafficLight, new Vector3(sign * 5.55f, 0f, 11.7f));
+            JunctionSocket(parent, $"StreetLight_{(left ? "L" : "R")}",
+                JunctionDecorSocketType.StreetLight, new Vector3(sign * 6.55f, 0f, 1.1f));
+            JunctionSocket(parent, $"RoadSign_{(left ? "L" : "R")}",
+                JunctionDecorSocketType.RoadSign, new Vector3(sign * 6.85f, 0f, 0.75f));
+            JunctionSocket(parent, $"UtilityBox_{(left ? "L" : "R")}",
+                JunctionDecorSocketType.UtilityBox, new Vector3(sign * 8.55f, 0f, 1.2f));
+            // Pedestrian markers remain on the corner/side road, outside |x| < 4.8.
+            JunctionSocket(parent, $"Pedestrian_{(left ? "L" : "R")}",
+                JunctionDecorSocketType.Pedestrian, new Vector3(sign * 6.45f, 0f, 12.4f));
+            JunctionSocket(parent, $"Vehicle_{(left ? "L" : "R")}",
+                JunctionDecorSocketType.Vehicle, new Vector3(sign * 16f, 0f, 7f));
+            JunctionSocket(parent, $"DeliveryVan_{(left ? "L" : "R")}",
+                JunctionDecorSocketType.DeliveryVan, new Vector3(sign * 25f, 0f, 9.2f));
+            JunctionSocket(parent, $"Vendor_{(left ? "L" : "R")}",
+                JunctionDecorSocketType.Vendor, new Vector3(sign * 11f, 0f, 13f));
+            JunctionSocket(parent, $"BusStop_{(left ? "L" : "R")}",
+                JunctionDecorSocketType.BusStop, new Vector3(sign * 20f, 0f, 13f));
+            JunctionSocket(parent, $"Bench_{(left ? "L" : "R")}",
+                JunctionDecorSocketType.Bench, new Vector3(sign * 14f, 0f, 13f));
+            JunctionSocket(parent, $"Bin_{(left ? "L" : "R")}",
+                JunctionDecorSocketType.Bin, new Vector3(sign * 9f, 0f, 13f));
+            JunctionSocket(parent, $"Bollard_{(left ? "L" : "R")}",
+                JunctionDecorSocketType.Bollard, new Vector3(sign * 7.4f, 0f, 1.1f));
+            JunctionSocket(parent, $"Planter_{(left ? "L" : "R")}",
+                JunctionDecorSocketType.Planter, new Vector3(sign * 10.2f, 0f, 1.2f));
+            JunctionSocket(parent, $"Jacaranda_{(left ? "L" : "R")}",
+                JunctionDecorSocketType.JacarandaTree, new Vector3(sign * 17f, 0f, 1f));
+            JunctionSocket(parent, $"Barrier_{(left ? "L" : "R")}",
+                JunctionDecorSocketType.Barrier, new Vector3(sign * 34f, 0f, 7f));
+        }
+
+        static void JunctionSocket(
+            Transform parent, string name, JunctionDecorSocketType type, Vector3 position)
+        {
+            GameObject socket = new GameObject(name);
+            socket.transform.SetParent(parent, false);
+            socket.transform.localPosition = position;
+            JunctionDecorSocket marker = socket.AddComponent<JunctionDecorSocket>();
+            SetField(marker, "socketType", type);
+        }
+
+        // A side-road arm begins at the edge of the unchanged three-lane runner
+        // road and extends behind the building line. Everything is visual-only.
+        static void BuildSideRoadArm(Transform parent, bool left)
+        {
+            float sign = left ? -1f : 1f;
+            const float junctionZ = 7f;
+            float armCentreX = sign * 19.625f;
+
+            Cube("SideStreetAsphalt", parent,
+                new Vector3(armCentreX, 0.045f, junctionZ),
+                new Vector3(30.75f, 0.13f, 8.8f), Mat("Asphalt"));
+
+            // Pavements and kerbs follow the two sides of the joining street.
+            foreach (float edgeSign in new[] { -1f, 1f })
+            {
+                float edgeZ = junctionZ + edgeSign * 5.25f;
+                Cube("SideStreetPavement", parent,
+                    new Vector3(armCentreX, 0.08f, edgeZ),
+                    new Vector3(30.75f, 0.18f, 1.7f), Mat("Pavement"));
+                Cube("SideStreetKerb", parent,
+                    new Vector3(armCentreX, 0.13f, junctionZ + edgeSign * 4.45f),
+                    new Vector3(30.75f, 0.24f, 0.24f), Mat("KerbStone"));
+            }
+
+            // Road-edge lines and a broken centre line make the side arm read as
+            // a real street rather than a flat asphalt patch.
+            Cube("SideStreetEdgeLineNear", parent,
+                new Vector3(armCentreX, 0.125f, junctionZ - 3.95f),
+                new Vector3(30.75f, 0.025f, 0.11f), Mat("PaintYellow"));
+            Cube("SideStreetEdgeLineFar", parent,
+                new Vector3(armCentreX, 0.125f, junctionZ + 3.95f),
+                new Vector3(30.75f, 0.025f, 0.11f), Mat("PaintYellow"));
+
+            for (int i = 0; i < 4; i++)
+            {
+                float distance = 8f + i * 5f;
+                float x = sign * distance;
+                Cube("SideStreetCentreDash", parent,
+                    new Vector3(x, 0.13f, junctionZ),
+                    new Vector3(2.4f, 0.025f, 0.12f), Mat("RoadMarkingWhite"));
+            }
+
+            // Stop line before entering the runner's street. It is deliberately
+            // outside the gameplay road and carries no collider.
+            Cube("SideStreetStopLine", parent,
+                new Vector3(sign * 5.6f, 0.135f, junctionZ),
+                new Vector3(0.16f, 0.025f, 7.1f), Mat("RoadMarkingWhite"));
+
+            // Low termination geometry prevents the decorative road reading as
+            // infinite; furniture sockets can later add parked vehicles/barriers.
+            Cube("SideStreetEndBarrier", parent,
+                new Vector3(sign * 34.2f, 0.55f, junctionZ),
+                new Vector3(0.35f, 1.1f, 8.4f), Mat("Concrete"));
+        }
+
+        static void BuildJunctionCorners(Transform parent, bool left)
+        {
+            float side = left ? -1f : 1f;
+            foreach (float longitudinal in new[] { -1f, 1f })
+            {
+                float cornerZ = 7f + longitudinal * 5.35f;
+                float cornerX = side * 5.9f;
+
+                Cube("CornerPavement", parent,
+                    new Vector3(cornerX, 0.12f, cornerZ),
+                    new Vector3(2.8f, 0.22f, 2.1f), Mat("Pavement"));
+
+                // Five short tangent kerb pieces approximate a clean 1.35 m
+                // radius without a bespoke high-poly mesh or negative scaling.
+                for (int i = 0; i < 5; i++)
+                {
+                    float angle = 9f + i * 18f;
+                    float radians = angle * Mathf.Deg2Rad;
+                    float x = side * (4.45f + Mathf.Cos(radians) * 1.35f);
+                    float z = 7f + longitudinal * (4.0f + Mathf.Sin(radians) * 1.35f);
+                    Cube("CurvedKerb", parent,
+                        new Vector3(x, 0.16f, z),
+                        new Vector3(0.72f, 0.28f, 0.24f), Mat("KerbStone"),
+                        new Vector3(0f, side * longitudinal * angle, 0f));
+                }
+
+                // Flush ramp plus tiny covers provide intersection detail while
+                // remaining outside the active road and carrying no colliders.
+                Cube("PavementRamp", parent,
+                    new Vector3(side * 5.1f, 0.075f, 7f + longitudinal * 4.55f),
+                    new Vector3(1.25f, 0.10f, 1.15f), Mat("Concrete"));
+                Cylinder("DrainCover", parent,
+                    new Vector3(side * 4.8f, 0.135f, 7f + longitudinal * 3.55f),
+                    new Vector3(0.34f, 0.025f, 0.34f), Mat("MetalDark"));
+                Cube("UtilityCover", parent,
+                    new Vector3(side * 6.5f, 0.245f, cornerZ),
+                    new Vector3(0.65f, 0.025f, 0.9f), Mat("MetalDark"));
+            }
+        }
+
+        static void BuildIntersectionMarkings(Transform parent, bool left, bool right)
+        {
+            Material white = Mat("RoadMarkingWhite");
+
+            // Two crossings on the forward road: one before and one after the junction.
+            foreach (float z in new[] { 1.7f, 12.3f })
+            {
+                for (int stripe = -3; stripe <= 3; stripe++)
+                {
+                    Cube("MainRoadZebra", parent,
+                        new Vector3(stripe * 1.15f, 0.14f, z),
+                        new Vector3(0.62f, 0.025f, 1.65f), white);
+                }
+                Cube("MainRoadStopLine", parent,
+                    new Vector3(0f, 0.145f, z + (z < 7f ? -1.2f : 1.2f)),
+                    new Vector3(7.7f, 0.025f, 0.16f), white);
+            }
+
+            if (left) BuildSideRoadZebraAndArrow(parent, -1f, white);
+            if (right) BuildSideRoadZebraAndArrow(parent, 1f, white);
+        }
+
+        static void BuildSideRoadZebraAndArrow(Transform parent, float side, Material white)
+        {
+            float crossingX = side * 6.7f;
+            for (int stripe = -3; stripe <= 3; stripe++)
+            {
+                Cube("SideRoadZebra", parent,
+                    new Vector3(crossingX, 0.15f, 7f + stripe * 1.0f),
+                    new Vector3(1.55f, 0.025f, 0.5f), white);
+            }
+
+            // Simple straight-ahead arrow deeper on the decorative arm.
+            Cube("DirectionArrowStem", parent,
+                new Vector3(side * 17f, 0.15f, 7f),
+                new Vector3(2.4f, 0.025f, 0.18f), white);
+            Cube("DirectionArrowHeadA", parent,
+                new Vector3(side * 18.15f, 0.15f, 6.55f),
+                new Vector3(1.1f, 0.025f, 0.16f), white,
+                new Vector3(0f, side * 35f, 0f));
+            Cube("DirectionArrowHeadB", parent,
+                new Vector3(side * 18.15f, 0.15f, 7.45f),
+                new Vector3(1.1f, 0.025f, 0.16f), white,
+                new Vector3(0f, side * -35f, 0f));
         }
 
         // Roadside props built from the supplied FBX models: jacaranda trees on
@@ -2433,36 +3082,70 @@ namespace JoburgRunner.Editor
         {
             // Trees – both pavements, staggered so probability + spacing never
             // yields a perfect row.
-            DecorSocketPoint(p, "TreeSocket_L1", DecorSocketType.Tree, new Vector3(-7.1f, 0f, 5f), 0f, 1.7f);
-            DecorSocketPoint(p, "TreeSocket_L2", DecorSocketType.Tree, new Vector3(-7.1f, 0f, 16f), 0f, 1.7f);
-            DecorSocketPoint(p, "TreeSocket_L3", DecorSocketType.Tree, new Vector3(-7.1f, 0f, 27f), 0f, 1.7f);
-            DecorSocketPoint(p, "TreeSocket_R1", DecorSocketType.Tree, new Vector3(7.1f, 0f, 10f), 0f, 1.7f);
-            DecorSocketPoint(p, "TreeSocket_R2", DecorSocketType.Tree, new Vector3(7.1f, 0f, 21f), 0f, 1.7f);
+            DecorSocketPoint(p, "TreeSocket_L1", DecorSocketType.Tree, new Vector3(-6.55f, 0f, 5f), 0f, 1.7f);
+            DecorSocketPoint(p, "TreeSocket_L2", DecorSocketType.Tree, new Vector3(-6.55f, 0f, 16f), 0f, 1.7f);
+            DecorSocketPoint(p, "TreeSocket_L3", DecorSocketType.Tree, new Vector3(-6.55f, 0f, 27f), 0f, 1.7f);
+            DecorSocketPoint(p, "TreeSocket_R1", DecorSocketType.Tree, new Vector3(6.55f, 0f, 10f), 0f, 1.7f);
+            DecorSocketPoint(p, "TreeSocket_R2", DecorSocketType.Tree, new Vector3(6.55f, 0f, 21f), 0f, 1.7f);
 
             // Lamps – kerb line, alternating left/right for a steady rhythm.
-            DecorSocketPoint(p, "LampSocket_L1", DecorSocketType.Lamp, new Vector3(-5.35f, 0f, 8f), 90f, 0.8f);
-            DecorSocketPoint(p, "LampSocket_R1", DecorSocketType.Lamp, new Vector3(5.35f, 0f, 22f), -90f, 0.8f);
+            DecorSocketPoint(p, "LampSocket_L1", DecorSocketType.Lamp, new Vector3(-4.8f, 0f, 8f), 90f, 0.8f);
+            DecorSocketPoint(p, "LampSocket_R1", DecorSocketType.Lamp, new Vector3(4.8f, 0f, 22f), -90f, 0.8f);
 
             // Stand-alone bench (parks only, via profile).
-            DecorSocketPoint(p, "BenchSocket_L1", DecorSocketType.Bench, new Vector3(-6.2f, 0.12f, 19f), 90f, 1.2f);
+            DecorSocketPoint(p, "BenchSocket_L1", DecorSocketType.Bench, new Vector3(-5.65f, 0.12f, 19f), 90f, 1.2f);
 
-            // Bin, billboard, bus stop.
-            DecorSocketPoint(p, "BinSocket_R1", DecorSocketType.Bin, new Vector3(5.8f, 0.15f, 26f), -90f, 0.6f);
-            DecorSocketPoint(p, "BillboardSocket_R1", DecorSocketType.Billboard, new Vector3(6.2f, 0f, 18.5f), -110f, 1.7f);
-            DecorSocketPoint(p, "BusStopSocket_R1", DecorSocketType.BusStop, new Vector3(6.2f, 0.1f, 13f), 180f, 2.5f);
+            // Street furniture spread — electric box (utility box), bus stand,
+            // dustbin and potplant are kept a full 10 m (SegmentLength / 3) apart
+            // so no two of them ever spawn next to each other. Each pavement holds
+            // three of the four types at z = 9 / 19 / 29; that 10 m pitch also holds
+            // across the tile seam (a prop at z = 29 sits 10 m from the next tile's
+            // z = 9 prop), so the "never adjacent" guarantee survives tile chaining.
+            // The small per-instance z-jitter (<=0.8 m) can never close a 10 m gap.
+            // z >= 9 also keeps them clear of the leading-edge traffic-light and
+            // crossing sockets. Bin and utility box are capped at one per tile, so
+            // each gets a single socket (box left, bin right) not a mirrored pair.
+            DecorSocketPoint(p, "UtilityBoxSocket_L1", DecorSocketType.UtilityBox, new Vector3(-5.45f, 0f, 9f), 90f, 1.0f);
+            // Market-stall anchors on both pavements. Their different socket yaws
+            // mirror the shared prefab so each storefront angles toward both the
+            // road and the approaching player.
+            DecorSocketPoint(p, "BusStopSocket_L1", DecorSocketType.BusStop, new Vector3(-5.55f, 0.1f, 19f), 90f, 2.5f);
+            DecorSocketPoint(p, "BusStopSocket_R1", DecorSocketType.BusStop, new Vector3(5.55f, 0.1f, 9f), 180f, 2.5f);
+            DecorSocketPoint(p, "BinSocket_R1", DecorSocketType.Bin, new Vector3(5.25f, 0.15f, 19f), -90f, 0.6f);
+            DecorSocketPoint(p, "PlanterSocket_L1", DecorSocketType.Planter, new Vector3(-5.4f, 0f, 29f), 90f, 1.25f);
+            DecorSocketPoint(p, "PlanterSocket_R1", DecorSocketType.Planter, new Vector3(5.4f, 0f, 29f), -90f, 1.25f);
+            // Billboard/bench sockets are currently rule-less (never spawned); kept
+            // for future districts, parked clear of the furniture rhythm.
+            DecorSocketPoint(p, "BillboardSocket_R1", DecorSocketType.Billboard, new Vector3(5.65f, 0f, 14f), -110f, 1.7f);
 
-            // Traffic lights – four crossing corners, only used on intersection tiles.
-            DecorSocketPoint(p, "TrafficLightSocket_SW", DecorSocketType.TrafficLight, new Vector3(-5.35f, 0f, 3f), 90f, 1.0f);
-            DecorSocketPoint(p, "TrafficLightSocket_SE", DecorSocketType.TrafficLight, new Vector3(5.35f, 0f, 3f), -90f, 1.0f);
-            DecorSocketPoint(p, "TrafficLightSocket_NW", DecorSocketType.TrafficLight, new Vector3(-5.35f, 0f, 7f), 90f, 1.0f);
-            DecorSocketPoint(p, "TrafficLightSocket_NE", DecorSocketType.TrafficLight, new Vector3(5.35f, 0f, 7f), -90f, 1.0f);
+            // Traffic-light anchors on both sides of an intersection. Profiles cap this
+            // type at two, and deterministic name ordering resolves NE then NW, yielding
+            // exactly one road-facing robot per side.
+            DecorSocketPoint(p, "TrafficLightSocket_SW", DecorSocketType.TrafficLight, new Vector3(-4.8f, 0f, 3f), 90f, 1.0f);
+            DecorSocketPoint(p, "TrafficLightSocket_SE", DecorSocketType.TrafficLight, new Vector3(4.8f, 0f, 3f), -90f, 1.0f);
+            DecorSocketPoint(p, "TrafficLightSocket_NW", DecorSocketType.TrafficLight, new Vector3(-4.8f, 0f, 7f), 90f, 1.0f);
+            DecorSocketPoint(p, "TrafficLightSocket_NE", DecorSocketType.TrafficLight, new Vector3(4.8f, 0f, 7f), -90f, 1.0f);
+            DecorSocketPoint(p, "PedestrianSocket_Crossing", DecorSocketType.Pedestrian,
+                new Vector3(-4.2f, 0.06f, 7f), 90f, 0.2f);
+            DecorSocketPoint(p, "WavingPedestrianSocket_R", DecorSocketType.WavingPedestrian,
+                new Vector3(6.45f, 0.1f, 7f), 180f, 0.6f);
+            // Walking pedestrians on both pavements, yawed 180 so they face and
+            // travel world -Z — opposite the player. Spawned near the tile's far
+            // end so they have a full stretch to stroll toward the approaching
+            // runner and past. The PavementWalker mover supplies the translation.
+            DecorSocketPoint(p, "WalkingPedestrianSocket_L", DecorSocketType.WalkingPedestrian,
+                new Vector3(-6.2f, 0f, 25f), 180f, 0.3f);
+            DecorSocketPoint(p, "WalkingPedestrianSocket_R", DecorSocketType.WalkingPedestrian,
+                new Vector3(6.2f, 0f, 22f), 180f, 0.3f);
 
             // Hero-building anchors at the CBD building line (just beyond the ~±9.15 m
             // pavement edge), centred along the tile and facing the road (left forward
             // = +X, right forward = -X). Only CBD tiles the director flags eligible fill
             // these; per-building offset/scale is authored in the HeroBuildingSet.
-            DecorSocketPoint(p, "HeroBuildingSocket_L", DecorSocketType.HeroBuilding, new Vector3(-11f, 0f, 15f), 90f, 9f);
-            DecorSocketPoint(p, "HeroBuildingSocket_R", DecorSocketType.HeroBuilding, new Vector3(11f, 0f, 15f), -90f, 9f);
+            // Keep façades dense but give the closest geometry a little breathing room.
+            // Socket yaw alone faces each façade squarely toward the road.
+            DecorSocketPoint(p, "HeroBuildingSocket_L", DecorSocketType.HeroBuilding, new Vector3(-11.45f, 0f, 15f), 90f, 9f);
+            DecorSocketPoint(p, "HeroBuildingSocket_R", DecorSocketType.HeroBuilding, new Vector3(11.45f, 0f, 15f), -90f, 9f);
         }
 
         // ---- Hero building catalogue (data-driven, scales to 20+) -----------
@@ -2482,7 +3165,12 @@ namespace JoburgRunner.Editor
 
             GameObject a = AssetDatabase.LoadAssetAtPath<GameObject>(JhbBuilding02PrefabPath);
             GameObject b = AssetDatabase.LoadAssetAtPath<GameObject>(JhbSkylinePop02PrefabPath);
-            if (a == null || b == null)
+            GameObject c = AssetDatabase.LoadAssetAtPath<GameObject>(JhbHeroBuilding03PrefabPath);
+            GameObject d = AssetDatabase.LoadAssetAtPath<GameObject>(JhbHeroBuilding04PrefabPath);
+            GameObject e = AssetDatabase.LoadAssetAtPath<GameObject>(JhbHeroBuilding05PrefabPath);
+            GameObject f = AssetDatabase.LoadAssetAtPath<GameObject>(JhbHeroBuilding06PrefabPath);
+            GameObject g = AssetDatabase.LoadAssetAtPath<GameObject>(JhbHeroBuilding07PrefabPath);
+            if (a == null || b == null || c == null || d == null || e == null || f == null || g == null)
             {
                 Debug.LogWarning("Hero building prefab(s) missing; HeroBuildingSet left with null entries.");
             }
@@ -2494,16 +3182,58 @@ namespace JoburgRunner.Editor
                 new HeroEntry
                 {
                     label = "JHB_Building02", prefab = a, weight = 1f, allowedSides = HeroSide.Both,
-                    localPositionOffset = new Vector3(0f, 0f, -2f), eulerOffset = Vector3.zero,
-                    facePlayerDegrees = 40f, uniformScale = 1f,
+                    localPositionOffset = new Vector3(-1.5f, 0f, -2f), eulerOffset = Vector3.zero,
+                    facePlayerDegrees = 0f, uniformScale = 0.92f,
+                    colorTint = new Color(1f, 0.96f, 0.9f, 1f),
                     footprintRadius = 10.5f, minRepeatDistance = 0f, enabled = true
                 },
                 new HeroEntry
                 {
                     label = "JHB_SkylinePop_02", prefab = b, weight = 1f, allowedSides = HeroSide.Both,
-                    localPositionOffset = new Vector3(0f, 0f, -4f), eulerOffset = Vector3.zero,
-                    facePlayerDegrees = 40f, uniformScale = 1f,
+                    localPositionOffset = new Vector3(1.5f, 0f, -3f), eulerOffset = Vector3.zero,
+                    facePlayerDegrees = 0f, uniformScale = 1.02f,
+                    colorTint = new Color(0.9f, 0.96f, 1f, 1f),
                     footprintRadius = 12.5f, minRepeatDistance = 0f, enabled = true
+                },
+                new HeroEntry
+                {
+                    label = "JHB_HeroBuilding03", prefab = c, weight = 1f, allowedSides = HeroSide.Both,
+                    localPositionOffset = new Vector3(-2f, 0f, -1f), eulerOffset = Vector3.zero,
+                    facePlayerDegrees = 0f, uniformScale = 0.95f,
+                    colorTint = new Color(1f, 0.93f, 0.82f, 1f),
+                    footprintRadius = 5.6f, minRepeatDistance = 0f, enabled = true
+                },
+                new HeroEntry
+                {
+                    label = "JHB_HeroBuilding04", prefab = d, weight = 1f, allowedSides = HeroSide.Both,
+                    localPositionOffset = new Vector3(2.5f, 0f, -1.5f), eulerOffset = Vector3.zero,
+                    facePlayerDegrees = 0f, uniformScale = 0.9f,
+                    colorTint = new Color(0.78f, 0.9f, 1f, 1f),
+                    footprintRadius = 5.6f, minRepeatDistance = 0f, enabled = true
+                },
+                new HeroEntry
+                {
+                    label = "JHB_HeroBuilding05", prefab = e, weight = 1f, allowedSides = HeroSide.Both,
+                    localPositionOffset = new Vector3(-1f, 0f, -1f), eulerOffset = Vector3.zero,
+                    facePlayerDegrees = 0f, uniformScale = 1.05f,
+                    colorTint = new Color(1f, 0.88f, 0.78f, 1f),
+                    footprintRadius = 5.6f, minRepeatDistance = 0f, enabled = true
+                },
+                new HeroEntry
+                {
+                    label = "JHB_HeroBuilding06", prefab = f, weight = 1f, allowedSides = HeroSide.Both,
+                    localPositionOffset = new Vector3(1f, 0f, -1f), eulerOffset = Vector3.zero,
+                    facePlayerDegrees = 0f, uniformScale = 1.1f,
+                    colorTint = new Color(0.9f, 1f, 0.9f, 1f),
+                    footprintRadius = 4.4f, minRepeatDistance = 0f, enabled = true
+                },
+                new HeroEntry
+                {
+                    label = "JHB_HeroBuilding07", prefab = g, weight = 1f, allowedSides = HeroSide.Both,
+                    localPositionOffset = new Vector3(-2.5f, 0f, -2f), eulerOffset = Vector3.zero,
+                    facePlayerDegrees = 0f, uniformScale = 0.98f,
+                    colorTint = Color.white,
+                    footprintRadius = 6.9f, minRepeatDistance = 0f, enabled = true
                 },
             };
 
@@ -2533,12 +3263,92 @@ namespace JoburgRunner.Editor
             public GameObject Bin;
             public GameObject Billboard;
             public GameObject BusStopCluster;
+            public GameObject Planter;
+            public GameObject UtilityBox;
         }
 
         static DecorPrefabSet CreateDecorPrefabs()
         {
             EnsureAssetFolder("Assets/Prefabs", "Decor");
             const string dir = "Assets/Prefabs/Decor";
+            GameObject approvedTrafficLight =
+                AssetDatabase.LoadAssetAtPath<GameObject>(ApprovedTrafficLightPrefabPath);
+            var trafficLights = new List<GameObject>();
+            if (approvedTrafficLight != null)
+            {
+                trafficLights.Add(BuildAnimatedTrafficLightPrefab(
+                    approvedTrafficLight, $"{dir}/DecorAnimatedTrafficLight.prefab"));
+            }
+            else
+            {
+                Debug.LogWarning($"Approved roadside traffic light not found at {ApprovedTrafficLightPrefabPath}.");
+                trafficLights.Add(BuildFbxDecorPrefab(
+                    TrafficLightModelPath, $"{dir}/DecorTrafficLight_A.prefab", 4.7f, "TrafficLight"));
+                trafficLights.Add(BuildFbxDecorPrefab(
+                    TrafficLightModelPath, $"{dir}/DecorTrafficLight_B.prefab", 5.1f, "TrafficLight"));
+            }
+
+            GameObject dustbin = BuildFbxDecorPrefab(
+                DustbinModelPath, $"{dir}/DecorBin.prefab", 1.1f, "Dustbin");
+            Transform dustbinVisual = dustbin != null
+                ? dustbin.transform.Find("Dustbin_FBX")
+                : null;
+            if (dustbinVisual != null)
+            {
+                // Flip the bin end-for-end so its concrete/base end becomes the
+                // pavement contact, then ground and preserve its approved height.
+                dustbinVisual.localPosition = Vector3.zero;
+                dustbinVisual.localRotation = Quaternion.Euler(0f, 0f, 180f);
+                NormalizeStaticModelBounds(dustbinVisual.gameObject, dustbin.transform, 1.1f);
+            }
+            ApplyGeneratedDecorTextures(
+                dustbin, "DustbinGenerated_URP", DustbinAlbedoPath, DustbinNormalPath);
+
+            GameObject busStopStand = BuildFbxDecorPrefab(
+                BusStopStandModelPath, $"{dir}/DecorBusStopCluster.prefab", 3.0f, "BusStopStand");
+            ApplyGeneratedDecorTextures(
+                busStopStand, "BusStopStandGenerated_URP",
+                BusStopStandAlbedoPath, BusStopStandNormalPath);
+
+            GameObject planter = BuildFbxDecorPrefab(
+                ConcretePotplantModelPath, $"{dir}/DecorConcretePotplant.prefab", 1.2f, "ConcretePotplant",
+                roadsideRotationOffset: new Vector3(0f, 270f, 90f));
+            Transform planterVisual = planter != null
+                ? planter.transform.Find("ConcretePotplant_FBX")
+                : null;
+            if (planterVisual != null)
+            {
+                // Blender's intended +Y foliage axis arrives on Unity +Z in this
+                // particular Meshy export. Rotate the visual so leaves grow up,
+                // then remeasure, centre, and ground it at the approved 1.2 m.
+                planterVisual.localPosition = Vector3.zero;
+                planterVisual.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                NormalizeStaticModelBounds(planterVisual.gameObject, planter.transform, 1.2f);
+            }
+            ApplyGeneratedDecorTextures(
+                planter, "ConcretePotplantGenerated_URP",
+                ConcretePotplantAlbedoPath, ConcretePotplantNormalPath);
+
+            GameObject utilityBox = BuildFbxDecorPrefab(
+                ElectricBoxModelPath, $"{dir}/DecorElectricBox.prefab", 1.5f, "ElectricBox",
+                roadsideRotationOffset: Vector3.zero);
+            Transform utilityVisual = utilityBox != null
+                ? utilityBox.transform.Find("ElectricBox_FBX")
+                : null;
+            if (utilityVisual != null)
+            {
+                // The FBX uses Y as its vertical axis but is authored top-down:
+                // its concrete plinth is above the cabinet. Flip top/bottom around
+                // Z (preserving the model's front/back axis), then centre and
+                // ground the complete plinth surface instead of only an edge.
+                utilityVisual.localPosition = Vector3.zero;
+                utilityVisual.localRotation = Quaternion.Euler(0f, 0f, 180f);
+                utilityVisual.localScale = Vector3.one;
+                NormalizeStaticModelBounds(utilityVisual.gameObject, utilityBox.transform, 1.5f);
+            }
+            ApplyGeneratedDecorTextures(
+                utilityBox, "ElectricBoxGenerated_URP",
+                ElectricBoxAlbedoPath, ElectricBoxNormalPath);
 
             var set = new DecorPrefabSet
             {
@@ -2549,29 +3359,115 @@ namespace JoburgRunner.Editor
                     BuildFbxDecorPrefab(JacarandaTreeModelPath, $"{dir}/DecorTree_JacarandaA.prefab", 6.0f, "JacarandaTree"),
                     BuildFbxDecorPrefab(JacarandaTreeModelPath, $"{dir}/DecorTree_JacarandaB.prefab", 6.9f, "JacarandaTree"),
                 },
-                TrafficLights = new[]
-                {
-                    BuildFbxDecorPrefab(TrafficLightModelPath, $"{dir}/DecorTrafficLight_A.prefab", 4.7f, "TrafficLight"),
-                    BuildFbxDecorPrefab(TrafficLightModelPath, $"{dir}/DecorTrafficLight_B.prefab", 5.1f, "TrafficLight"),
-                },
-                Lamp = BuildGeneratedDecorPrefab($"{dir}/DecorLamp.prefab", t => StreetLight(t, Vector3.zero, 1f)),
+                TrafficLights = trafficLights.ToArray(),
+                Lamp = BuildGeneratedDecorPrefab($"{dir}/DecorCurvedStreetLight.prefab",
+                    t => CurvedStreetLight(t, Vector3.zero)),
                 Bench = BuildGeneratedDecorPrefab($"{dir}/DecorBench.prefab", t => Bench(t, Vector3.zero, 0f)),
-                Bin = BuildGeneratedDecorPrefab($"{dir}/DecorBin.prefab", t => PublicBin(t, Vector3.zero)),
+                Bin = dustbin,
                 Billboard = BuildGeneratedDecorPrefab($"{dir}/DecorBillboard.prefab", t => RoadsideBillboard(t, Vector3.zero, 0f, "HF_Street")),
-                BusStopCluster = BuildGeneratedDecorPrefab($"{dir}/DecorBusStopCluster.prefab", t =>
-                {
-                    // Bus stop auto-clusters a bench, bin and lamp – one pooled unit.
-                    BusStop(t, Vector3.zero, 0f);
-                    Bench(t, new Vector3(2.4f, 0.12f, 0.2f), 0f);
-                    PublicBin(t, new Vector3(-1.4f, 0.15f, 0.3f));
-                    StreetLight(t, new Vector3(-0.2f, 0f, 2.6f), -1f);
-                }),
+                BusStopCluster = busStopStand,
+                Planter = planter,
+                UtilityBox = utilityBox,
             };
 
             return set;
         }
 
-        static GameObject BuildFbxDecorPrefab(string modelPath, string prefabPath, float targetHeight, string keyPrefix)
+        static void ApplyGeneratedDecorTextures(
+            GameObject prefab, string materialName, string albedoPath, string normalPath)
+        {
+            if (prefab == null)
+            {
+                return;
+            }
+
+            Texture2D albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(albedoPath);
+            Texture2D normal = LoadAsNormalMap(normalPath);
+            Material material = CreateMaterial(materialName, Color.white);
+            material.SetColor("_BaseColor", Color.white);
+            material.SetTexture("_BaseMap", albedo);
+            material.mainTexture = albedo;
+            material.SetFloat("_Metallic", 0f);
+            material.SetFloat("_Smoothness", 0.28f);
+            if (normal != null)
+            {
+                material.SetTexture("_BumpMap", normal);
+                material.EnableKeyword("_NORMALMAP");
+            }
+            material.enableInstancing = true;
+            EditorUtility.SetDirty(material);
+
+            foreach (Renderer renderer in prefab.GetComponentsInChildren<Renderer>(true))
+            {
+                Material[] materials = renderer.sharedMaterials;
+                for (int index = 0; index < materials.Length; index++)
+                {
+                    materials[index] = material;
+                }
+                renderer.sharedMaterials = materials;
+            }
+
+            PrefabUtility.SavePrefabAsset(prefab);
+        }
+
+        static GameObject BuildAnimatedTrafficLightPrefab(GameObject approved, string prefabPath)
+        {
+            GameObject root = Object.Instantiate(approved);
+            root.name = Path.GetFileNameWithoutExtension(prefabPath);
+
+            Transform overlay = Category("AnimatedSignalLenses", root.transform);
+            Material red = UnlitColorMaterial("TrafficSignalRedGlow", new Color(1f, 0.04f, 0.02f));
+            Material amber = UnlitColorMaterial("TrafficSignalAmberGlow", new Color(1f, 0.55f, 0.02f));
+            Material green = UnlitColorMaterial("TrafficSignalGreenGlow", new Color(0.05f, 1f, 0.16f));
+            Material mask = UnlitColorMaterial("TrafficSignalLensOff", new Color(0.015f, 0.018f, 0.016f));
+
+            float[] lensY = { 3.16f, 2.87f, 2.58f };
+            for (int i = 0; i < lensY.Length; i++)
+            {
+                Sphere($"LensMaskFront_{i}", overlay, new Vector3(0f, lensY[i], 0.455f),
+                    new Vector3(0.205f, 0.205f, 0.035f), mask);
+                Sphere($"LensMaskBack_{i}", overlay, new Vector3(0f, lensY[i], -0.455f),
+                    new Vector3(0.205f, 0.205f, 0.035f), mask);
+                Sphere($"LensMaskLeft_{i}", overlay, new Vector3(-0.455f, lensY[i], 0f),
+                    new Vector3(0.035f, 0.205f, 0.205f), mask);
+                Sphere($"LensMaskRight_{i}", overlay, new Vector3(0.455f, lensY[i], 0f),
+                    new Vector3(0.035f, 0.205f, 0.205f), mask);
+            }
+
+            GameObject redLens = BuildSignalLensPair(overlay, "AnimatedRedLens", lensY[0], red);
+            GameObject amberLens = BuildSignalLensPair(overlay, "AnimatedAmberLens", lensY[1], amber);
+            GameObject greenLens = BuildSignalLensPair(overlay, "AnimatedGreenLens", lensY[2], green);
+
+            var cycle = root.AddComponent<TrafficLightCycle>();
+            SetField(cycle, "redLens", redLens);
+            SetField(cycle, "amberLens", amberLens);
+            SetField(cycle, "greenLens", greenLens);
+            SetField(cycle, "redSeconds", 4f);
+            SetField(cycle, "amberSeconds", 1f);
+            SetField(cycle, "greenSeconds", 4f);
+
+            StripColliders(overlay.gameObject);
+            return SavePrefab(root, prefabPath);
+        }
+
+        static GameObject BuildSignalLensPair(Transform parent, string name, float y, Material material)
+        {
+            Transform group = Category(name, parent);
+            Sphere($"{name}_Front", group, new Vector3(0f, y, 0.495f),
+                new Vector3(0.175f, 0.175f, 0.035f), material);
+            Sphere($"{name}_Back", group, new Vector3(0f, y, -0.495f),
+                new Vector3(0.175f, 0.175f, 0.035f), material);
+            Sphere($"{name}_Left", group, new Vector3(-0.495f, y, 0f),
+                new Vector3(0.035f, 0.175f, 0.175f), material);
+            Sphere($"{name}_Right", group, new Vector3(0.495f, y, 0f),
+                new Vector3(0.035f, 0.175f, 0.175f), material);
+            return group.gameObject;
+        }
+
+        static GameObject BuildFbxDecorPrefab(
+            string modelPath, string prefabPath, float targetHeight, string keyPrefix,
+            bool resetImportedRotation = false,
+            Vector3? roadsideRotationOffset = null)
         {
             GameObject root = new GameObject(Path.GetFileNameWithoutExtension(prefabPath));
             GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
@@ -2581,6 +3477,14 @@ namespace JoburgRunner.Editor
                 GameObject visual = Object.Instantiate(model, root.transform);
                 visual.name = keyPrefix + "_FBX";
                 visual.transform.localPosition = Vector3.zero;
+                if (resetImportedRotation)
+                {
+                    // Meshy FBX imports can retain a -90 degree axis-conversion
+                    // transform even when their validated mesh bounds are Y-up.
+                    // Clear it before measuring so depth is not mistaken for height.
+                    visual.transform.localRotation = Quaternion.identity;
+                    visual.transform.localScale = Vector3.one;
+                }
                 // Keep the FBX's authored import orientation (see RoadsideModel note).
                 NormalizeStaticModelBounds(visual, root.transform, targetHeight);
                 ConvertImportedMaterialsToUrp(visual, keyPrefix);
@@ -2592,6 +3496,9 @@ namespace JoburgRunner.Editor
 
             EnableInstancing(root);
             StripColliders(root);
+            // The cabinet, for example, uses (0,180,0) because its access doors
+            // are authored opposite the standard +Z roadside-facing convention.
+            ConfigureRoadsideOrientation(root, roadsideRotationOffset ?? Vector3.zero);
             return SavePrefab(root, prefabPath);
         }
 
@@ -2601,7 +3508,30 @@ namespace JoburgRunner.Editor
             build(root.transform);
             EnableInstancing(root);
             StripColliders(root);
+            ConfigureRoadsideOrientation(root, Vector3.zero);
             return SavePrefab(root, prefabPath);
+        }
+
+        /// <summary>
+        /// Stores a prefab-authored facing correction. Runtime placement always
+        /// composes this after the socket's left/right road-facing rotation and
+        /// yaw variation. Future props only need this component configured on
+        /// their prefab; SegmentDecorator does not need asset-specific branches.
+        /// </summary>
+        static void ConfigureRoadsideOrientation(GameObject prefabRoot, Vector3 rotationOffset)
+        {
+            if (prefabRoot == null)
+            {
+                return;
+            }
+
+            RoadsidePropOrientation orientation =
+                prefabRoot.GetComponent<RoadsidePropOrientation>();
+            if (orientation == null)
+            {
+                orientation = prefabRoot.AddComponent<RoadsidePropOrientation>();
+            }
+            orientation.SetRotationOffset(rotationOffset);
         }
 
         static void EnableInstancing(GameObject root)
@@ -2620,47 +3550,63 @@ namespace JoburgRunner.Editor
 
         // ---- District profiles (data-driven, tunable in the Inspector) ------
 
-        static DistrictDecorProfile[] CreateDistrictDecorProfiles(DecorPrefabSet d)
+        static DistrictDecorProfile[] CreateDistrictDecorProfiles(
+            DecorPrefabSet d, GameObject fruitsStall, GameObject gentleman,
+            GameObject wavingGentleman, GameObject walkingWoman, GameObject walkingMan)
         {
             EnsureAssetFolder("Assets/Environment", "Decor");
 
             // [0] Johannesburg CBD – dense, few trees, more traffic lights.
             var cbd = SaveDecorProfile("District_CBD", "Johannesburg CBD", new List<DecorRule>
             {
-                MakeRule(DecorSocketType.Tree, 0.25f, 1, 15f, d.Trees, new Vector2(0.9f, 1.1f), new Vector2(0f, 360f), new Vector2(0.4f, 1.5f), 0f, 1.6f, 0.12f, false),
-                MakeRule(DecorSocketType.Lamp, 1f, 2, 12f, new[] { d.Lamp }, new Vector2(1f, 1.05f), new Vector2(0f, 0f), new Vector2(0f, 0.5f), 0f, 0.8f, 0f, false),
-                MakeRule(DecorSocketType.TrafficLight, 0.9f, 4, 3f, d.TrafficLights, new Vector2(0.95f, 1.05f), new Vector2(0f, 0f), new Vector2(0f, 0f), 0f, 1.0f, 0f, true),
-                MakeRule(DecorSocketType.Billboard, 0.35f, 1, 30f, new[] { d.Billboard }, new Vector2(1f, 1.1f), new Vector2(0f, 0f), new Vector2(0f, 1f), 0f, 1.6f, 0f, false),
-                MakeRule(DecorSocketType.BusStop, 0.15f, 1, 30f, new[] { d.BusStopCluster }, Vector2.one, new Vector2(0f, 0f), Vector2.zero, 0f, 2.5f, 0f, false),
+                MakeRule(DecorSocketType.Tree, 0.15f, 1, 15f, d.Trees, new Vector2(0.75f, 0.9f), new Vector2(0f, 360f), new Vector2(0.4f, 1.5f), 0f, 1.6f, 0.12f, false),
+                MakeRule(DecorSocketType.Lamp, 0.3f, 1, 20f, new[] { d.Lamp }, Vector2.one, Vector2.zero, new Vector2(0f, 0.5f), 0f, 0.8f, 0f, false),
+                MakeRule(DecorSocketType.TrafficLight, 1f, 2, 3f, d.TrafficLights, new Vector2(0.95f, 1.05f), new Vector2(0f, 0f), new Vector2(0f, 0f), 0f, 1.0f, 0f, true),
+                MakeRule(DecorSocketType.Pedestrian, 1f, 1, 30f, new[] { gentleman }, Vector2.one, Vector2.zero, Vector2.zero, 0f, 0.1f, 0f, true, true),
+                MakeRule(DecorSocketType.WavingPedestrian, 1f, 1, 30f, new[] { wavingGentleman }, Vector2.one, Vector2.zero, Vector2.zero, 0f, 0.5f, 0.18f, true, false, true),
+                MakeRule(DecorSocketType.WalkingPedestrian, 0.7f, 2, 30f, new[] { walkingWoman, walkingMan }, new Vector2(0.95f, 1.05f), Vector2.zero, Vector2.zero, 0f, 0.3f, 0f, false),
+                MakeRule(DecorSocketType.Bin, 0.55f, 1, 15f, new[] { d.Bin }, Vector2.one, new Vector2(0f, 360f), new Vector2(0f, 0.4f), 0f, 0.55f, 0f, false),
+                MakeRule(DecorSocketType.Planter, 0.5f, 2, 9f, new[] { d.Planter }, new Vector2(0.9f, 1.05f), Vector2.zero, new Vector2(0f, 0.6f), 0f, 1.1f, 0f, false),
+                MakeRule(DecorSocketType.UtilityBox, 0.4f, 1, 12f, new[] { d.UtilityBox }, new Vector2(0.95f, 1.05f), new Vector2(-5f, 5f), new Vector2(0f, 0.5f), 0f, 0.9f, 0f, false),
+                MakeRule(DecorSocketType.BusStop, 0.6f, 2, 30f, new[] { fruitsStall, d.BusStopCluster }, Vector2.one, new Vector2(225f, 225f), new Vector2(0f, 0.8f), 0.5f, 1.8f, 0f, false, minimumDecorationSequence: 7),
             });
 
             // [1] Commissioner Street – medium density, many jacarandas, no lights.
             var commissioner = SaveDecorProfile("District_Commissioner", "Commissioner Street", new List<DecorRule>
             {
-                MakeRule(DecorSocketType.Tree, 0.7f, 3, 12f, d.Trees, new Vector2(0.9f, 1.15f), new Vector2(0f, 360f), new Vector2(0.5f, 2f), 0.2f, 1.6f, 0.15f, false),
-                MakeRule(DecorSocketType.Lamp, 0.8f, 2, 12f, new[] { d.Lamp }, new Vector2(1f, 1.05f), new Vector2(0f, 0f), new Vector2(0f, 0.5f), 0f, 0.8f, 0f, false),
-                MakeRule(DecorSocketType.Billboard, 0.4f, 1, 30f, new[] { d.Billboard }, new Vector2(1f, 1.1f), new Vector2(0f, 0f), new Vector2(0f, 1f), 0f, 1.6f, 0f, false),
-                MakeRule(DecorSocketType.BusStop, 0.3f, 1, 30f, new[] { d.BusStopCluster }, Vector2.one, new Vector2(0f, 0f), Vector2.zero, 0f, 2.5f, 0f, false),
+                MakeRule(DecorSocketType.Tree, 0.45f, 2, 12f, d.Trees, new Vector2(0.75f, 0.95f), new Vector2(0f, 360f), new Vector2(0.5f, 2f), 0.2f, 1.6f, 0.15f, false),
+                MakeRule(DecorSocketType.Lamp, 0.35f, 1, 20f, new[] { d.Lamp }, Vector2.one, Vector2.zero, new Vector2(0f, 0.5f), 0f, 0.8f, 0f, false),
+                MakeRule(DecorSocketType.WalkingPedestrian, 0.6f, 2, 30f, new[] { walkingWoman, walkingMan }, new Vector2(0.95f, 1.05f), Vector2.zero, Vector2.zero, 0f, 0.3f, 0f, false),
+                MakeRule(DecorSocketType.Bin, 0.45f, 1, 15f, new[] { d.Bin }, Vector2.one, new Vector2(0f, 360f), new Vector2(0f, 0.4f), 0f, 0.55f, 0f, false),
+                MakeRule(DecorSocketType.Planter, 0.6f, 2, 9f, new[] { d.Planter }, new Vector2(0.9f, 1.08f), Vector2.zero, new Vector2(0f, 0.7f), 0f, 1.1f, 0f, false),
+                MakeRule(DecorSocketType.UtilityBox, 0.35f, 1, 12f, new[] { d.UtilityBox }, new Vector2(0.95f, 1.05f), new Vector2(-5f, 5f), new Vector2(0f, 0.5f), 0f, 0.9f, 0f, false),
+                MakeRule(DecorSocketType.BusStop, 0.6f, 2, 30f, new[] { fruitsStall, d.BusStopCluster }, Vector2.one, new Vector2(225f, 225f), new Vector2(0f, 0.8f), 0.5f, 1.8f, 0f, false, minimumDecorationSequence: 7),
             });
 
             // [2] Park District – lush, benches, very few lights.
             var park = SaveDecorProfile("District_Park", "Park District", new List<DecorRule>
             {
-                MakeRule(DecorSocketType.Tree, 0.9f, 4, 10f, d.Trees, new Vector2(0.9f, 1.15f), new Vector2(0f, 360f), new Vector2(0.6f, 2f), 0.3f, 1.6f, 0.15f, false),
-                MakeRule(DecorSocketType.Bench, 0.6f, 2, 12f, new[] { d.Bench }, Vector2.one, new Vector2(-8f, 8f), new Vector2(0.2f, 1f), 0f, 1.2f, 0f, false),
-                MakeRule(DecorSocketType.Lamp, 0.5f, 1, 15f, new[] { d.Lamp }, new Vector2(1f, 1.05f), new Vector2(0f, 0f), new Vector2(0f, 0.5f), 0f, 0.8f, 0f, false),
+                MakeRule(DecorSocketType.Tree, 0.65f, 3, 10f, d.Trees, new Vector2(0.8f, 1f), new Vector2(0f, 360f), new Vector2(0.6f, 2f), 0.3f, 1.6f, 0.15f, false),
+                MakeRule(DecorSocketType.Lamp, 0.2f, 1, 20f, new[] { d.Lamp }, Vector2.one, Vector2.zero, new Vector2(0f, 0.5f), 0f, 0.8f, 0f, false),
+                MakeRule(DecorSocketType.WalkingPedestrian, 0.4f, 2, 30f, new[] { walkingWoman, walkingMan }, new Vector2(0.95f, 1.05f), Vector2.zero, Vector2.zero, 0f, 0.3f, 0f, false),
                 MakeRule(DecorSocketType.Bin, 0.4f, 1, 15f, new[] { d.Bin }, Vector2.one, new Vector2(0f, 360f), new Vector2(0f, 0.5f), 0f, 0.6f, 0f, false),
-                MakeRule(DecorSocketType.BusStop, 0.2f, 1, 30f, new[] { d.BusStopCluster }, Vector2.one, new Vector2(0f, 0f), Vector2.zero, 0f, 2.5f, 0f, false),
+                MakeRule(DecorSocketType.Planter, 0.75f, 2, 9f, new[] { d.Planter }, new Vector2(0.9f, 1.1f), Vector2.zero, new Vector2(0f, 0.8f), 0f, 1.1f, 0f, false),
+                MakeRule(DecorSocketType.UtilityBox, 0.2f, 1, 12f, new[] { d.UtilityBox }, new Vector2(0.95f, 1.05f), new Vector2(-5f, 5f), new Vector2(0f, 0.5f), 0f, 0.9f, 0f, false),
             });
 
             // [3] Business District – tall glass, modern lamps, more lights, few trees.
             var business = SaveDecorProfile("District_Business", "Business District", new List<DecorRule>
             {
-                MakeRule(DecorSocketType.Tree, 0.2f, 1, 15f, d.Trees, new Vector2(0.9f, 1.1f), new Vector2(0f, 360f), new Vector2(0.4f, 1.2f), 0f, 1.6f, 0.1f, false),
-                MakeRule(DecorSocketType.Lamp, 1f, 2, 12f, new[] { d.Lamp }, new Vector2(1f, 1.08f), new Vector2(0f, 0f), new Vector2(0f, 0.5f), 0f, 0.8f, 0f, false),
-                MakeRule(DecorSocketType.TrafficLight, 0.9f, 4, 3f, d.TrafficLights, new Vector2(0.95f, 1.05f), new Vector2(0f, 0f), new Vector2(0f, 0f), 0f, 1.0f, 0f, true),
-                MakeRule(DecorSocketType.Billboard, 0.3f, 1, 30f, new[] { d.Billboard }, new Vector2(1f, 1.1f), new Vector2(0f, 0f), new Vector2(0f, 1f), 0f, 1.6f, 0f, false),
-                MakeRule(DecorSocketType.BusStop, 0.15f, 1, 30f, new[] { d.BusStopCluster }, Vector2.one, new Vector2(0f, 0f), Vector2.zero, 0f, 2.5f, 0f, false),
+                MakeRule(DecorSocketType.Tree, 0.1f, 1, 15f, d.Trees, new Vector2(0.75f, 0.9f), new Vector2(0f, 360f), new Vector2(0.4f, 1.2f), 0f, 1.6f, 0.1f, false),
+                MakeRule(DecorSocketType.Lamp, 0.5f, 1, 20f, new[] { d.Lamp }, Vector2.one, Vector2.zero, new Vector2(0f, 0.5f), 0f, 0.8f, 0f, false),
+                MakeRule(DecorSocketType.TrafficLight, 1f, 2, 3f, d.TrafficLights, new Vector2(0.95f, 1.05f), new Vector2(0f, 0f), new Vector2(0f, 0f), 0f, 1.0f, 0f, true),
+                MakeRule(DecorSocketType.Pedestrian, 1f, 1, 30f, new[] { gentleman }, Vector2.one, Vector2.zero, Vector2.zero, 0f, 0.1f, 0f, true, true),
+                MakeRule(DecorSocketType.WavingPedestrian, 1f, 1, 30f, new[] { wavingGentleman }, Vector2.one, Vector2.zero, Vector2.zero, 0f, 0.5f, 0.18f, true, false, true),
+                MakeRule(DecorSocketType.WalkingPedestrian, 0.65f, 2, 30f, new[] { walkingWoman, walkingMan }, new Vector2(0.95f, 1.05f), Vector2.zero, Vector2.zero, 0f, 0.3f, 0f, false),
+                MakeRule(DecorSocketType.Bin, 0.6f, 1, 15f, new[] { d.Bin }, Vector2.one, new Vector2(0f, 360f), new Vector2(0f, 0.4f), 0f, 0.55f, 0f, false),
+                MakeRule(DecorSocketType.Planter, 0.45f, 2, 9f, new[] { d.Planter }, new Vector2(0.9f, 1.05f), Vector2.zero, new Vector2(0f, 0.6f), 0f, 1.1f, 0f, false),
+                MakeRule(DecorSocketType.UtilityBox, 0.65f, 1, 12f, new[] { d.UtilityBox }, new Vector2(0.95f, 1.05f), new Vector2(-5f, 5f), new Vector2(0f, 0.5f), 0f, 0.9f, 0f, false),
+                MakeRule(DecorSocketType.BusStop, 0.6f, 2, 30f, new[] { fruitsStall, d.BusStopCluster }, Vector2.one, new Vector2(225f, 225f), new Vector2(0f, 0.8f), 0.5f, 1.8f, 0f, false, minimumDecorationSequence: 7),
             });
 
             // [4] Mandela Bridge – elevated deck, no roadside decoration.
@@ -2670,7 +3616,11 @@ namespace JoburgRunner.Editor
         }
 
         static DecorRule MakeRule(DecorSocketType type, float prob, int maxCount, float minSpacing, GameObject[] prefabs,
-            Vector2 scaleRange, Vector2 yawJitter, Vector2 posJitter, float sidewalkOffset, float collisionRadius, float tint, bool requiresIntersection)
+            Vector2 scaleRange, Vector2 yawJitter, Vector2 posJitter, float sidewalkOffset,
+            float collisionRadius, float tint, bool requiresIntersection,
+            bool requiresPedestrianCrossing = false,
+            bool requiresNoPedestrianCrossing = false,
+            int minimumDecorationSequence = 0)
         {
             return new DecorRule
             {
@@ -2687,7 +3637,10 @@ namespace JoburgRunner.Editor
                 sidewalkOffset = sidewalkOffset,
                 tintVariation = tint,
                 collisionRadius = collisionRadius,
+                minimumDecorationSequence = minimumDecorationSequence,
                 requiresIntersection = requiresIntersection,
+                requiresPedestrianCrossing = requiresPedestrianCrossing,
+                requiresNoPedestrianCrossing = requiresNoPedestrianCrossing,
             };
         }
 
@@ -2707,19 +3660,45 @@ namespace JoburgRunner.Editor
             return profile;
         }
 
+        // Living-street pigeons: builds the pooled pigeon + flock prefabs and drops
+        // a single PigeonSpawner into the scene, wired to the player. The spawner is
+        // the only pigeon component with an Update; it owns the pool and flocks.
+        static void CreatePigeonSystem(Transform player)
+        {
+            GameObject pigeonPrefab = PigeonBuilder.BuildPigeonPrefab();
+            GameObject flockPrefab = PigeonBuilder.BuildFlockPrefab();
+            if (pigeonPrefab == null || flockPrefab == null)
+            {
+                Debug.LogWarning("Pigeon prefabs missing; skipping PigeonSpawner.");
+                return;
+            }
+
+            GameObject go = new GameObject("PigeonSpawner");
+            var spawner = go.AddComponent<JoburgRunner.Environment.Pigeons.PigeonSpawner>();
+            SerializedObject so = new SerializedObject(spawner);
+            so.FindProperty("pigeonPrefab").objectReferenceValue = pigeonPrefab;
+            so.FindProperty("flockPrefab").objectReferenceValue = flockPrefab;
+            so.FindProperty("player").objectReferenceValue = player;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         static void CreateDecorDirector(DistrictDecorProfile[] profiles, HeroBuildingSet heroSet)
         {
             GameObject go = new GameObject("EnvironmentDecorDirector");
             var director = go.AddComponent<EnvironmentDecorDirector>();
             SetField(director, "useSocketDecoration", true);
             SetField(director, "profilesByDistrict", profiles);
+            SetField(director, "jacarandaAvenueProfile",
+                AssetDatabase.LoadAssetAtPath<DistrictDecorProfile>(
+                    "Assets/Environment/Decor/District_JacarandaAvenue.asset"));
             SetField(director, "intersectionEvery", 3);
             SetField(director, "prewarmPerPrefab", 16);
             // Hero-building spawning: frequent, both sides, no-repeat.
             SetField(director, "heroSet", heroSet);
+            SetField(director, "heroAllDistricts", true);
             SetField(director, "heroPrewarm", 2);       // two-sided + back-to-back tiles need up to 2 of each
-            SetField(director, "heroMinGap", 1);        // a hero block every 1-2 CBD appearances
-            SetField(director, "heroMaxGap", 2);
+            SetField(director, "heroMinGap", 1);        // a hero block on every segment
+            SetField(director, "heroMaxGap", 1);
             SetField(director, "heroEarlyGuaranteeWithin", 1);
             SetField(director, "heroAvoidRecent", 1);
             SetField(director, "heroBothSides", true);  // a (different) building on each side
@@ -2821,6 +3800,28 @@ namespace JoburgRunner.Editor
             Cylinder("MunicipalStreetLight_Pole", parent, position + new Vector3(0f, 2.3f, 0f), new Vector3(0.08f, 2.3f, 0.08f), Mat("PoleGrey"));
             Cube("MunicipalStreetLight_Arm", parent, position + new Vector3(sideTowardsRoad * 0.5f, 4.55f, 0f), new Vector3(1f, 0.07f, 0.07f), Mat("PoleGrey"));
             Cube("MunicipalStreetLight_Lamp", parent, position + new Vector3(sideTowardsRoad * 0.95f, 4.5f, 0f), new Vector3(0.45f, 0.14f, 0.22f), Mat("PaintWhite"));
+        }
+
+        static void CurvedStreetLight(Transform parent, Vector3 position)
+        {
+            Material pole = Mat("PoleGrey");
+            Cylinder("CurvedStreetLight_Pole", parent, position + new Vector3(0f, 2.05f, 0f),
+                new Vector3(0.09f, 2.05f, 0.09f), pole);
+
+            // Three low-poly arm sections form a smooth-looking forward bend.
+            // The lamp extends along local +Z; the ±90° socket yaw turns +Z
+            // toward the road from both pavements.
+            Cylinder("CurvedStreetLight_ArmLower", parent, position + new Vector3(0f, 4.32f, 0.16f),
+                new Vector3(0.085f, 0.46f, 0.085f), pole, new Vector3(20f, 0f, 0f));
+            Cylinder("CurvedStreetLight_ArmMiddle", parent, position + new Vector3(0f, 4.75f, 0.52f),
+                new Vector3(0.08f, 0.42f, 0.08f), pole, new Vector3(48f, 0f, 0f));
+            Cylinder("CurvedStreetLight_ArmUpper", parent, position + new Vector3(0f, 5.02f, 1.02f),
+                new Vector3(0.075f, 0.40f, 0.075f), pole, new Vector3(72f, 0f, 0f));
+
+            Cube("CurvedStreetLight_LampHousing", parent, position + new Vector3(0f, 5.13f, 1.46f),
+                new Vector3(0.42f, 0.16f, 0.58f), Mat("MetalDark"));
+            Cube("CurvedStreetLight_LampGlow", parent, position + new Vector3(0f, 5.04f, 1.5f),
+                new Vector3(0.30f, 0.035f, 0.40f), Mat("PaintWhite"));
         }
 
         static void TreeCanopy(Transform parent, Vector3 position)
@@ -3028,8 +4029,31 @@ namespace JoburgRunner.Editor
         {
             for (int i = -4; i <= 4; i++)
             {
-                Cube("ZebraCrossingStripe", parent, new Vector3(i * 1.15f, 0.06f, zPosition), new Vector3(0.6f, 0.04f, 2.4f), Mat("PaintWhite"));
+                Cube("ZebraCrossingStripe", parent, new Vector3(i * 1.0f, 0.06f, zPosition), new Vector3(0.55f, 0.04f, 2.4f), Mat("PaintWhite"));
             }
+        }
+
+        static void PedestrianCrossingTreatment(Transform parent, float zPosition)
+        {
+            ZebraCrossing(parent, zPosition);
+
+            // Slightly raised pavement islands frame the crossing like a real
+            // signalised Johannesburg kerb treatment. These remain visual-only.
+            Cube("RaisedPavement_Left", parent, new Vector3(-5.82f, 0.15f, zPosition),
+                new Vector3(2.9f, 0.08f, 4.2f), Mat("Pavement"));
+            Cube("RaisedPavement_Right", parent, new Vector3(5.82f, 0.15f, zPosition),
+                new Vector3(2.9f, 0.08f, 4.2f), Mat("SidewalkConcrete"));
+
+            Cube("RaisedKerb_Left", parent, new Vector3(-4.36f, 0.20f, zPosition),
+                new Vector3(0.28f, 0.18f, 4.2f), Mat("KerbStone"));
+            Cube("RaisedKerb_Right", parent, new Vector3(4.36f, 0.20f, zPosition),
+                new Vector3(0.28f, 0.18f, 4.2f), Mat("KerbStone"));
+
+            // Yellow tactile pads sit beside the stripe ends, clear of all lanes.
+            Cube("TactilePaving_Left", parent, new Vector3(-4.9f, 0.205f, zPosition),
+                new Vector3(0.72f, 0.03f, 1.15f), Mat("PaintYellow"));
+            Cube("TactilePaving_Right", parent, new Vector3(4.9f, 0.205f, zPosition),
+                new Vector3(0.72f, 0.03f, 1.15f), Mat("PaintYellow"));
         }
 
         enum BuildingStyle
@@ -4425,12 +5449,24 @@ namespace JoburgRunner.Editor
             // single-mesh model, then the primitive minibus.
             GameObject assembledRoot = AssembledTaxiInstance(holder.transform, Vector3.zero, 180f, 2.3f);
             GameObject modelRoot = assembledRoot ?? FbxVehicleInstance("taxi", holder.transform, Vector3.zero, 180f, 2.3f, "TaxiObstacle");
-            GameObject root = modelRoot ?? MinibusTaxiVisual(holder.transform, Vector3.zero, 180f);
-            root.name = "SouthAfricanTaxiObstacle";
-            root.transform.SetParent(null);
+            GameObject classic = modelRoot ?? MinibusTaxiVisual(holder.transform, Vector3.zero, 180f);
+            classic.name = "ClassicTaxiVisual";
+            classic.transform.SetParent(null);
             Object.DestroyImmediate(holder);
 
-            // Fit the collider to whatever model is in use.
+            GameObject root = new GameObject("SouthAfricanTaxiObstacle");
+            classic.transform.SetParent(root.transform, true);
+            GameObject taxi2 = CreateTaxi2Visual(root.transform);
+            GameObject[] variants = taxi2 != null
+                ? new[] { classic, taxi2 }
+                : new[] { classic };
+
+            // Fit one shared collider to both visuals. This keeps obstacle
+            // clearance identical regardless of which taxi body is selected.
+            foreach (GameObject variant in variants)
+            {
+                variant.SetActive(true);
+            }
             Renderer[] renderers = root.GetComponentsInChildren<Renderer>();
             Bounds bounds = renderers[0].bounds;
             foreach (Renderer renderer in renderers)
@@ -4447,11 +5483,19 @@ namespace JoburgRunner.Editor
             // primitive fallback gets the full running gear.
             if (assembledRoot == null && modelRoot != null)
             {
-                AddSpinningWheels(root);
+                AddSpinningWheels(classic);
             }
             else if (modelRoot == null)
             {
-                AddVehicleRunningGear(root, -1f);
+                AddVehicleRunningGear(classic, -1f);
+            }
+
+            TaxiObstacleVisualVariants selector = root.AddComponent<TaxiObstacleVisualVariants>();
+            SetField(selector, "variants", variants);
+            classic.SetActive(true);
+            if (taxi2 != null)
+            {
+                taxi2.SetActive(false);
             }
 
             // Oncoming traffic: taxi obstacles drive toward the player, each with
@@ -4462,6 +5506,165 @@ namespace JoburgRunner.Editor
 
             Debug.Log($"Taxi obstacle triangle count: {CountTriangles(root)}");
             return SavePrefab(root, TaxiPrefabPath);
+        }
+
+        static GameObject CreateTaxi2Visual(Transform parent)
+        {
+            GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(Taxi2ModelPath);
+            if (model == null)
+            {
+                Debug.LogWarning($"Taxi2 model has not imported yet: {Taxi2ModelPath}");
+                return null;
+            }
+
+            GameObject visual = new GameObject("Taxi2Visual");
+            visual.transform.SetParent(parent);
+            visual.transform.localPosition = Vector3.zero;
+            // Taxi obstacles travel toward the runner, so the vehicle's nose
+            // must point down the track toward local -Z.
+            visual.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            visual.transform.localScale = Vector3.one;
+
+            GameObject body = Object.Instantiate(model, visual.transform);
+            body.name = "Taxi2Body";
+            body.transform.localPosition = Vector3.zero;
+            body.transform.localRotation = Quaternion.identity;
+            body.transform.localScale = Vector3.one;
+
+            Material material = CreateTaxi2Material();
+            Renderer[] renderers = body.GetComponentsInChildren<Renderer>(true);
+            foreach (Renderer renderer in renderers)
+            {
+                Material[] materials = renderer.sharedMaterials;
+                for (int index = 0; index < materials.Length; index++)
+                {
+                    materials[index] = material;
+                }
+                renderer.sharedMaterials = materials;
+            }
+
+            // Use the exact separate Higgsfield wheel asset fitted to the original
+            // assembled taxi, rather than the procedural wheel-disc overlay.
+            AddOriginalTaxiWheels(visual);
+            // Raise only the body. Wheel pivots remain direct children of the
+            // assembly at their measured ground-aligned positions.
+            body.transform.localPosition = new Vector3(0f, 0.2f, 0f);
+            renderers = visual.GetComponentsInChildren<Renderer>(true);
+
+            if (renderers.Length > 0)
+            {
+                LODGroup lodGroup = visual.AddComponent<LODGroup>();
+                lodGroup.SetLODs(new[]
+                {
+                    new LOD(0.08f, renderers),
+                    new LOD(0.015f, System.Array.Empty<Renderer>()),
+                });
+                lodGroup.RecalculateBounds();
+            }
+
+            return visual;
+        }
+
+        static void AddOriginalTaxiWheels(GameObject root)
+        {
+            GameObject wheelModel = AssetDatabase.LoadAssetAtPath<GameObject>(TaxiWheelModelPath);
+            Renderer[] bodyRenderers = root.GetComponentsInChildren<Renderer>();
+            if (wheelModel == null || bodyRenderers.Length == 0)
+            {
+                Debug.LogWarning("Taxi2: original TaxiWheel.glb is unavailable");
+                return;
+            }
+
+            Bounds bounds = WorldRendererBounds(root);
+            float frontAxleZ = bounds.center.z + bounds.size.z * 0.30f;
+            float rearAxleZ = bounds.center.z - bounds.size.z * 0.30f;
+            float halfTrack = bounds.size.x * 0.5f;
+            if (TryMeasureWheels(root, bounds, out float measuredFront, out float measuredRear, out float measuredTrack))
+            {
+                frontAxleZ = measuredFront;
+                rearAxleZ = measuredRear;
+                halfTrack = measuredTrack;
+            }
+
+            float wheelRadius = bounds.size.y * 0.16f;
+            var wheels = new List<Transform>();
+            foreach ((float side, bool front) in new (float, bool)[]
+                     { (-1f, true), (1f, true), (-1f, false), (1f, false) })
+            {
+                GameObject pivot = new GameObject(
+                    $"{(front ? "Front" : "Rear")}{(side < 0f ? "Left" : "Right")}Wheel");
+                pivot.transform.SetParent(root.transform);
+                pivot.transform.localRotation = Quaternion.identity;
+
+                GameObject wheel = Object.Instantiate(wheelModel, pivot.transform);
+                wheel.name = "OriginalTaxiWheelVisual";
+                wheel.transform.localPosition = Vector3.zero;
+                wheel.transform.localRotation = Quaternion.identity;
+
+                Bounds raw = WorldRendererBounds(wheel);
+                if (raw.size.z <= raw.size.x && raw.size.z <= raw.size.y)
+                {
+                    wheel.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                }
+                else if (raw.size.y <= raw.size.x && raw.size.y <= raw.size.z)
+                {
+                    wheel.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+                }
+                if (side < 0f)
+                {
+                    wheel.transform.localRotation =
+                        Quaternion.Euler(0f, 180f, 0f) * wheel.transform.localRotation;
+                }
+
+                Bounds fitted = WorldRendererBounds(wheel);
+                float diameter = Mathf.Max(fitted.size.y, fitted.size.z);
+                wheel.transform.localScale *= wheelRadius * 2f / diameter;
+                fitted = WorldRendererBounds(wheel);
+
+                pivot.transform.localPosition = new Vector3(
+                    bounds.center.x + side * (halfTrack - fitted.size.x * 0.45f),
+                    bounds.min.y + wheelRadius,
+                    front ? frontAxleZ : rearAxleZ);
+                fitted = WorldRendererBounds(wheel);
+                wheel.transform.position += pivot.transform.position - fitted.center;
+
+                SimplifyMeshes(wheel, 8000);
+                ApplyGltfLitMaterial(wheel, "TaxiWheelLit", 0.25f);
+                StripColliders(wheel);
+                wheels.Add(pivot.transform);
+            }
+
+            VehicleMotion motion = root.AddComponent<VehicleMotion>();
+            SetField(motion, "wheels", wheels.ToArray());
+            SetField(motion, "wheelRadius", wheelRadius);
+            Debug.Log(
+                $"Taxi2: fitted original taxi wheels at z {rearAxleZ:F2}/{frontAxleZ:F2}, " +
+                $"half-track {halfTrack:F2}, radius {wheelRadius:F2}");
+        }
+
+        static Material CreateTaxi2Material()
+        {
+            Material material = AssetDatabase.LoadAssetAtPath<Material>(Taxi2MaterialPath);
+            if (material == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+                material = new Material(shader) { name = "Taxi2_URP" };
+                AssetDatabase.CreateAsset(material, Taxi2MaterialPath);
+            }
+
+            Texture2D albedo = AssetDatabase.LoadAssetAtPath<Texture2D>(Taxi2AlbedoPath);
+            Texture2D normal = AssetDatabase.LoadAssetAtPath<Texture2D>(Taxi2NormalPath);
+            material.SetTexture("_BaseMap", albedo);
+            material.SetColor("_BaseColor", Color.white);
+            material.SetFloat("_Metallic", 0.12f);
+            material.SetFloat("_Smoothness", 0.32f);
+            if (normal != null)
+            {
+                material.SetTexture("_BumpMap", normal);
+                material.EnableKeyword("_NORMALMAP");
+            }
+            EditorUtility.SetDirty(material);
+            return material;
         }
 
         static GameObject CreateSceneryTaxiPrefab()
@@ -5160,7 +6363,7 @@ namespace JoburgRunner.Editor
             }
         }
 
-        static float LaneX(int lane) => (lane - 1) * 2.7f;
+        static float LaneX(int lane) => RoadMetrics.LaneX(lane);
 
         static GameObject[] CreatePowerUpPrefabs(GameObject ubuntuDissolvePrefab)
         {
@@ -5486,14 +6689,15 @@ namespace JoburgRunner.Editor
         static void CreateLighting()
         {
             Transform lighting = EnvironmentCategory("Lighting");
-            RenderSettings.ambientLight = new Color(0.6f, 0.65f, 0.72f);
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.48f, 0.54f, 0.68f);
 
             GameObject sun = new GameObject("JohannesburgSun");
             sun.transform.SetParent(lighting);
             Light light = sun.AddComponent<Light>();
             light.type = LightType.Directional;
-            light.intensity = 1.35f;
-            light.color = new Color(1f, 0.96f, 0.88f);
+            light.intensity = 1.3f;
+            light.color = new Color(1f, 0.91f, 0.76f);
             light.shadows = LightShadows.None;
             sun.transform.rotation = Quaternion.Euler(50f, -25f, 0f);
 
@@ -5507,9 +6711,9 @@ namespace JoburgRunner.Editor
             skybox.SetFloat("_SunSize", 0.045f);
             skybox.SetFloat("_SunSizeConvergence", 5f);
             skybox.SetFloat("_AtmosphereThickness", 1f);
-            skybox.SetColor("_SkyTint", new Color(0.5f, 0.5f, 0.5f));
-            skybox.SetColor("_GroundColor", new Color(0.55f, 0.55f, 0.55f));
-            skybox.SetFloat("_Exposure", 1.25f);
+            skybox.SetColor("_SkyTint", new Color(0.34f, 0.52f, 0.78f));
+            skybox.SetColor("_GroundColor", new Color(0.48f, 0.5f, 0.58f));
+            skybox.SetFloat("_Exposure", 1.18f);
             EditorUtility.SetDirty(skybox);
 
             RenderSettings.skybox = skybox;
@@ -5517,8 +6721,75 @@ namespace JoburgRunner.Editor
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogColor = new Color(0.72f, 0.79f, 0.86f);
-            RenderSettings.fogStartDistance = 80f;
-            RenderSettings.fogEndDistance = 260f;
+            RenderSettings.fogStartDistance = 110f;
+            RenderSettings.fogEndDistance = 155f;
+        }
+
+        static void CreateRoadsideSpawnHaze(Transform player)
+        {
+            const string materialPath = "Assets/Materials/RoadsideSpawnHaze.mat";
+            Material haze = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+            if (haze == null)
+            {
+                haze = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+                AssetDatabase.CreateAsset(haze, materialPath);
+            }
+
+            Color hazeColor = new Color(0.72f, 0.79f, 0.86f, 0.82f);
+            haze.SetColor("_BaseColor", hazeColor);
+            haze.SetFloat("_Surface", 1f);
+            haze.SetFloat("_Blend", 0f);
+            haze.SetFloat("_ZWrite", 0f);
+            haze.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            haze.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            EditorUtility.SetDirty(haze);
+
+            GameObject root = new GameObject("RoadsideSpawnHaze");
+            root.transform.SetParent(EnvironmentCategory("Skybox"));
+            root.transform.position = new Vector3(0f, 0f, player.position.z + 123f);
+            RoadsideSpawnHaze controller = root.AddComponent<RoadsideSpawnHaze>();
+            SetField(controller, "runner", player);
+            SetField(controller, "forwardDistance", 123f);
+            SetField(controller, "fogStart", 110f);
+            SetField(controller, "fogEnd", 155f);
+
+            // Leave a clear opening over the narrowed gameplay road. Two
+            // large side panels hide buildings, trees and decoration as pooled
+            // segments are dressed, with only four transparent draw calls total.
+            for (int layer = 0; layer < 2; layer++)
+            {
+                float localZ = layer == 0 ? 0f : 2.5f;
+                float alpha = layer == 0 ? 0.55f : 0.82f;
+                string layerPath = $"Assets/Materials/RoadsideSpawnHaze_{layer}.mat";
+                Material layerMaterial = AssetDatabase.LoadAssetAtPath<Material>(layerPath);
+                if (layerMaterial == null)
+                {
+                    layerMaterial = new Material(haze);
+                    AssetDatabase.CreateAsset(layerMaterial, layerPath);
+                }
+                layerMaterial.SetColor("_BaseColor",
+                    new Color(hazeColor.r, hazeColor.g, hazeColor.b, alpha));
+                layerMaterial.SetFloat("_Surface", 1f);
+                layerMaterial.SetFloat("_ZWrite", 0f);
+                layerMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                layerMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                EditorUtility.SetDirty(layerMaterial);
+
+                foreach (float side in new[] { -1f, 1f })
+                {
+                    GameObject panel = Cube(
+                        side < 0f ? $"HazeLeft_{layer}" : $"HazeRight_{layer}",
+                        root.transform,
+                        new Vector3(side * 30.2f, 18f, localZ),
+                        new Vector3(50f, 36f, 0.08f),
+                        layerMaterial);
+                    Collider collider = panel.GetComponent<Collider>();
+                    if (collider != null)
+                    {
+                        Object.DestroyImmediate(collider);
+                    }
+                }
+            }
         }
 
         static void CreateSkyline(Transform player)
@@ -5544,10 +6815,6 @@ namespace JoburgRunner.Editor
                 Cylinder("HillbrowTower_AntennaTip", t, towerBase + new Vector3(0f, 47.4f, 0f), new Vector3(0.28f, 1f, 0.28f), Mat("AntennaRed"));
             }
 
-            // Brutalist CBD tower landmark (ABSA-style, brand-neutral), centre-right of the
-            // horizon to balance the Telkom tower. Faceting is invisible at this distance.
-            CreateCbdTowerSkyline(t, new Vector3(13f, 0f, 16f), 1.3f);
-
             // Reuse the two active roadside heroes as recognizable, collision-free skyline
             // silhouettes. Opposite-side placement frames the road without blocking its vanishing point.
             CreateHeroBackdropBuilding(t, JhbBuilding02PrefabPath, "Backdrop_JHB_Building02",
@@ -5567,6 +6834,13 @@ namespace JoburgRunner.Editor
                 float depth = 12f + (i % 4) * 9f;
                 Vector3 size = new Vector3(4.2f + (i % 3) * 1.4f, height, 4.5f + (i % 2) * 2f);
                 Cube("CitySkyscraper", t, new Vector3(x, height * 0.5f, depth), size, towerMats[i % 3]);
+                // One inset glass panel breaks up the old blank placeholder silhouette
+                // without adding dense geometry to the distant skyline.
+                float facadeZ = depth - size.z * 0.5f - 0.03f;
+                Cube("CitySkyscraper_WindowPanel", t,
+                    new Vector3(x, height * 0.55f, facadeZ),
+                    new Vector3(size.x * 0.72f, height * 0.58f, 0.08f),
+                    Mat("SkyscraperGlass"));
 
                 if (i % 4 == 0)
                 {
@@ -5622,28 +6896,6 @@ namespace JoburgRunner.Editor
             AssignMaterial(visual, GetTelkomTowerMaterial());
             SimplifyMeshes(visual, 60000);
             StripColliders(root);
-            return true;
-        }
-
-        // Places the imported PF_JHB_CBDTower as a distant horizon landmark (like the
-        // Telkom tower). Reuses the prefab's own LODGroup/materials — at skyline distance
-        // it renders a cheap LOD and the close-range window-grid faceting is not visible.
-        // Rotated 180° so the +Z façade faces back toward the oncoming player.
-        static bool CreateCbdTowerSkyline(Transform parent, Vector3 position, float scale)
-        {
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(JhbCbdTowerPrefabPath);
-            if (prefab == null)
-            {
-                Debug.LogWarning($"CBD tower prefab not found at {JhbCbdTowerPrefabPath}; skipping skyline landmark.");
-                return false;
-            }
-
-            GameObject inst = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-            inst.name = "CBDTowerSkyline";
-            inst.transform.localPosition = position;
-            inst.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
-            inst.transform.localScale = Vector3.one * scale;
-            StripColliders(inst); // skyline decoration: no collision
             return true;
         }
 
@@ -6811,6 +8063,8 @@ namespace JoburgRunner.Editor
             GameObject vfxPrefab = CreatePerfectDodgeVfxPrefab();
             PerfectDodge dodge = player.AddComponent<PerfectDodge>();
             SetField(dodge, "vfxPrefab", vfxPrefab);
+            SetField(dodge, "perfectDodgeDistance", 0.5f);
+            SetField(dodge, "perfectDodgeCooldown", 0.75f);
             SetField(dodge, "whooshClip", AssetDatabase.LoadAssetAtPath<AudioClip>("Assets/Audio/LaneSwitch.mp3"));
         }
 
@@ -7929,9 +9183,9 @@ namespace JoburgRunner.Editor
 
         static Camera CreateCamera(Transform player)
         {
-            Vector3 offset = new Vector3(0f, 2.05f, -4.35f);
+            Vector3 offset = new Vector3(0f, 2.25f, -4.9f);
             const float lookHeight = 1.05f;
-            Vector3 idleOffset = new Vector3(0f, 1.2f, -5.2f);
+            Vector3 idleOffset = new Vector3(0f, 1.2f, -4.95f);
             const float idleLookHeight = 0.95f;
 
             GameObject cameraObject = new GameObject("Main Camera");
@@ -7955,7 +9209,9 @@ namespace JoburgRunner.Editor
             return camera;
         }
 
-        static void CreateSystems(Transform player, GameObject roadPrefab, TrackChunk[] chunkPrefabs)
+        static void CreateSystems(
+            Transform player, GameObject roadPrefab, TrackChunk[] chunkPrefabs,
+            JunctionSpawnSettings junctionSettings)
         {
             GameObject gameManagerObject = new GameObject("GameManager");
             GameManager gameManager = gameManagerObject.AddComponent<GameManager>();
@@ -8008,6 +9264,7 @@ namespace JoburgRunner.Editor
             RoadSegmentSpawner roadSpawner = roadSpawnerObject.AddComponent<RoadSegmentSpawner>();
             SetField(roadSpawner, "player", player);
             SetField(roadSpawner, "roadSegmentPrefab", roadPrefab);
+            SetField(roadSpawner, "junctionSettings", junctionSettings);
             // One segment sits behind the origin so the cameras (which trail the
             // player) never see past the road's near edge on tall screens.
             int[] openingDistricts = { 0, 0, 2, 1, 3, 0 };
@@ -8269,6 +9526,12 @@ namespace JoburgRunner.Editor
             gameOverTitle.color = gold;
             gameOverTitle.characterSpacing = 8f;
             Anchor(gameOverTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(780f, 120f));
+
+            Button closeGameOverButton = UiButton(card.transform, "CloseButton", "×", 64,
+                new Color(0.25f, 0.28f, 0.35f, 1f), rounded,
+                new Vector2(1f, 1f), new Vector2(-28f, -28f), new Vector2(112f, 112f));
+            closeGameOverButton.GetComponentInChildren<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
+            closeGameOverButton.gameObject.AddComponent<GameOverCloseButton>();
 
             TextMeshProUGUI finalScore = Text(card.transform, "FinalScoreText", "Final score: 0", 46, TextAlignmentOptions.Center);
             Anchor(finalScore.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -230f), new Vector2(780f, 420f));

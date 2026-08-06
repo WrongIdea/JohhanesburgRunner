@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using JoburgRunner.Environment.Decor;
 
@@ -8,7 +9,41 @@ namespace JoburgRunner
         [SerializeField] GameObject[] districtRoots;
         [SerializeField] bool suppressDistrictBuildings = true;
 
+        static readonly List<RoadSegmentVisuals> Active = new List<RoadSegmentVisuals>();
+
         public int DistrictCount => districtRoots != null ? districtRoots.Length : 0;
+
+        /// <summary>The district index this segment is currently dressed as.</summary>
+        public int CurrentDistrict { get; private set; }
+
+        /// <summary>
+        /// District index of the active road segment nearest a world-Z position, or
+        /// -1 if no segments are live. Used by the pigeon spawner to weight spawns.
+        /// </summary>
+        public static int DistrictAt(float worldZ)
+        {
+            int best = -1;
+            float bestDist = float.MaxValue;
+            for (int i = 0; i < Active.Count; i++)
+            {
+                RoadSegmentVisuals seg = Active[i];
+                if (seg == null)
+                {
+                    continue;
+                }
+                float d = Mathf.Abs(seg.transform.position.z - worldZ);
+                if (d < bestDist)
+                {
+                    bestDist = d;
+                    best = seg.CurrentDistrict;
+                }
+            }
+            return best;
+        }
+
+        void OnEnable() => Active.Add(this);
+
+        void OnDisable() => Active.Remove(this);
 
         void Start()
         {
@@ -22,7 +57,8 @@ namespace JoburgRunner
             // freeze them in place. Sockets carry no renderers, so skip them too.
             foreach (Transform child in transform)
             {
-                if (child.name == "DecorRuntime" || child.name == "DecorSockets")
+                if (child.name == "DecorRuntime" || child.name == "DecorSockets" ||
+                    child.name == "PedestrianCrossing" || child.name == "JunctionVisuals")
                 {
                     continue;
                 }
@@ -63,6 +99,7 @@ namespace JoburgRunner
             }
 
             int safeIndex = Mathf.Abs(districtIndex) % districtRoots.Length;
+            CurrentDistrict = safeIndex;
             for (int i = 0; i < districtRoots.Length; i++)
             {
                 if (districtRoots[i] != null)
