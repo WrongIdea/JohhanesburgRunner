@@ -196,15 +196,28 @@ namespace JoburgRunner.Environment.Pigeons
             }
         }
 
+        // Alarm propagation tuning (Parts 2 & 6). The bird nearest the threat lifts
+        // first; the alarm then ripples outward from it at a fixed spread rate, so the
+        // flock never lifts as one synchronised block. Jitter keeps any two birds off
+        // the same frame; the cap stops a large flock from dribbling out too slowly.
+        const float AlarmSpreadPerMetre = 0.06f;
+        const float AlarmMaxDelay = 0.4f;
+        const float AlarmJitter = 0.1f;
+
         // --- Reaction API (Part 4 named methods) ---
 
-        public void ReactToPlayer() => Scatter();
-        public void ReactToVehicle(Vector3 source, float speed) => Scatter();
-        public void ReactToHorn(Vector3 source) => Scatter();
-        public void TriggerTakeoff() => Scatter();
+        public void ReactToPlayer() => Scatter(player != null ? player.position : center, player != null);
+        public void ReactToVehicle(Vector3 source, float speed) => Scatter(source, true);
+        public void ReactToHorn(Vector3 source) => Scatter(source, true);
+        public void TriggerTakeoff() => Scatter(center, false);
 
-        /// <summary>Independent scare from any source — staggered take-off.</summary>
-        void Scatter()
+        /// <summary>
+        /// Independent scare from any source. Picks a leader (the bird nearest the
+        /// threat, or a random bird for an un-sourced take-off), then staggers every
+        /// other bird by its distance from that leader plus jitter so the take-off
+        /// reads as a spreading alarm rather than a synchronised launch (Parts 2 & 6).
+        /// </summary>
+        void Scatter(Vector3 origin, bool hasOrigin)
         {
             if (scared || pigeons.Count == 0)
             {
@@ -212,6 +225,27 @@ namespace JoburgRunner.Environment.Pigeons
             }
             scared = true;
             State = FlockState.Alerted;
+
+            // The first to notice: nearest the threat, or random for a blind takeoff.
+            int leader = 0;
+            if (hasOrigin)
+            {
+                float best = float.MaxValue;
+                for (int i = 0; i < pigeons.Count; i++)
+                {
+                    float d = (pigeons[i].transform.position - origin).sqrMagnitude;
+                    if (d < best)
+                    {
+                        best = d;
+                        leader = i;
+                    }
+                }
+            }
+            else
+            {
+                leader = Random.Range(0, pigeons.Count);
+            }
+            Vector3 leaderPos = pigeons[leader].transform.position;
 
             for (int i = 0; i < pigeons.Count; i++)
             {
@@ -228,7 +262,19 @@ namespace JoburgRunner.Environment.Pigeons
                         pigeon.SetLandingTarget(perch);
                     }
                 }
-                pigeon.Scare(Random.Range(0f, 0.25f));
+
+                float delay;
+                if (i == leader)
+                {
+                    delay = 0f;
+                }
+                else
+                {
+                    float dist = Vector3.Distance(pigeon.transform.position, leaderPos);
+                    delay = Mathf.Min(dist * AlarmSpreadPerMetre, AlarmMaxDelay)
+                            + Random.Range(0f, AlarmJitter);
+                }
+                pigeon.Scare(delay);
             }
 
             if (interestArea != null)

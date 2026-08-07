@@ -75,6 +75,15 @@ namespace JoburgRunner.Environment.Pigeons
         float roamRadius = 1.6f;
         Vector3 homePos;
 
+        // Idle micro-motion — a per-instance breathing / weight-shift sway so a
+        // resting flock is never statue-still or perfectly in sync (Part 4). Driven
+        // procedurally on the root while grounded (the in-place clips don't touch it),
+        // so it costs a sine per bird and needs no extra animation states.
+        float swayPhase;
+        float swaySpeed;
+        float groundBaseYaw;
+        Ground lastGround = Ground.Idle;
+
         // Editor gizmo state.
         bool gizmoFlying;
 
@@ -106,6 +115,8 @@ namespace JoburgRunner.Environment.Pigeons
             yawBias = 0f;
             feeding = false;
             canCoo = true;
+            swayPhase = Random.value * Mathf.PI * 2f;
+            swaySpeed = Random.Range(0.8f, 1.3f);
             homePos = transform.position;
             transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
             PickGroundBehaviour(true);
@@ -147,14 +158,26 @@ namespace JoburgRunner.Environment.Pigeons
             }
         }
 
-        /// <summary>Begin the scatter. Delay staggers the flock's take-off.</summary>
+        /// <summary>
+        /// Begin the scatter. <paramref name="delay"/> staggers the flock's take-off
+        /// as the alarm ripples out from the leader. The bird snaps to an alert idle
+        /// (head up, stops pecking / wandering) the instant the alarm reaches it, even
+        /// though lift-off is still <paramref name="delay"/> seconds away (Part 6).
+        /// </summary>
         public void Scare(float delay)
         {
-            if (phase != Phase.Ground)
+            if (phase != Phase.Ground || scareDelay >= 0f)
             {
                 return;
             }
             scareDelay = delay;
+            if (ground != Ground.Idle)
+            {
+                ground = Ground.Idle;
+                CrossFade(HashIdle, 0.06f);
+            }
+            groundBaseYaw = transform.eulerAngles.y;
+            groundTimer = Mathf.Max(groundTimer, delay + 0.1f); // don't re-pick mid-alert
         }
 
         /// <summary>Force this pigeon straight into a despawning flight (segment recycle).</summary>
@@ -236,11 +259,21 @@ namespace JoburgRunner.Environment.Pigeons
                 if (fromHome.magnitude > roamRadius)
                 {
                     transform.rotation = Quaternion.LookRotation(-fromHome.normalized, Vector3.up);
+                    groundBaseYaw = transform.eulerAngles.y;
                 }
                 else
                 {
                     transform.position = next;
                 }
+            }
+            else if (scareDelay < 0f)
+            {
+                // Calm idle/peck: gentle procedural breathing + weight shift so the bird
+                // reads as alive rather than a frozen prop. Held still while alert.
+                swayPhase += dt * swaySpeed;
+                float pitch = Mathf.Sin(swayPhase) * 1.4f;
+                float roll = Mathf.Sin(swayPhase * 0.5f) * 1.1f;
+                transform.rotation = Quaternion.Euler(pitch, groundBaseYaw, roll);
             }
 
             if (softCoo != null && audioReady && canCoo && AudioEnabled)
@@ -257,23 +290,39 @@ namespace JoburgRunner.Environment.Pigeons
         void PickGroundBehaviour(bool forceIdle)
         {
             groundTimer = Random.Range(minGroundSwitch, maxGroundSwitch);
-            float r = forceIdle ? 0f : Random.value;
-            // Feeding areas bias toward Idle/Peck and away from wandering.
-            float peckCut = feeding ? 0.9f : 0.8f;
-            if (r < 0.5f)
+
+            if (forceIdle)
             {
                 ground = Ground.Idle;
-                CrossFade(HashIdle);
-            }
-            else if (r < peckCut)
-            {
-                ground = Ground.Peck;
-                CrossFade(HashPeck);
             }
             else
             {
-                ground = Ground.Walk;
-                CrossFade(HashWalk);
+                // Weighted pick, re-rolled once if it repeats the previous behaviour,
+                // so a bird never plays the same thing twice running — the main source
+                // of visible repetition. Feeding areas bias toward Idle/Peck (Part 3).
+                float peckCut = feeding ? 0.9f : 0.8f;
+                Ground next = ground;
+                for (int attempt = 0; attempt < 2 && next == lastGround; attempt++)
+                {
+                    float r = Random.value;
+                    next = r < 0.5f ? Ground.Idle : (r < peckCut ? Ground.Peck : Ground.Walk);
+                }
+                ground = next;
+            }
+
+            lastGround = ground;
+            // The idle sway rotates the body around whatever yaw it settled on; walking
+            // drives its own facing, so only re-anchor when we're staying put.
+            if (ground != Ground.Walk)
+            {
+                groundBaseYaw = transform.eulerAngles.y;
+            }
+
+            switch (ground)
+            {
+                case Ground.Idle: CrossFade(HashIdle); break;
+                case Ground.Peck: CrossFade(HashPeck); break;
+                case Ground.Walk: CrossFade(HashWalk); break;
             }
         }
 

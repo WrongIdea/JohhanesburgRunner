@@ -37,6 +37,10 @@ Ground(Idle⇄Walk⇄Peck) ──Scare(delay)──> TakeOff ──> Fly(bezier 
 ```
 
 - Ground behaviour is weighted-random with per-bird timing; feeding areas bias to Idle/Peck.
+  A re-roll prevents the same behaviour running twice in a row (kills visible repetition).
+- While grounded and calm, the body carries a per-instance procedural sway (breathing +
+  weight-shift) so a resting flock is never statue-still or synchronised. Held frozen the
+  instant a scare arrives — the bird snaps to an alert idle `delay` seconds before lift-off.
 - Flight is a per-bird quadratic bezier arc; body banks by rolling into lateral turns.
 - Land descends to a reserved perch (or ground), settles, resumes ground behaviour.
 
@@ -47,7 +51,11 @@ Inactive ─Deploy─> Grounded ─react─> Alerted ─> TakingOff ─> Flying 
 ```
 
 Reactions (`ReactToPlayer` / `ReactToVehicle` / `ReactToHorn` / `TriggerTakeoff`)
-all funnel to one guarded `Scatter()` (the `scared` latch → no double takeoff).
+all funnel to one guarded `Scatter(origin, hasOrigin)` (the `scared` latch → no double
+takeoff). Scatter picks a **leader** — the bird nearest the threat (or a random bird for a
+blind takeoff) — which lifts first; every other bird's take-off delay grows with its
+distance from that leader plus jitter, so the alarm ripples outward instead of the flock
+launching as one synchronised block.
 
 ## Spawn flow
 

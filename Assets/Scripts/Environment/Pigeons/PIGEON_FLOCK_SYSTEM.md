@@ -134,5 +134,7 @@ disables ground, cinematic, reset+respawn).
   spec's "lightweight only when needed" guidance; pigeons stay in their local disc.
 - Cinematic events are limited to one at a time (single spawner slot); large events
   auto-shrink to the available pool rather than borrowing from ordinary flocks.
-- Vehicle `IPigeonThreat` is defined but not yet implemented on `MovingObstacle`;
-  the passive obstacle-registry fallback covers taxis until it is.
+- Vehicle `IPigeonThreat` is implemented on `MovingObstacle` (`IsScary` gates on
+  cruising + `pigeonMinScarySpeed`, `ThreatSpeed` = current speed), so parked/slow
+  taxis no longer flush a flock. The obstacle-registry walk finds them without a
+  scene search.
