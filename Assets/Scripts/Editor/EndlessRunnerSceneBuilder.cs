@@ -27,28 +27,28 @@ namespace JoburgRunner.Editor
         const string ScenePath = "Assets/Scenes/JoburgEndlessRunner.unity";
         const string RoadPrefabPath = "Assets/Prefabs/RoadSegment.prefab";
         const string TaxiPrefabPath = "Assets/Prefabs/SouthAfricanTaxiObstacle.prefab";
-        const string Taxi2ModelPath = "Assets/Art/Generated/Incoming/Optimized/taxi2/taxi2_production.fbx";
+        const string Taxi2ModelPath = "Assets/Art/GameReady/Vehicles/taxi2/taxi2_production.fbx";
         const string Taxi2MaterialPath = "Assets/Materials/Taxi2_URP.mat";
-        const string Taxi2AlbedoPath = "Assets/Art/Generated/Incoming/Optimized/taxi2/Meshy_AI_Low_poly_1980s_South__0731072049_texture.png";
-        const string Taxi2NormalPath = "Assets/Art/Generated/Incoming/Optimized/taxi2/Meshy_AI_Low_poly_1980s_South__0731072049_texture_normal.png";
-        const string DustbinModelPath = "Assets/Art/Generated/Incoming/Optimized/dustbin/dustbin_upright.fbx";
-        const string BusStopStandModelPath = "Assets/Art/Generated/Incoming/Optimized/bus_stop_stand/bus_stop_stand_right_side_up.fbx";
-        const string DustbinAlbedoPath = "Assets/Art/Generated/Incoming/Optimized/dustbin/Meshy_AI_Low_poly_modern_Johan_0731082557_texture.png";
-        const string DustbinNormalPath = "Assets/Art/Generated/Incoming/Optimized/dustbin/Meshy_AI_Low_poly_modern_Johan_0731082557_texture_normal.png";
-        const string BusStopStandAlbedoPath = "Assets/Art/Generated/Incoming/Optimized/bus_stop_stand/Meshy_AI_Create_a_game_ready_J_0731074501_texture.png";
-        const string BusStopStandNormalPath = "Assets/Art/Generated/Incoming/Optimized/bus_stop_stand/Meshy_AI_Create_a_game_ready_J_0731074501_texture_normal.png";
-        const string ConcretePotplantModelPath = "Assets/Art/Generated/Incoming/Optimized/concrete_potplant/concrete_potplant_production.fbx";
-        const string ConcretePotplantAlbedoPath = "Assets/Art/Generated/Incoming/Optimized/concrete_potplant/Meshy_AI_Low_poly_rectangular__0731084256_texture.png";
-        const string ConcretePotplantNormalPath = "Assets/Art/Generated/Incoming/Optimized/concrete_potplant/Meshy_AI_Low_poly_rectangular__0731084256_texture_normal.png";
-        const string ElectricBoxModelPath = "Assets/Art/Generated/Incoming/Optimized/electric_box/electric_box_upright.fbx";
-        const string ElectricBoxAlbedoPath = "Assets/Art/Generated/Incoming/Optimized/electric_box/Meshy_AI_Low_poly_roadside_ele_0731085731_texture.png";
-        const string ElectricBoxNormalPath = "Assets/Art/Generated/Incoming/Optimized/electric_box/Meshy_AI_Low_poly_roadside_ele_0731085731_texture_normal.png";
-        const string DirectionSignModelPath = "Assets/Art/Generated/Incoming/road_sign_new/road_sign_unity.fbx";
+        const string Taxi2AlbedoPath = "Assets/Art/GameReady/Vehicles/taxi2/Meshy_AI_Low_poly_1980s_South__0731072049_texture.png";
+        const string Taxi2NormalPath = "Assets/Art/GameReady/Vehicles/taxi2/Meshy_AI_Low_poly_1980s_South__0731072049_texture_normal.png";
+        const string DustbinModelPath = "Assets/Art/GameReady/Props/dustbin/dustbin_upright.fbx";
+        const string BusStopStandModelPath = "Assets/Art/GameReady/Props/bus_stop_stand/bus_stop_stand_right_side_up.fbx";
+        const string DustbinAlbedoPath = "Assets/Art/GameReady/Props/dustbin/Meshy_AI_Low_poly_modern_Johan_0731082557_texture.png";
+        const string DustbinNormalPath = "Assets/Art/GameReady/Props/dustbin/Meshy_AI_Low_poly_modern_Johan_0731082557_texture_normal.png";
+        const string BusStopStandAlbedoPath = "Assets/Art/GameReady/Props/bus_stop_stand/Meshy_AI_Create_a_game_ready_J_0731074501_texture.png";
+        const string BusStopStandNormalPath = "Assets/Art/GameReady/Props/bus_stop_stand/Meshy_AI_Create_a_game_ready_J_0731074501_texture_normal.png";
+        const string ConcretePotplantModelPath = "Assets/Art/GameReady/Props/concrete_potplant/concrete_potplant_production.fbx";
+        const string ConcretePotplantAlbedoPath = "Assets/Art/GameReady/Props/concrete_potplant/Meshy_AI_Low_poly_rectangular__0731084256_texture.png";
+        const string ConcretePotplantNormalPath = "Assets/Art/GameReady/Props/concrete_potplant/Meshy_AI_Low_poly_rectangular__0731084256_texture_normal.png";
+        const string ElectricBoxModelPath = "Assets/Art/GameReady/Props/electric_box/electric_box_upright.fbx";
+        const string ElectricBoxAlbedoPath = "Assets/Art/GameReady/Props/electric_box/Meshy_AI_Low_poly_roadside_ele_0731085731_texture.png";
+        const string ElectricBoxNormalPath = "Assets/Art/GameReady/Props/electric_box/Meshy_AI_Low_poly_roadside_ele_0731085731_texture_normal.png";
+        const string DirectionSignModelPath = "Assets/Art/GameReady/Props/road_sign/road_sign_unity.fbx";
         // NB: copied to a clean name — the original PNG shares the FBX's base name
         // (..._texture.fbx / ..._texture.png), so Unity's FBX importer claims it and
         // LoadAssetAtPath<Texture2D> returns null (the sign rendered white).
-        const string DirectionSignAlbedoPath = "Assets/Art/Generated/Incoming/road_sign_new/roadsign_base_albedo.png";
-        const string DirectionSignNormalPath = "Assets/Art/Generated/Incoming/road_sign_new/Meshy_AI_Create_a_low_poly_mod_0802182911_texture_fbx/Meshy_AI_Create_a_low_poly_mod_0802182911_texture_normal.png";
+        const string DirectionSignAlbedoPath = "Assets/Art/GameReady/Props/road_sign/roadsign_base_albedo.png";
+        const string DirectionSignNormalPath = "Assets/Art/GameReady/Props/road_sign/Meshy_AI_Create_a_low_poly_mod_0802182911_texture_normal.png";
         const string DirectionSignPrefabPath = "Assets/Prefabs/Decor/DecorDirectionSign.prefab";
         // Higgsfield-generated taxi: a wheel-less body GLB plus a separate wheel
         // GLB, assembled into one prefab so the wheels are real spinning children.

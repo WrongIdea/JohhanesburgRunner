@@ -82,14 +82,18 @@ A["Takeoff"] = {  # 1..30 rapid flaps + push
 }
 A["Takeoff"]["Wing.R"]=mirrorZ(A["Takeoff"]["Wing.L"])
 
-A["Glide"] = {  # 1..30 loop, wings extended
- "Wing.L":[(1,(0,0,-48),None),(8,(3,0,-50),None),(15,(0,0,-53),None),(23,(-3,0,-50),None),(30,(0,0,-48),None)],
- "Body":[(1,(-3,0,0),None),(15,(-4,0,0),None),(30,(-3,0,0),None)],
- "Tail":[(1,(4,0,0),None),(15,(6,0,0),None),(30,(4,0,0),None)],
- "UpperLeg.L":[(1,(38,0,0),None),(30,(38,0,0),None)],
- "LowerLeg.L":[(1,(-46,0,0),None),(30,(-46,0,0),None)],
- "UpperLeg.R":[(1,(38,0,0),None),(30,(38,0,0),None)],
- "LowerLeg.R":[(1,(-46,0,0),None),(30,(-46,0,0),None)],
+A["Glide"] = {  # 1..20 loop, continuous powered wing-flapping (level-flight cruise).
+ # This is the clip the runtime "Fly" state plays, so it must FLAP, not hold the
+ # wings out — two full beats per loop: up (~-60) -> downstroke (~-6) -> up.
+ "Wing.L":[(1,(0,0,-64),None),(4,(0,0,-30),None),(7,(0,0,16),None),(11,(0,0,-64),None),(14,(0,0,-30),None),(17,(0,0,16),None),(20,(0,0,-64),None)],
+ "Body":[(1,(-4,0,0),None),(7,(-1,0,0),None),(11,(-4,0,0),None),(17,(-1,0,0),None),(20,(-4,0,0),None)],
+ "Neck":[(1,(-4,0,0),None),(20,(-4,0,0),None)],
+ "Head":[(1,(4,0,0),None),(20,(4,0,0),None)],
+ "Tail":[(1,(4,0,0),None),(7,(8,0,0),None),(11,(4,0,0),None),(17,(8,0,0),None),(20,(4,0,0),None)],
+ "UpperLeg.L":[(1,(42,0,0),None),(20,(42,0,0),None)],
+ "LowerLeg.L":[(1,(-52,0,0),None),(20,(-52,0,0),None)],
+ "UpperLeg.R":[(1,(42,0,0),None),(20,(42,0,0),None)],
+ "LowerLeg.R":[(1,(-52,0,0),None),(20,(-52,0,0),None)],
 }
 A["Glide"]["Wing.R"]=mirrorZ(A["Glide"]["Wing.L"])
 
@@ -105,7 +109,7 @@ A["Landing"] = {  # 1..30 brake + reach + settle to rest
 }
 A["Landing"]["Wing.R"]=mirrorZ(A["Landing"]["Wing.L"])
 
-RANGES={"Idle":(1,75),"Walk":(1,30),"Peck":(1,30),"Hop":(1,15),"Takeoff":(1,30),"Glide":(1,30),"Landing":(1,30)}
+RANGES={"Idle":(1,75),"Walk":(1,30),"Peck":(1,30),"Hop":(1,15),"Takeoff":(1,30),"Glide":(1,20),"Landing":(1,30)}
 
 if not arm.animation_data:
     arm.animation_data_create()
@@ -159,7 +163,7 @@ from mathutils import Vector
 cen=Vector((0,-0.02,0.02)); dv=Vector((1,0.25,0.15))
 cam.location=cen+dv.normalized()*2; cam.rotation_euler=(-dv.normalized()).to_track_quat('-Z','Y').to_euler()
 
-checkframes={"Idle":18,"Walk":15,"Peck":12,"Hop":7,"Takeoff":5,"Glide":15,"Landing":8}
+checkframes={"Idle":18,"Walk":15,"Peck":12,"Hop":7,"Takeoff":5,"Glide":6,"Landing":8}
 for name in A:
     arm.animation_data.action=bpy.data.actions[name]
     sc.frame_set(checkframes[name])

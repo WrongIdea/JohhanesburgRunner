@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &1424677852101804357
+--- !u!1 &7208624174937571530
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,9 +8,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 4254727399395435443}
-  - component: {fileID: 4732419765927551213}
-  - component: {fileID: 4749164051969070014}
+  - component: {fileID: 8166324230993346568}
+  - component: {fileID: 5247435785068613131}
+  - component: {fileID: 852826501519674909}
   m_Layer: 0
   m_Name: DirectionSign_FBX
   m_TagString: Untagged
@@ -18,13 +18,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &4254727399395435443
+--- !u!4 &8166324230993346568
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1424677852101804357}
+  m_GameObject: {fileID: 7208624174937571530}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0.0041148663, y: 2.00823, z: 0.0020564497}
@@ -33,21 +33,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1908854147359242235}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &4732419765927551213
+--- !u!33 &5247435785068613131
 MeshFilter:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1424677852101804357}
+  m_GameObject: {fileID: 7208624174937571530}
   m_Mesh: {fileID: 7158796146257112550, guid: cc7f7bfd6e6594213b43fe979a6d0ac6, type: 3}
---- !u!23 &4749164051969070014
+--- !u!23 &852826501519674909
 MeshRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1424677852101804357}
+  m_GameObject: {fileID: 7208624174937571530}
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
@@ -120,7 +120,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 4254727399395435443}
+  - {fileID: 8166324230993346568}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1181475073328545088

@@ -9,7 +9,7 @@ namespace JoburgRunner.Editor
     public static class FruitsStallPrefabBuilder
     {
         public const string ModelPath =
-            "Assets/Art/Generated/Incoming/Optimized/fruits-stall-v2/fruits-stall-v2_optimized.fbx";
+            "Assets/Art/GameReady/Props/fruits_stall/fruits-stall-v2_optimized.fbx";
         public const string PrefabPath = "Assets/Prefabs/Decor/DecorFruitsStall.prefab";
         const string WomanPrefabPath = "Assets/Prefabs/Decor/DecorRoadsideWoman.prefab";
 
