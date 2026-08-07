@@ -36,5 +36,21 @@ namespace JoburgRunner.Core
 
         [Header("Audio")]
         [Min(1)] public int audioVoiceLimit = 12;
+
+        [Header("Pigeons")]
+        [Tooltip("Hard cap on simultaneously active pigeons for this tier.")]
+        [Min(0)] public int pigeonMaxActive = 20;
+        [Tooltip("Max ordinary (non-cinematic) flocks alive at once.")]
+        [Min(0)] public int pigeonMaxFlocks = 2;
+        [Tooltip("Allow rare large cinematic pigeon set-pieces.")]
+        public bool pigeonCinematics = true;
+        [Tooltip("Distance behind the player at which flocks are reclaimed / culled.")]
+        [Min(5f)] public float pigeonCullDistance = 50f;
+        [Tooltip("Allow pigeons to perch on landing points (vs. always fly off).")]
+        public bool pigeonLanding = true;
+        [Tooltip("Cast shadows from pigeons.")]
+        public bool pigeonShadows = true;
+        [Tooltip("Play pigeon audio (coo / wing flutter).")]
+        public bool pigeonAudio = true;
     }
 }

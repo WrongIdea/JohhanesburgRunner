@@ -24,6 +24,15 @@ namespace JoburgRunner.Core
         public static float PropDensity => Instance != null && Instance.Active != null ? Instance.Active.propDensity : 1f;
         public static float VehicleDensity => Instance != null && Instance.Active != null ? Instance.Active.vehicleDensity : 1f;
 
+        // Pigeon caps (consumed by PigeonSpawner at Start / on quality change).
+        public static int PigeonMaxActive => Instance != null && Instance.Active != null ? Instance.Active.pigeonMaxActive : 20;
+        public static int PigeonMaxFlocks => Instance != null && Instance.Active != null ? Instance.Active.pigeonMaxFlocks : 2;
+        public static bool PigeonCinematics => Instance == null || Instance.Active == null || Instance.Active.pigeonCinematics;
+        public static float PigeonCullDistance => Instance != null && Instance.Active != null ? Instance.Active.pigeonCullDistance : 50f;
+        public static bool PigeonLanding => Instance == null || Instance.Active == null || Instance.Active.pigeonLanding;
+        public static bool PigeonShadows => Instance == null || Instance.Active == null || Instance.Active.pigeonShadows;
+        public static bool PigeonAudio => Instance == null || Instance.Active == null || Instance.Active.pigeonAudio;
+
         void Awake()
         {
             Instance = this;

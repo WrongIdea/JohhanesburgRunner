@@ -3673,12 +3673,15 @@ namespace JoburgRunner.Editor
                 return;
             }
 
+            var settings = PigeonBuilder.BuildFlockSettings();
+
             GameObject go = new GameObject("PigeonSpawner");
             var spawner = go.AddComponent<JoburgRunner.Environment.Pigeons.PigeonSpawner>();
             SerializedObject so = new SerializedObject(spawner);
             so.FindProperty("pigeonPrefab").objectReferenceValue = pigeonPrefab;
             so.FindProperty("flockPrefab").objectReferenceValue = flockPrefab;
             so.FindProperty("player").objectReferenceValue = player;
+            so.FindProperty("settings").objectReferenceValue = settings;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

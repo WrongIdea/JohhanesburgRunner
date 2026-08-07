@@ -8,6 +8,11 @@ namespace JoburgRunner.Environment.Pigeons
     /// <see cref="PigeonFlock"/> (no per-pigeon Update, so a full flock costs one
     /// Update callback). Drives clips directly via Animator.CrossFade — the
     /// controller only needs the six states to exist, no parameter wiring.
+    ///
+    /// Flight follows a per-pigeon quadratic bezier arc (no two identical) and the
+    /// body banks into lateral movement by rolling around its forward axis, so
+    /// banking needs no extra clips. A pigeon may be given a reserved
+    /// <see cref="PigeonLandingPoint"/> to descend onto instead of despawning.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class PigeonController : MonoBehaviour
@@ -25,12 +30,19 @@ namespace JoburgRunner.Environment.Pigeons
         [SerializeField] float flightSpeed = 6f;
         [SerializeField] float flightDuration = 5f;
         [SerializeField] float landingChance = 0.4f;
+        [SerializeField] float maxBankAngle = 28f;
+        [SerializeField] float pathVariation = 1f;
 
         [Header("Audio clips (Inspector only)")]
         [SerializeField] AudioClip softCoo;
         [SerializeField] AudioClip wingFlap;
         [SerializeField] AudioClip takeOffFlutter;
         [SerializeField] AudioClip landingFlutter;
+
+        const float TakeOffTime = 0.6f;
+
+        /// <summary>Global mute (set from quality settings). Cheap gate on all pigeon SFX.</summary>
+        public static bool AudioEnabled = true;
 
         static readonly int HashIdle = Animator.StringToHash("Idle");
         static readonly int HashWalk = Animator.StringToHash("Walk");
@@ -45,17 +57,30 @@ namespace JoburgRunner.Environment.Pigeons
         float groundTimer;
         float scareDelay = -1f;   // >=0 while a scare is pending.
         float phaseTimer;
-        Vector3 flightVelocity;
         float cooTimer;
         bool audioReady;
         AudioSource audioSource;
 
+        // Per-pigeon flight plan (varied by the flock so no two paths match).
+        float yawBias;
+        bool feeding;
+        bool canCoo = true;
+        PigeonLandingPoint landingPoint;
+
+        // Bezier arc state.
+        Vector3 p0, p1, p2;
+        float flightElapsed, flightTotal;
+        Vector3 prevHeading;
+        float bankAngle, bankVel;
+        float roamRadius = 1.6f;
+        Vector3 homePos;
+
         // Editor gizmo state.
-        Vector3 gizmoFlightDir;
         bool gizmoFlying;
 
         public bool IsFinished => phase == Phase.Done;
         public bool IsFlying => phase == Phase.TakeOff || phase == Phase.Fly;
+        public bool IsLanding => phase == Phase.Land;
 
         void Awake()
         {
@@ -72,9 +97,17 @@ namespace JoburgRunner.Environment.Pigeons
             flightDuration = duration;
             landingChance = landChance;
 
+            ReleaseLandingPoint();
             phase = Phase.Ground;
             scareDelay = -1f;
             gizmoFlying = false;
+            bankAngle = 0f;
+            bankVel = 0f;
+            yawBias = 0f;
+            feeding = false;
+            canCoo = true;
+            homePos = transform.position;
+            transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
             PickGroundBehaviour(true);
             cooTimer = Random.Range(2f, 8f);
 
@@ -83,6 +116,34 @@ namespace JoburgRunner.Environment.Pigeons
                 // Desync flocks: start each clip at a random normalised time.
                 animator.Play(HashIdle, 0, Random.value);
                 animator.speed = Random.Range(0.9f, 1.1f);
+            }
+        }
+
+        /// <summary>Extra per-pigeon variation applied by the flock after spawn.</summary>
+        public void SetFlightPlan(float yawBiasDeg, float bankMax, float variation, float roam)
+        {
+            yawBias = yawBiasDeg;
+            maxBankAngle = bankMax;
+            pathVariation = variation;
+            roamRadius = Mathf.Max(0.2f, roam);
+        }
+
+        /// <summary>Bias ground behaviour toward feeding (Idle/Peck) under interest areas.</summary>
+        public void SetFeeding(bool value) => feeding = value;
+
+        /// <summary>Flock designates only one or two birds as coo emitters (Part 15).</summary>
+        public void SetCanCoo(bool value) => canCoo = value;
+
+        /// <summary>Give this pigeon a reserved perch to descend onto after flight.</summary>
+        public void SetLandingTarget(PigeonLandingPoint point) => landingPoint = point;
+
+        /// <summary>Free any perch we hold (on scatter re-plan or return to pool).</summary>
+        public void ReleaseLandingPoint()
+        {
+            if (landingPoint != null)
+            {
+                landingPoint.Release();
+                landingPoint = null;
             }
         }
 
@@ -96,6 +157,17 @@ namespace JoburgRunner.Environment.Pigeons
             scareDelay = delay;
         }
 
+        /// <summary>Force this pigeon straight into a despawning flight (segment recycle).</summary>
+        public void ForceDespawn()
+        {
+            ReleaseLandingPoint();
+            if (phase == Phase.Ground)
+            {
+                EnterTakeOff();
+            }
+            landingChance = 0f; // ensure it exits rather than perches
+        }
+
         /// <summary>Advanced by the owning flock once per frame.</summary>
         public void Tick(float dt)
         {
@@ -106,7 +178,7 @@ namespace JoburgRunner.Environment.Pigeons
                     break;
                 case Phase.TakeOff:
                     phaseTimer -= dt;
-                    ClimbTowardFlight(dt);
+                    AdvanceFlight(dt);
                     if (phaseTimer <= 0f)
                     {
                         EnterFly();
@@ -114,8 +186,7 @@ namespace JoburgRunner.Environment.Pigeons
                     break;
                 case Phase.Fly:
                     phaseTimer -= dt;
-                    transform.position += flightVelocity * dt;
-                    ClimbTowardFlight(dt);
+                    AdvanceFlight(dt);
                     if (phaseTimer <= 0f)
                     {
                         EnterLandOrDespawn();
@@ -123,12 +194,13 @@ namespace JoburgRunner.Environment.Pigeons
                     break;
                 case Phase.Land:
                     phaseTimer -= dt;
-                    // Ease down to the ground during the land clip.
-                    Vector3 p = transform.position;
-                    p.y = Mathf.MoveTowards(p.y, 0f, flightHeight / 0.5f * dt);
-                    transform.position = p;
+                    Vector3 lp = transform.position;
+                    Vector3 target = landingPoint != null ? landingPoint.Position : new Vector3(lp.x, 0f, lp.z);
+                    transform.position = Vector3.MoveTowards(lp, target, flightSpeed * dt);
                     if (phaseTimer <= 0f)
                     {
+                        transform.rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
+                        homePos = transform.position;
                         phase = Phase.Ground;
                         PickGroundBehaviour(true);
                     }
@@ -156,10 +228,22 @@ namespace JoburgRunner.Environment.Pigeons
 
             if (ground == Ground.Walk)
             {
-                transform.position += transform.forward * (walkSpeed * dt);
+                // Small local roaming — turn back before leaving the roam radius so
+                // pigeons never wander into the road or through each other's home.
+                Vector3 next = transform.position + transform.forward * (walkSpeed * dt);
+                Vector3 fromHome = next - homePos;
+                fromHome.y = 0f;
+                if (fromHome.magnitude > roamRadius)
+                {
+                    transform.rotation = Quaternion.LookRotation(-fromHome.normalized, Vector3.up);
+                }
+                else
+                {
+                    transform.position = next;
+                }
             }
 
-            if (softCoo != null && audioReady)
+            if (softCoo != null && audioReady && canCoo && AudioEnabled)
             {
                 cooTimer -= dt;
                 if (cooTimer <= 0f)
@@ -174,12 +258,14 @@ namespace JoburgRunner.Environment.Pigeons
         {
             groundTimer = Random.Range(minGroundSwitch, maxGroundSwitch);
             float r = forceIdle ? 0f : Random.value;
+            // Feeding areas bias toward Idle/Peck and away from wandering.
+            float peckCut = feeding ? 0.9f : 0.8f;
             if (r < 0.5f)
             {
                 ground = Ground.Idle;
                 CrossFade(HashIdle);
             }
-            else if (r < 0.8f)
+            else if (r < peckCut)
             {
                 ground = Ground.Peck;
                 CrossFade(HashPeck);
@@ -195,19 +281,54 @@ namespace JoburgRunner.Environment.Pigeons
         {
             phase = Phase.TakeOff;
             scareDelay = -1f;
-            phaseTimer = 0.6f;
+            phaseTimer = TakeOffTime;
             CrossFade(HashTakeOff, 0.05f);
             Play(takeOffFlutter, 0.6f);
-
-            // Choose a flight path: left / right / forward / diagonals.
-            float[] yaws = { -90f, 90f, 0f, -45f, 45f };
-            float yaw = yaws[Random.Range(0, yaws.Length)];
-            Vector3 dir = Quaternion.Euler(0f, transform.eulerAngles.y + yaw, 0f) * Vector3.forward;
-            dir.y = 0f;
-            flightVelocity = dir.normalized * flightSpeed;
-            gizmoFlightDir = flightVelocity;
+            BuildFlightArc();
+            flightElapsed = 0f;
+            flightTotal = TakeOffTime + flightDuration;
             gizmoFlying = true;
-            // Face the flight direction.
+            bankAngle = 0f;
+            bankVel = 0f;
+        }
+
+        void BuildFlightArc()
+        {
+            p0 = transform.position;
+
+            Vector3 dir;
+            if (landingPoint != null)
+            {
+                // Fly to the reserved perch.
+                p2 = landingPoint.Position;
+                Vector3 flat = p2 - p0;
+                flat.y = 0f;
+                dir = flat.sqrMagnitude > 0.01f ? flat.normalized : transform.forward;
+            }
+            else
+            {
+                // Pick a scatter heading: left / right / forward / diagonals, plus a
+                // per-pigeon bias and jitter so the flock fans out, never a line.
+                float[] yaws = { -90f, 90f, 0f, -45f, 45f };
+                float yaw = yaws[Random.Range(0, yaws.Length)] + yawBias + Random.Range(-12f, 12f);
+                dir = Quaternion.Euler(0f, transform.eulerAngles.y + yaw, 0f) * Vector3.forward;
+                dir.y = 0f;
+                dir.Normalize();
+                float dist = flightSpeed * flightDuration;
+                p2 = p0 + dir * dist;
+                p2.y = flightHeight;
+            }
+
+            // Control point: raised above the midpoint and pushed sideways so the arc
+            // curves instead of running straight. Sign/scale vary per pigeon.
+            Vector3 mid = (p0 + p2) * 0.5f;
+            Vector3 side = Vector3.Cross(Vector3.up, dir).normalized;
+            float lateral = Random.Range(-1f, 1f) * pathVariation * 2f;
+            float lift = Mathf.Max(flightHeight, p2.y) + Random.Range(0.5f, 1.5f) * pathVariation;
+            p1 = mid + side * lateral;
+            p1.y = lift;
+
+            prevHeading = dir;
             transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
         }
 
@@ -219,13 +340,34 @@ namespace JoburgRunner.Environment.Pigeons
             Play(wingFlap, 0.4f);
         }
 
+        void AdvanceFlight(float dt)
+        {
+            flightElapsed += dt;
+            float t = flightTotal > 0f ? Mathf.Clamp01(flightElapsed / flightTotal) : 1f;
+            Vector3 pos = Bezier(p0, p1, p2, t);
+            Vector3 delta = pos - transform.position;
+            transform.position = pos;
+
+            Vector3 flat = new Vector3(delta.x, 0f, delta.z);
+            if (flat.sqrMagnitude > 1e-6f)
+            {
+                Vector3 heading = flat.normalized;
+                // Bank into the turn: this frame's yaw change → roll, smoothed.
+                float turn = Vector3.SignedAngle(prevHeading, heading, Vector3.up);
+                float target = Mathf.Clamp(-turn / Mathf.Max(dt, 1e-4f) * 0.08f, -maxBankAngle, maxBankAngle);
+                bankAngle = Mathf.SmoothDamp(bankAngle, target, ref bankVel, 0.15f);
+                prevHeading = heading;
+                transform.rotation = Quaternion.LookRotation(heading, Vector3.up) * Quaternion.Euler(0f, 0f, bankAngle);
+            }
+        }
+
         void EnterLandOrDespawn()
         {
-            if (Random.value < landingChance)
+            bool land = landingPoint != null || Random.value < landingChance;
+            if (land)
             {
                 phase = Phase.Land;
                 phaseTimer = 0.5f;
-                flightVelocity = Vector3.zero;
                 gizmoFlying = false;
                 CrossFade(HashLand, 0.1f);
                 Play(landingFlutter, 0.5f);
@@ -237,11 +379,10 @@ namespace JoburgRunner.Environment.Pigeons
             }
         }
 
-        void ClimbTowardFlight(float dt)
+        static Vector3 Bezier(Vector3 a, Vector3 b, Vector3 c, float t)
         {
-            Vector3 p = transform.position;
-            p.y = Mathf.MoveTowards(p.y, flightHeight, flightSpeed * dt);
-            transform.position = p;
+            float u = 1f - t;
+            return u * u * a + 2f * u * t * b + t * t * c;
         }
 
         void CrossFade(int hash, float dur = 0.12f)
@@ -254,9 +395,18 @@ namespace JoburgRunner.Environment.Pigeons
 
         void Play(AudioClip clip, float volume)
         {
-            if (clip != null && audioReady)
+            if (clip != null && audioReady && AudioEnabled)
             {
                 audioSource.PlayOneShot(clip, volume);
+            }
+        }
+
+        /// <summary>Stop and mute audio (called by the flock on return to pool).</summary>
+        public void SilenceAudio()
+        {
+            if (audioReady)
+            {
+                audioSource.Stop();
             }
         }
 
@@ -268,11 +418,14 @@ namespace JoburgRunner.Environment.Pigeons
                 return;
             }
             Gizmos.color = new Color(0.3f, 0.8f, 1f, 0.9f);
-            Vector3 from = transform.position;
-            Vector3 to = from + gizmoFlightDir.normalized * (flightSpeed * flightDuration);
-            to.y = flightHeight;
-            Gizmos.DrawLine(from, to);
-            Gizmos.DrawWireSphere(to, 0.3f);
+            Vector3 prev = p0;
+            for (int i = 1; i <= 16; i++)
+            {
+                Vector3 cur = Bezier(p0, p1, p2, i / 16f);
+                Gizmos.DrawLine(prev, cur);
+                prev = cur;
+            }
+            Gizmos.DrawWireSphere(p2, 0.3f);
         }
 #endif
     }

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using JoburgRunner.Environment.Decor;
+using JoburgRunner.Environment.Pigeons;
 using UnityEngine;
 
 namespace JoburgRunner
@@ -15,7 +16,7 @@ namespace JoburgRunner
     /// steered back into its original (chunk-designed) lane before it gets close,
     /// so the survivable path the chunk laid out is restored near the player.
     /// </summary>
-    public class MovingObstacle : MonoBehaviour
+    public class MovingObstacle : MonoBehaviour, IPigeonThreat
     {
         static readonly float[] LaneCenters =
             { -RoadMetrics.LaneSpacing, 0f, RoadMetrics.LaneSpacing };
@@ -49,6 +50,19 @@ namespace JoburgRunner
 
         [Tooltip("Stays parked until the player is this close, so chunk taxis hold their designed lane instead of drifting into earlier chunks.")]
         [SerializeField] float activationDistance = 70f;
+
+        [Header("Pigeon threat (IPigeonThreat)")]
+        [Tooltip("How close this taxi must pass a flock to spook it.")]
+        [SerializeField] float pigeonThreatRadius = 8f;
+        [Tooltip("Below this cruising speed the taxi is not scary (parked/crawling taxis don't flush pigeons).")]
+        [SerializeField] float pigeonMinScarySpeed = 6f;
+
+        // IPigeonThreat: a flock reads these when a taxi enters its trigger radius,
+        // so parked or slow taxis are ignored while a fast pass flushes the birds.
+        public Vector3 ThreatPosition => transform.position;
+        public float ThreatSpeed => currentSpeed;
+        public float ThreatRadius => pigeonThreatRadius;
+        public bool IsScary => !isStopped && drive == Drive.Cruise && currentSpeed >= pigeonMinScarySpeed;
 
         enum Drive { Cruise, Braking, Stopped }
 

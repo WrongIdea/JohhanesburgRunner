@@ -1,0 +1,62 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18fab83f69aa347f398a6cad80179ba8, type: 3}
+  m_Name: PigeonFlockSettings
+  m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.Environment.Pigeons.PigeonFlockSettings
+  minFlockSize: 3
+  maxFlockSize: 6
+  minSpacing: 0.4
+  maxSpacing: 1.8
+  groundRoamRadius: 1.6
+  idleDuration: {x: 1.5, y: 4}
+  walkDuration: {x: 1, y: 2.5}
+  peckDuration: {x: 0.8, y: 2}
+  alertDuration: {x: 0.2, y: 0.6}
+  triggerDistance: 15
+  minTakeoffDelay: 0
+  maxTakeoffDelay: 0.25
+  minSpeed: 5
+  maxSpeed: 7
+  minHeightGain: 3
+  maxHeightGain: 5
+  minFlightDuration: 4
+  maxFlightDuration: 6
+  landingChance: 0.3
+  despawnChance: 0.7
+  maxBankAngle: 28
+  flightPathVariation: 1
+  spawnChance: 0.3
+  minEventSpacing: 80
+  maxEventSpacing: 120
+  maxActiveFlocks: 2
+  maxFlockDistanceFromPlayer: 90
+  cullDistance: 45
+  vehicleTriggerDistance: 8
+  minScaryVehicleSpeed: 6
+  hornReactionRadius: 22
+  rainMultiplier: 0.4
+  heavyRainGroundMultiplier: 0
+  overcastMultiplier: 1
+  sunnyMultiplier: 1
+  cbd: 1.2
+  taxiRank: 1.6
+  busStop: 1.35
+  mandelaBridge: 0.75
+  sandton: 0.5
+  residential: 0.65
+  park: 1.4
+  jacarandaAvenue: 1.1
+  cinematicChance: 0.06
+  cinematicMinSize: 8
+  cinematicMaxSize: 12
+  cinematicMinSpacing: 500
+  cinematicMaxSpacing: 800

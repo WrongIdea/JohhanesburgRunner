@@ -25,6 +25,7 @@ namespace JoburgRunner.Editor
         const string ControllerPath = "Assets/Animations/PigeonAnimator.controller";
         public const string PigeonPrefabPath = "Assets/Prefabs/Pigeons/Pigeon.prefab";
         public const string FlockPrefabPath = "Assets/Prefabs/Pigeons/PigeonFlock.prefab";
+        public const string SettingsPath = "Assets/Environment/Pigeons/PigeonFlockSettings.asset";
 
         // FBX clip names (authored in Blender). Canonicalised on import.
         static readonly string[] AllClips = { "Idle", "Walk", "Peck", "Hop", "Takeoff", "Glide", "Landing" };
@@ -43,9 +44,24 @@ namespace JoburgRunner.Editor
         [MenuItem("Joburg Runner/Assets/Build Pigeon Prefabs")]
         public static void BuildAll()
         {
+            BuildFlockSettings();
             BuildPigeonPrefab();
             BuildFlockPrefab();
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>Create the shared flock-settings asset if it doesn't exist yet.</summary>
+        public static PigeonFlockSettings BuildFlockSettings()
+        {
+            PigeonFlockSettings s = AssetDatabase.LoadAssetAtPath<PigeonFlockSettings>(SettingsPath);
+            if (s == null)
+            {
+                EnsureFolder("Assets", "Environment");
+                EnsureFolder("Assets/Environment", "Pigeons");
+                s = ScriptableObject.CreateInstance<PigeonFlockSettings>();
+                AssetDatabase.CreateAsset(s, SettingsPath);
+            }
+            return s;
         }
 
         public static GameObject BuildPigeonPrefab()
