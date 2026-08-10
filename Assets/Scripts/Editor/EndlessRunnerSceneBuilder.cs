@@ -2440,6 +2440,7 @@ namespace JoburgRunner.Editor
         const string JhbHeroBuilding05PrefabPath = "Assets/Environment/Buildings/ImportedHeroes/JHB_HeroBuilding05/Prefabs/JHB_HeroBuilding05.prefab";
         const string JhbHeroBuilding06PrefabPath = "Assets/Environment/Buildings/ImportedHeroes/JHB_HeroBuilding06/Prefabs/JHB_HeroBuilding06.prefab";
         const string JhbHeroBuilding07PrefabPath = "Assets/Environment/Buildings/ImportedHeroes/JHB_HeroBuilding07/Prefabs/JHB_HeroBuilding07.prefab";
+        const string JhbJoziFurniturePrefabPath = "Assets/Environment/Buildings/ImportedHeroes/JHB_JoziFurniture/Prefabs/JHB_JoziFurniture.prefab";
 
         static GameObject CreateRoadSegmentPrefab()
         {
@@ -3173,7 +3174,8 @@ namespace JoburgRunner.Editor
             GameObject e = AssetDatabase.LoadAssetAtPath<GameObject>(JhbHeroBuilding05PrefabPath);
             GameObject f = AssetDatabase.LoadAssetAtPath<GameObject>(JhbHeroBuilding06PrefabPath);
             GameObject g = AssetDatabase.LoadAssetAtPath<GameObject>(JhbHeroBuilding07PrefabPath);
-            if (a == null || b == null || c == null || d == null || e == null || f == null || g == null)
+            GameObject h = AssetDatabase.LoadAssetAtPath<GameObject>(JhbJoziFurniturePrefabPath);
+            if (a == null || b == null || c == null || d == null || e == null || f == null || g == null || h == null)
             {
                 Debug.LogWarning("Hero building prefab(s) missing; HeroBuildingSet left with null entries.");
             }
@@ -3237,6 +3239,14 @@ namespace JoburgRunner.Editor
                     facePlayerDegrees = 0f, uniformScale = 0.98f,
                     colorTint = Color.white,
                     footprintRadius = 6.9f, minRepeatDistance = 0f, enabled = true
+                },
+                new HeroEntry
+                {
+                    label = "JoziFurniture", prefab = h, weight = 1.75f, allowedSides = HeroSide.Both,
+                    localPositionOffset = Vector3.zero, eulerOffset = Vector3.zero,
+                    facePlayerDegrees = 0f, uniformScale = 1f,
+                    colorTint = Color.white,
+                    footprintRadius = 11f, minRepeatDistance = 0f, enabled = true
                 },
             };
 
