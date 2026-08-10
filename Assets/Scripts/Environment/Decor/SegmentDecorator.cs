@@ -210,7 +210,7 @@ namespace JoburgRunner.Environment.Decor
                 {
                     continue;
                 }
-                GameObject instance = pool.Get(prefab, socket.transform);
+                GameObject instance = pool.GetInactive(prefab, socket.transform);
                 if (instance == null)
                 {
                     continue;
@@ -267,6 +267,9 @@ namespace JoburgRunner.Environment.Decor
                 {
                     ApplyTint(instance, rng, rule, paletteIndex++);
                 }
+
+                // Make the fully configured pooled object visible only now.
+                instance.SetActive(true);
 
                 activeInstances.Add(instance);
                 placed.Add(new Placed
@@ -372,7 +375,7 @@ namespace JoburgRunner.Environment.Decor
                 return;
             }
 
-            GameObject instance = heroPool.Get(entry.prefab, socket.transform);
+            GameObject instance = heroPool.GetInactive(entry.prefab, socket.transform);
             if (instance == null)
             {
                 return;
@@ -405,6 +408,9 @@ namespace JoburgRunner.Environment.Decor
             }
 
             HideBlockingProps(socket, entry.footprintRadius);
+
+            // Avoid exposing the pooled building at its previous transform.
+            instance.SetActive(true);
 
             if (left) { heroLeft = instance; affectedLeft = grp; }
             else { heroRight = instance; affectedRight = grp; }

@@ -55,6 +55,17 @@ namespace JoburgRunner.Environment.Decor
         /// </summary>
         public GameObject Get(GameObject prefab, Transform parent)
         {
+            GameObject instance = GetInactive(prefab, parent);
+            if (instance != null)
+            {
+                instance.SetActive(true);
+            }
+            return instance;
+        }
+
+        /// <summary>Rent inactive so callers can finish placement before rendering.</summary>
+        public GameObject GetInactive(GameObject prefab, Transform parent)
+        {
             if (prefab == null)
             {
                 return null;
@@ -79,7 +90,6 @@ namespace JoburgRunner.Environment.Decor
             }
 
             instance.transform.SetParent(parent, false);
-            instance.SetActive(true);
             return instance;
         }
 

@@ -227,12 +227,15 @@ namespace JoburgRunner.Environment.Decor
                 return;
             }
 
+            // Large buildings must never be instantiated during a run. Four per
+            // design covers the two-sided seven-tile ring with recent-item avoidance.
+            int safeHeroPrewarm = Mathf.Max(4, heroPrewarm);
             var seen = new HashSet<GameObject>();
             foreach (HeroEntry e in heroSet.entries)
             {
                 if (e != null && e.enabled && e.prefab != null && seen.Add(e.prefab))
                 {
-                    heroPool.Prewarm(e.prefab, heroPrewarm);
+                    heroPool.Prewarm(e.prefab, safeHeroPrewarm);
                 }
             }
         }

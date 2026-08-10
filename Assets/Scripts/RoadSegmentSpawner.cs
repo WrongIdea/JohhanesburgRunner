@@ -35,6 +35,10 @@ namespace JoburgRunner
                 return;
             }
 
+            // Older serialized scenes used 35 m, which left too little road ahead
+            // and allowed freshly dressed skyline tiles to enter the visible haze.
+            recycleBehindDistance = Mathf.Min(recycleBehindDistance, 12f);
+
             // Dress the baked ring before the first frame is rendered so pooled
             // buildings never visibly activate around the player.
             for (int i = 0; i < transform.childCount; i++)

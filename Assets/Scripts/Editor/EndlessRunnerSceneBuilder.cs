@@ -3716,7 +3716,7 @@ namespace JoburgRunner.Editor
             // Hero-building spawning: frequent, both sides, no-repeat.
             SetField(director, "heroSet", heroSet);
             SetField(director, "heroAllDistricts", true);
-            SetField(director, "heroPrewarm", 2);       // two-sided + back-to-back tiles need up to 2 of each
+            SetField(director, "heroPrewarm", 4);       // avoid large hero pool growth during play
             SetField(director, "heroMinGap", 1);        // a hero block on every segment
             SetField(director, "heroMaxGap", 1);
             SetField(director, "heroEarlyGuaranteeWithin", 1);
@@ -9367,6 +9367,9 @@ namespace JoburgRunner.Editor
             SetField(roadSpawner, "player", player);
             SetField(roadSpawner, "roadSegmentPrefab", roadPrefab);
             SetField(roadSpawner, "junctionSettings", junctionSettings);
+            // Recycle as soon as the tile's far edge is safely behind the trailing
+            // camera. Its replacement is staged ~167 m ahead, behind the 123 m haze.
+            SetField(roadSpawner, "recycleBehindDistance", 12f);
             // One segment sits behind the origin so the cameras (which trail the
             // player) never see past the road's near edge on tall screens.
             int[] openingDistricts = { 0, 0, 2, 1, 3, 0 };
