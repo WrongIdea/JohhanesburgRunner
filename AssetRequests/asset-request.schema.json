@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jozirunner.local/schemas/asset-request.schema.json",
+  "title": "Jozi Runner generated asset request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "assetId", "assetName", "assetCategory", "description", "intendedDistrict",
+    "targetDimensionsMetres", "targetTriangleCount", "maximumTriangleCount",
+    "textureResolution", "requiredMaterials", "colliderType", "movingPartsRequired",
+    "lodsRequired", "spawnRole", "gameplayCameraVisibilityRequirements",
+    "referenceImagePaths", "meshyGenerationPrompt", "status", "approvalState"
+  ],
+  "properties": {
+    "assetId": { "type": "string", "pattern": "^[A-Z0-9][A-Z0-9_-]+$" },
+    "assetName": { "type": "string", "minLength": 1 },
+    "assetCategory": {
+      "type": "string",
+      "enum": ["HeroBuilding", "StandardBuilding", "Vehicle", "Obstacle", "SmallProp"]
+    },
+    "description": { "type": "string" },
+    "intendedDistrict": { "type": "string" },
+    "targetDimensionsMetres": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height", "depth"],
+      "properties": {
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 },
+        "depth": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "targetTriangleCount": { "type": "integer", "minimum": 1 },
+    "maximumTriangleCount": { "type": "integer", "minimum": 1 },
+    "textureResolution": { "type": "integer", "enum": [256, 512, 1024, 2048, 4096] },
+    "requiredMaterials": { "type": "array", "items": { "type": "string" } },
+    "colliderType": { "type": "string", "enum": ["None", "Box", "Capsule", "Sphere", "Mesh"] },
+    "movingPartsRequired": { "type": "boolean" },
+    "lodsRequired": { "type": "boolean" },
+    "spawnRole": { "type": "string" },
+    "gameplayCameraVisibilityRequirements": { "type": "string" },
+    "referenceImagePaths": { "type": "array", "items": { "type": "string" } },
+    "meshyGenerationPrompt": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["Pending", "Generated", "InReview", "Approved", "Rejected", "Completed"]
+    },
+    "approvalState": { "type": "string", "enum": ["Unreviewed", "Approved", "Rejected"] },
+    "reviewNotes": { "type": "string" }
+  }
+}

@@ -1,0 +1,109 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 559930a7d0769441284f568f2aea0fa5, type: 3}
+  m_Name: Zone_MandelaBridge
+  m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.Environment.EnvironmentZoneProfile
+  displayName: Nelson Mandela Bridge
+  zoneId: 7
+  palette:
+    buildingColors:
+    - {r: 0.28, g: 0.34, b: 0.42, a: 1}
+    - {r: 0.55, g: 0.62, b: 0.7, a: 1}
+    accentColors:
+    - {r: 0.12, g: 0.55, b: 0.9, a: 1}
+    - {r: 1, g: 0.72, b: 0.18, a: 1}
+    skyTint: {r: 0.4, g: 0.62, b: 0.84, a: 1}
+    hazeColor: {r: 0.55, g: 0.68, b: 0.8, a: 1}
+    roadWearTint: {r: 0.72, g: 0.76, b: 0.82, a: 1}
+    weatherTint: {r: 0.86, g: 0.94, b: 1, a: 1}
+  lighting:
+    overrideLighting: 1
+    sunColor: {r: 1, g: 0.88, b: 0.7, a: 1}
+    sunIntensity: 1.2
+    ambientTint: {r: 0.42, g: 0.52, b: 0.66, a: 1}
+    enableFog: 1
+    fogColor: {r: 0.55, g: 0.68, b: 0.8, a: 1}
+    fogDensity: 0.004
+  audio:
+    ambienceClip: {fileID: 0}
+    ambienceVolume: 0.5
+    musicClip: {fileID: 0}
+    musicVolume: 0.45
+  difficulty:
+    forwardSpeedMultiplier: 1.12
+    easyWeightScale: 0.6
+    mediumWeightScale: 1.2
+    hardWeightScale: 1.35
+    specialWeightScale: 1.2
+  buildings: []
+  props:
+  - prefab: {fileID: 5978773766082716465, guid: f4c4ce0e250e7438bbf6a134fc8e82db,
+      type: 3}
+    weight: 2
+  - prefab: {fileID: 6452186604608012796, guid: 0b3bc98c3529e40189d38019c602b435,
+      type: 3}
+    weight: 1
+  obstacles: []
+  variation:
+    buildingColors:
+    - {r: 0.28, g: 0.34, b: 0.42, a: 1}
+    - {r: 0.55, g: 0.62, b: 0.7, a: 1}
+    windowMaterials: []
+    wallMaterials: []
+    vehicleColors:
+    - {r: 0.85, g: 0.85, b: 0.85, a: 1}
+    - {r: 0.15, g: 0.3, b: 0.55, a: 1}
+    - {r: 0.7, g: 0.15, b: 0.15, a: 1}
+    - {r: 0.9, g: 0.8, b: 0.1, a: 1}
+    shopSigns:
+    - MANDELA BRIDGE
+    - NEWTOWN
+    - BRAAMFONTEIN
+    billboardTextures: []
+    graffitiDecals: []
+    treeSpacingRange: {x: 6, y: 12}
+    streetlightSpacingRange: {x: 12, y: 20}
+    roadWearRange: {x: 0, y: 0.4}
+    weatherTintRange:
+      serializedVersion: 2
+      key0: {r: 1, g: 1, b: 1, a: 1}
+      key1: {r: 1, g: 1, b: 1, a: 1}
+      key2: {r: 0, g: 0, b: 0, a: 0}
+      key3: {r: 0, g: 0, b: 0, a: 0}
+      key4: {r: 0, g: 0, b: 0, a: 0}
+      key5: {r: 0, g: 0, b: 0, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 65535
+      ctime2: 0
+      ctime3: 0
+      ctime4: 0
+      ctime5: 0
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: -1
+      m_NumColorKeys: 2
+      m_NumAlphaKeys: 2
+    avoidRecentCount: 3
+  routeWeight: 1
+  minRunDistance: 1600
+  routeLeg: 2

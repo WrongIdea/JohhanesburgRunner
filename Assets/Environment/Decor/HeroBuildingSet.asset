@@ -1,0 +1,106 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 864a7cd41c5004b7d9d44bf8ed7005f7, type: 3}
+  m_Name: HeroBuildingSet
+  m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.Environment.Decor.HeroBuildingSet
+  entries:
+  - label: JHB_Building02
+    prefab: {fileID: 3747004421356106737, guid: 7172c26c790964ba2afd1a49d0ad52e8,
+      type: 3}
+    weight: 1
+    allowedSides: 3
+    localPositionOffset: {x: -1.5, y: 0, z: -2}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    facePlayerDegrees: 0
+    uniformScale: 0.92
+    colorTint: {r: 1, g: 0.96, b: 0.9, a: 1}
+    footprintRadius: 10.5
+    minRepeatDistance: 0
+    enabled: 1
+  - label: JHB_SkylinePop_02
+    prefab: {fileID: 2772312973052275331, guid: de37e042d888d44e593f2d44332b685c,
+      type: 3}
+    weight: 1
+    allowedSides: 3
+    localPositionOffset: {x: 1.5, y: 0, z: -3}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    facePlayerDegrees: 0
+    uniformScale: 1.02
+    colorTint: {r: 0.9, g: 0.96, b: 1, a: 1}
+    footprintRadius: 12.5
+    minRepeatDistance: 0
+    enabled: 1
+  - label: JHB_HeroBuilding03
+    prefab: {fileID: 6807855262752706228, guid: 5ee4a89182b6e4cc894ef0df7184b4a7,
+      type: 3}
+    weight: 1
+    allowedSides: 3
+    localPositionOffset: {x: -2, y: 0, z: -1}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    facePlayerDegrees: 0
+    uniformScale: 0.95
+    colorTint: {r: 1, g: 0.93, b: 0.82, a: 1}
+    footprintRadius: 5.6
+    minRepeatDistance: 0
+    enabled: 1
+  - label: JHB_HeroBuilding04
+    prefab: {fileID: 6354309818978984357, guid: 651bfd818ddc34d818480eebf790f8f5,
+      type: 3}
+    weight: 1
+    allowedSides: 3
+    localPositionOffset: {x: 2.5, y: 0, z: -1.5}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    facePlayerDegrees: 0
+    uniformScale: 0.9
+    colorTint: {r: 0.78, g: 0.9, b: 1, a: 1}
+    footprintRadius: 5.6
+    minRepeatDistance: 0
+    enabled: 1
+  - label: JHB_HeroBuilding05
+    prefab: {fileID: 2229102433138044470, guid: de4415ac786214fd082c589fdee8ec5f,
+      type: 3}
+    weight: 1
+    allowedSides: 3
+    localPositionOffset: {x: -1, y: 0, z: -1}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    facePlayerDegrees: 0
+    uniformScale: 1.05
+    colorTint: {r: 1, g: 0.88, b: 0.78, a: 1}
+    footprintRadius: 5.6
+    minRepeatDistance: 0
+    enabled: 1
+  - label: JHB_HeroBuilding06
+    prefab: {fileID: 4092706290104661331, guid: c081c420263c9476face6fd9ed3f832f,
+      type: 3}
+    weight: 1
+    allowedSides: 3
+    localPositionOffset: {x: 1, y: 0, z: -1}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    facePlayerDegrees: 0
+    uniformScale: 1.1
+    colorTint: {r: 0.9, g: 1, b: 0.9, a: 1}
+    footprintRadius: 4.4
+    minRepeatDistance: 0
+    enabled: 1
+  - label: JHB_HeroBuilding07
+    prefab: {fileID: 2702664094212487695, guid: 9d6461ca53ad44b5ab11a429047843dc,
+      type: 3}
+    weight: 1
+    allowedSides: 3
+    localPositionOffset: {x: -2.5, y: 0, z: -2}
+    eulerOffset: {x: 0, y: 0, z: 0}
+    facePlayerDegrees: 0
+    uniformScale: 0.98
+    colorTint: {r: 1, g: 1, b: 1, a: 1}
+    footprintRadius: 6.9
+    minRepeatDistance: 0
+    enabled: 1

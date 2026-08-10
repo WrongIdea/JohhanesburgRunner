@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6645fd1037faf4796a689bfd68cce11d, type: 3}
+  m_Name: Obstacle_ConstructionBarricade
+  m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.Obstacles.ObstacleDefinition
+  displayName: Construction Barricade
+  category: 6
+  prefab: {fileID: 4418984896703566704, guid: b1323578a5bdd467f978283f61778166, type: 3}
+  allowedLanes: 7
+  blockedLanes: 2
+  requiredAction: 0
+  minPlayerProgression: 0
+  minSpawnSpeed: 0
+  maxSpawnSpeed: 999
+  spawnWeight: 1.5
+  zoneRestrictions: 
+  safeGap: 12
+  width: 2.4
+  height: 1.4
+  movement: 0
+  indicatorBlink: 0
+  steeringAnimation: 0
+  scoreReward: 0
+  perfectDodgeEligible: 1
+  approachAudio: {fileID: 0}
+  spawnVfx: {fileID: 0}
+  destroyVfx: {fileID: 0}

@@ -12,9 +12,12 @@ namespace JoburgRunner
     public class RunnerLeanVisual : MonoBehaviour
     {
         [SerializeField] Transform leanPivot;
-        [SerializeField] float maxLeanDegrees = 8f;
+        [SerializeField] float maxLeanDegrees = 7f;
         [SerializeField] float degreesPerLateralMeterPerSecond = 1f;
-        [SerializeField] float leanSmoothing = 10f;
+        [Tooltip("Lerp rate while leaning INTO a dash (~0.06 s response).")]
+        [SerializeField] float leanInSmoothing = 16f;
+        [Tooltip("Lerp rate while easing back upright (~0.12 s response).")]
+        [SerializeField] float leanReturnSmoothing = 8f;
         [SerializeField] bool keepSkinnedMeshesVisible = true;
         [SerializeField] Vector3 expandedSkinnedBounds = new Vector3(4f, 5f, 4f);
 
@@ -57,7 +60,12 @@ namespace JoburgRunner
             // Moving right (+X) rolls the model to the right (negative Z).
             float targetLean = Mathf.Clamp(
                 -lateralSpeed * degreesPerLateralMeterPerSecond, -maxLeanDegrees, maxLeanDegrees);
-            currentLean = Mathf.Lerp(currentLean, targetLean, leanSmoothing * Time.deltaTime);
+            // Snap into the lean, ease back out — the dash should feel
+            // instant, the recovery relaxed.
+            float smoothing = Mathf.Abs(targetLean) > Mathf.Abs(currentLean)
+                ? leanInSmoothing
+                : leanReturnSmoothing;
+            currentLean = Mathf.Lerp(currentLean, targetLean, smoothing * Time.deltaTime);
             leanPivot.localRotation = pivotRestRotation * Quaternion.Euler(0f, 0f, currentLean);
         }
 

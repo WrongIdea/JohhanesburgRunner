@@ -1,0 +1,463 @@
+{
+  "rig": {
+    "name": "Beaded Warrior Rig",
+    "type": "ARMATURE",
+    "location": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "rotation_mode": "QUATERNION",
+    "rotation": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "scale": [
+      0.009999999776482582,
+      0.009999999776482582,
+      0.009999999776482582
+    ],
+    "constraints": []
+  },
+  "mesh": {
+    "name": "Beaded Warrior",
+    "parent": "Beaded Warrior Rig",
+    "modifiers": [
+      {
+        "name": "Armature",
+        "type": "ARMATURE",
+        "object": "Beaded Warrior Rig"
+      }
+    ],
+    "dimensions": [
+      0.7954616546630859,
+      0.8859530687332153,
+      0.9700234532356262
+    ],
+    "vertex_groups": 24
+  },
+  "actions": [
+    {
+      "name": "Armature|Run_Jump_and_Roll|baselayer",
+      "frame_range": [
+        0.8000000715255737,
+        83.19999694824219
+      ],
+      "fake_user": false,
+      "slots": [
+        "OBArmature"
+      ]
+    }
+  ],
+  "bones": [
+    {
+      "name": "Hips",
+      "parent": null,
+      "head": [
+        0.36297,
+        -8.54313,
+        94.38979
+      ],
+      "tail": [
+        -1072.38794,
+        -193.22108,
+        -261.1557
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "LeftUpLeg",
+      "parent": "Hips",
+      "head": [
+        10.71989,
+        -6.71882,
+        85.61741
+      ],
+      "tail": [
+        442.03705,
+        723.00299,
+        -3423.33472
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "LeftLeg",
+      "parent": "LeftUpLeg",
+      "head": [
+        15.03306,
+        0.57838,
+        50.52788
+      ],
+      "tail": [
+        528.73376,
+        450.56973,
+        -3360.40479
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "LeftFoot",
+      "parent": "LeftLeg",
+      "head": [
+        20.17008,
+        5.07829,
+        16.41855
+      ],
+      "tail": [
+        199.66386,
+        -1042.93726,
+        -1221.19727
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "LeftToeBase",
+      "parent": "LeftFoot",
+      "head": [
+        21.96504,
+        -5.40186,
+        4.04239
+      ],
+      "tail": [
+        297.40811,
+        -1613.62415,
+        4.04161
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "RightUpLeg",
+      "parent": "Hips",
+      "head": [
+        -8.6639,
+        -6.9937,
+        85.54381
+      ],
+      "tail": [
+        -389.48981,
+        612.7738,
+        -3452.85107
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "RightLeg",
+      "parent": "RightUpLeg",
+      "head": [
+        -12.47216,
+        -0.79603,
+        50.15987
+      ],
+      "tail": [
+        -195.96759,
+        699.17731,
+        -3250.3606
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "RightFoot",
+      "parent": "RightLeg",
+      "head": [
+        -14.30712,
+        6.2037,
+        17.15467
+      ],
+      "tail": [
+        -712.49384,
+        -1208.87012,
+        -1288.41602
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "RightToeBase",
+      "parent": "RightFoot",
+      "head": [
+        -21.28898,
+        -5.94703,
+        4.09896
+      ],
+      "tail": [
+        -975.51758,
+        -1666.61914,
+        4.09896
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "Spine02",
+      "parent": "Hips",
+      "head": [
+        0.30248,
+        -7.28426,
+        105.77148
+      ],
+      "tail": [
+        -5.74711,
+        118.60262,
+        1243.94177
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "Spine01",
+      "parent": "Spine02",
+      "head": [
+        0.24198,
+        -6.0254,
+        117.15319
+      ],
+      "tail": [
+        -5.80762,
+        119.86098,
+        1255.31897
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "Spine",
+      "parent": "Spine01",
+      "head": [
+        0.18148,
+        -4.76653,
+        128.53485
+      ],
+      "tail": [
+        -8.36975,
+        154.27739,
+        527.55664
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "LeftShoulder",
+      "parent": "Spine",
+      "head": [
+        3.5924,
+        -2.9263,
+        130.47739
+      ],
+      "tail": [
+        1367.9585,
+        181.09546,
+        130.47739
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "LeftArm",
+      "parent": "LeftShoulder",
+      "head": [
+        17.23606,
+        -1.0861,
+        130.47734
+      ],
+      "tail": [
+        823.82745,
+        480.01956,
+        -2070.04663
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "LeftForeArm",
+      "parent": "LeftArm",
+      "head": [
+        25.30203,
+        3.72497,
+        108.47212
+      ],
+      "tail": [
+        869.22723,
+        -577.46844,
+        -1871.73071
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "LeftHand",
+      "parent": "LeftForeArm",
+      "head": [
+        33.7413,
+        -2.08697,
+        88.6701
+      ],
+      "tail": [
+        85.26659,
+        -529.35791,
+        -2077.09302
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "RightShoulder",
+      "parent": "Spine",
+      "head": [
+        -3.37563,
+        -2.94702,
+        130.1144
+      ],
+      "tail": [
+        -1426.22253,
+        179.00325,
+        130.1144
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "RightArm",
+      "parent": "RightShoulder",
+      "head": [
+        -17.6041,
+        -1.12753,
+        130.11438
+      ],
+      "tail": [
+        -678.01678,
+        470.31137,
+        -2034.11194
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "RightForeArm",
+      "parent": "RightArm",
+      "head": [
+        -24.20822,
+        3.58688,
+        108.47213
+      ],
+      "tail": [
+        -904.41309,
+        -539.93427,
+        -1834.92981
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "RightHand",
+      "parent": "RightForeArm",
+      "head": [
+        -33.01027,
+        -1.84835,
+        89.03812
+      ],
+      "tail": [
+        -308.67932,
+        -561.01428,
+        -2022.43701
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "neck",
+      "parent": "Spine",
+      "head": [
+        0.08433,
+        -3.90009,
+        136.36845
+      ],
+      "tail": [
+        -8.34903,
+        71.3111,
+        816.36859
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "Head",
+      "parent": "neck",
+      "head": [
+        -0.0,
+        -3.148,
+        143.16846
+      ],
+      "tail": [
+        -12.93243,
+        -593.75311,
+        1201.91956
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "head_end",
+      "parent": "Head",
+      "head": [
+        -0.32998,
+        -6.09331,
+        170.18277
+      ],
+      "tail": [
+        -15.05104,
+        -137.49191,
+        1375.36035
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    },
+    {
+      "name": "headfront",
+      "parent": "Head",
+      "head": [
+        -0.0,
+        -15.27208,
+        143.16846
+      ],
+      "tail": [
+        0.00017,
+        -1227.68103,
+        143.16846
+      ],
+      "use_deform": true,
+      "rotation_mode": "QUATERNION",
+      "constraints": []
+    }
+  ]
+}

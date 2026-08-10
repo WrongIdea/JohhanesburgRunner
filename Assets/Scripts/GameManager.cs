@@ -11,6 +11,7 @@ namespace JoburgRunner
         [SerializeField] PlayerController player;
         [SerializeField] ScoreManager scoreManager;
         [SerializeField] GameObject gameOverPanel;
+        [SerializeField] GameObject pausePanel;
         [SerializeField] TextMeshProUGUI finalScoreText;
         [SerializeField] GameObject continueButton;
         [SerializeField] TextMeshProUGUI continueLabel;
@@ -26,16 +27,26 @@ namespace JoburgRunner
 
         public bool IsGameOver { get; private set; }
 
-        /// <summary>False while the main menu is up and after a crash.</summary>
+        public bool IsPaused { get; private set; }
+
+        /// <summary>False while the main menu is up, while paused, and after a crash.</summary>
         public bool IsRunning { get; private set; }
+
+        /// <summary>True once the first run has begun; the pre-run idle showcase
+        /// (dancing runner, centered camera) shows only while this is false.</summary>
+        public bool HasStarted { get; private set; }
 
         bool canRestart;
 
         void Start()
         {
-            // Run at 60fps on mobile instead of the platform default.
-            Application.targetFrameRate = 60;
-            QualitySettings.vSyncCount = 0;
+            // Frame cap: QualityController owns it when present (per-tier target +
+            // 30 FPS battery mode). This is the fallback for scenes without one.
+            if (JoburgRunner.Core.QualityController.Instance == null)
+            {
+                Application.targetFrameRate = 60;
+                QualitySettings.vSyncCount = 0;
+            }
 
             Time.timeScale = 1f;
             if (gameOverPanel != null)
@@ -48,7 +59,13 @@ namespace JoburgRunner
         {
             if (!IsGameOver)
             {
+                bool firstStart = !HasStarted;
                 IsRunning = true;
+                HasStarted = true;
+                if (firstStart)
+                {
+                    GameEvents.RaiseRunStarted();
+                }
             }
         }
 
@@ -57,6 +74,61 @@ namespace JoburgRunner
             if (IsGameOver && canRestart && WantsRestart())
             {
                 RestartGame();
+            }
+        }
+
+        /// <summary>Freezes the run mid-flight; everything resumes exactly where it was.</summary>
+        public void PauseGame()
+        {
+            if (IsPaused || !IsRunning)
+            {
+                return;
+            }
+
+            IsPaused = true;
+            IsRunning = false;
+            Time.timeScale = 0f;
+            if (pausePanel != null)
+            {
+                pausePanel.SetActive(true);
+            }
+        }
+
+        public void ResumeGame()
+        {
+            if (!IsPaused)
+            {
+                return;
+            }
+
+            IsPaused = false;
+            Time.timeScale = 1f;
+            if (pausePanel != null)
+            {
+                pausePanel.SetActive(false);
+            }
+
+            if (!IsGameOver)
+            {
+                IsRunning = true;
+            }
+        }
+
+        // A phone call, home button, or app switch must never cost the player
+        // a run: freeze the moment the app loses the screen or focus.
+        void OnApplicationPause(bool paused)
+        {
+            if (paused)
+            {
+                PauseGame();
+            }
+        }
+
+        void OnApplicationFocus(bool focused)
+        {
+            if (!focused)
+            {
+                PauseGame();
             }
         }
 
@@ -74,6 +146,18 @@ namespace JoburgRunner
             if (player != null)
             {
                 player.enabled = false;
+            }
+
+            GameEvents.RaisePlayerCrashed();
+            if (scoreManager != null)
+            {
+                GameEvents.RaiseRunEnded(new RunSummary
+                {
+                    score = Mathf.FloorToInt(scoreManager.Score),
+                    distance = scoreManager.Distance,
+                    coins = scoreManager.Coins,
+                    rareCoins = scoreManager.RareCoins,
+                });
             }
 
             if (scoreManager != null)
@@ -165,6 +249,21 @@ namespace JoburgRunner
             SkipMenuOnce = true;
             Time.timeScale = 1f;
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+
+        /// <summary>
+        /// Dismisses the Game Over overlay so the player can inspect the finished
+        /// scene. The run remains over and paused; Restart and Menu are not invoked.
+        /// </summary>
+        public void CloseGameOverMenu()
+        {
+            if (!IsGameOver || gameOverPanel == null)
+            {
+                return;
+            }
+
+            gameOverPanel.SetActive(false);
+            canRestart = false;
         }
 
         public void BackToMenu()

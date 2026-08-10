@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3720a13f3b33149c5845c0c3fa4e2628, type: 3}
+  m_Name: ObstacleCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::JoburgRunner.Obstacles.ObstacleCatalog
+  obstacles:
+  - {fileID: 11400000, guid: de33de5170d5246799690b0e5360ff5e, type: 2}
+  - {fileID: 11400000, guid: 738497a0f21474a739b2c876e3e41e0c, type: 2}
+  - {fileID: 11400000, guid: a34ab34a68ad84bd1b87a237c88bed86, type: 2}
+  patterns:
+  - {fileID: 11400000, guid: 5e8ef3b5fb5334423a1f22f16bf2e1e2, type: 2}
+  avoidRecentObstacles: 2

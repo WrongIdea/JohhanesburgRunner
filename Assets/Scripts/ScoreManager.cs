@@ -17,6 +17,7 @@ namespace JoburgRunner
 
         [Header("UI")]
         [SerializeField] TextMeshProUGUI scoreText;
+        [SerializeField] TextMeshProUGUI multiplierText;
         [SerializeField] TextMeshProUGUI coinText;
 
         [Header("Scoring")]
@@ -34,6 +35,10 @@ namespace JoburgRunner
         bool initialised;
         int committedCoins;
         int committedRareCoins;
+        int shownScore = -1;
+        int shownMultiplier = -1;
+        int shownCoins = -1;
+        int lastRaisedScore = -1;
 
         public float Score { get; private set; }
         public float Distance => initialised && player != null ? Mathf.Max(0f, player.position.z - startZ) : 0f;
@@ -41,6 +46,7 @@ namespace JoburgRunner
         public int RareCoins { get; private set; }
         public int Multiplier { get; private set; } = 1;
         public int HighScore => PlayerPrefs.GetInt(HighScoreKey, 0);
+        public static int BestScore => PlayerPrefs.GetInt(HighScoreKey, 0);
         public int TotalCoins => PlayerPrefs.GetInt(TotalCoinsKey, 0);
         public int TotalRareCoins => PlayerPrefs.GetInt(RareCoinsKey, 0);
 
@@ -55,6 +61,21 @@ namespace JoburgRunner
         {
             int balance = PlayerPrefs.GetInt(RareCoinsKey, 0);
             PlayerPrefs.SetInt(RareCoinsKey, Mathf.Max(0, balance - amount));
+            PlayerPrefs.Save();
+        }
+
+        /// <summary>Banks reward coins into the persistent total (missions, achievements, daily rewards).</summary>
+        public static void GrantCoins(int amount)
+        {
+            if (amount <= 0) return;
+            PlayerPrefs.SetInt(TotalCoinsKey, PlayerPrefs.GetInt(TotalCoinsKey, 0) + amount);
+            PlayerPrefs.Save();
+        }
+
+        public static void GrantRareCoins(int amount)
+        {
+            if (amount <= 0) return;
+            PlayerPrefs.SetInt(RareCoinsKey, PlayerPrefs.GetInt(RareCoinsKey, 0) + amount);
             PlayerPrefs.Save();
         }
 
@@ -86,11 +107,22 @@ namespace JoburgRunner
             int powerMultiplier = powerUpManager != null ? powerUpManager.ScoreMultiplier : 1;
             Score += delta * pointsPerMeter * Multiplier * powerMultiplier;
             UpdateHud();
+
+            GameEvents.RaiseDistanceChanged(Distance);
+            int scoreInt = Mathf.FloorToInt(Score);
+            if (scoreInt != lastRaisedScore)
+            {
+                lastRaisedScore = scoreInt;
+                GameEvents.RaiseScoreChanged(scoreInt);
+            }
         }
 
         public void AddCoins(int value, bool rare)
         {
-            Coins += value;
+            // Double Coins power-up: every pickup pays out twice. The rare R5
+            // collectable count stays honest — only its coin value doubles.
+            int coinMultiplier = powerUpManager != null ? powerUpManager.CoinMultiplier : 1;
+            Coins += value * coinMultiplier;
             if (rare)
             {
                 RareCoins++;
@@ -131,14 +163,26 @@ namespace JoburgRunner
 
         void UpdateHud()
         {
-            if (scoreText != null)
+            // Only rebuild the label strings when a displayed integer actually
+            // changes, so the every-frame score tick does not allocate a new
+            // string (and re-mesh the TMP text) each frame.
+            int score = Mathf.FloorToInt(Score);
+            if (scoreText != null && (score != shownScore || Multiplier != shownMultiplier))
             {
-                scoreText.text = $"Score: {Mathf.FloorToInt(Score)}  x{Multiplier}";
+                scoreText.text = score.ToString("N0");
+                if (multiplierText != null)
+                {
+                    multiplierText.text = $"×{Multiplier}";
+                }
+                shownScore = score;
+                shownMultiplier = Multiplier;
             }
 
-            if (coinText != null)
+            if (coinText != null && Coins != shownCoins)
             {
-                coinText.text = $"Coins: {Coins}";
+                // The Higgsfield coin icon sits beside this, so show just the count.
+                coinText.text = $"{Coins}";
+                shownCoins = Coins;
             }
         }
     }

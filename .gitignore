@@ -30,9 +30,53 @@ build/
 .vscode/
 .idea/
 
+# Unity Burst debug + editor backup artifacts (never shipped)
+*_BurstDebugInformation_DoNotShip/
+*_BackUpThisFolder_ButDontShipItWithYourGame/
+.utmp/
+
 # Flutter generated files
 quickwin_planner/.dart_tool/
 quickwin_planner/build/
 quickwin_planner/.flutter-plugins
 quickwin_planner/.flutter-plugins-dependencies
 quickwin_planner/android/local.properties
+
+# AI-generated asset pipeline secrets and transient provider data
+.env
+.env.*
+!.env.example
+*.api-key
+*.apikey
+secrets.json
+Tools/Meshy/Downloads/
+Tools/Meshy/Temp/
+Tools/Meshy/TaskResponses/
+**/*meshy*task-response*.json
+**/*meshy*task_response*.json
+Audit/Raw/**/Temp/
+Audit/Raw/**/*credentials*
+Audit/Raw/**/*authorization*
+Audit/Raw/**/*headers*
+Audit/Raw/Meshy/*task-response*
+Audit/Raw/Meshy/*task_response*
+Audit/Raw/Codex/*.stderr.tmp
+
+# Blender transient and recovery files (authored .blend files remain trackable)
+*.blend1
+*.blend2
+*.blend@
+*.blend~
+*.blend.autosave
+Tools/Blender/Temp/
+__pycache__/
+*.py[cod]
+
+# Raw Meshy source drops. Game-ready assets are copied into Assets/Art/GameReady/
+# (dependency-verified); the bulky originals here are not shipped.
+Assets/Art/Generated/Incoming/
+Assets/Art/Generated/Incoming.meta
+
+# Pigeon Blender authoring scratch — the pigeon/*.py scripts are tracked, but the
+# working .blend, source textures and preview renders under here are not.
+pigeon/meshy_pigeon/

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using JoburgRunner.Environment;
 
 namespace JoburgRunner
 {
@@ -13,7 +14,8 @@ namespace JoburgRunner
     {
         [Header("Lane Settings")]
         [Tooltip("Fixed X positions for Left, Center, Right lanes.")]
-        [SerializeField] float[] laneXPositions = { -2.7f, 0f, 2.7f };
+        [SerializeField] float[] laneXPositions =
+            { -RoadMetrics.LaneSpacing, 0f, RoadMetrics.LaneSpacing };
         [Tooltip("Seconds to settle into the target lane; ease-in/ease-out, no first-frame jerk.")]
         [SerializeField] float laneChangeSmoothTime = 0.12f;
 
@@ -25,9 +27,13 @@ namespace JoburgRunner
         [Header("Jumping")]
         [SerializeField] float jumpHeight = 2.2f;
         [SerializeField] float gravity = -28f;
+        [Tooltip("Downward speed forced when the player swipes down while airborne (dive-roll).")]
+        [SerializeField] float diveSpeed = 22f;
 
         [Header("Swipe Input")]
         [SerializeField] float minimumSwipeDistance = 80f;
+        [Tooltip("Max seconds between two taps for the hoverboard double-tap.")]
+        [SerializeField] float doubleTapMaxDelay = 0.32f;
 
         [Header("References")]
         [SerializeField] GameManager gameManager;
@@ -35,6 +41,9 @@ namespace JoburgRunner
         [SerializeField] RollController rollController;
         [SerializeField] PlayerAnimator playerAnimator;
         [SerializeField] PlayerDeathVisual deathVisual;
+        [SerializeField] TrafficOfficerChase officerChase;
+        [SerializeField] UbuntuPulseVisual ubuntuPulseVisual;
+        [SerializeField] UbuntuLaneShift ubuntuLaneShift;
         [SerializeField] float droneClimbSpeed = 6f;
 
         CharacterController controller;
@@ -45,8 +54,18 @@ namespace JoburgRunner
         bool isTouching;
         float startZ;
         float lastGroundedTime;
+        float sideBumpGraceUntil;
+        float lastTapTime = float.NegativeInfinity;
+        bool airborne;
 
         public float CurrentForwardSpeed { get; private set; }
+
+        /// <summary>
+        /// Debounced ground contact — the same window the jump and animator
+        /// logic use, exposed for visual systems like the running dust.
+        /// </summary>
+        public bool GroundedStable => controller != null &&
+            (controller.isGrounded || Time.time - lastGroundedTime < 0.15f);
 
         void Awake()
         {
@@ -64,6 +83,21 @@ namespace JoburgRunner
             if (deathVisual == null)
             {
                 deathVisual = GetComponentInChildren<PlayerDeathVisual>();
+            }
+
+            if (officerChase == null)
+            {
+                officerChase = FindAnyObjectByType<TrafficOfficerChase>();
+            }
+
+            if (ubuntuPulseVisual == null)
+            {
+                ubuntuPulseVisual = GetComponentInChildren<UbuntuPulseVisual>();
+            }
+
+            if (ubuntuLaneShift == null)
+            {
+                ubuntuLaneShift = GetComponentInChildren<UbuntuLaneShift>();
             }
 
             startZ = transform.position.z;
@@ -88,12 +122,43 @@ namespace JoburgRunner
 
         public void MoveLeft()
         {
-            currentLane = Mathf.Max(0, currentLane - 1);
+            TryStepLane(-1, true);
         }
 
         public void MoveRight()
         {
-            currentLane = Mathf.Min(laneXPositions.Length - 1, currentLane + 1);
+            TryStepLane(1, true);
+        }
+
+        // Keyboard and swipe dashes get the full Ubuntu Lane Shift; the taxi
+        // side-bounce (an automatic correction, not a player move) keeps only
+        // the whoosh. A step already at the track edge changes nothing and
+        // stays silent. Dead/paused is gated upstream: input is only read
+        // while GameManager.IsRunning, and the bounce needs a live collision.
+        void TryStepLane(int step, bool signatureEffect)
+        {
+            int previousLane = currentLane;
+            currentLane = Mathf.Clamp(currentLane + step, 0, laneXPositions.Length - 1);
+            if (currentLane == previousLane)
+            {
+                return;
+            }
+
+            GameEvents.RaiseLaneChanged(step);
+
+            if (ubuntuLaneShift == null)
+            {
+                return;
+            }
+
+            if (signatureEffect)
+            {
+                ubuntuLaneShift.Play(step);
+            }
+            else
+            {
+                ubuntuLaneShift.PlaySwipeAudio();
+            }
         }
 
         public void Jump()
@@ -104,12 +169,62 @@ namespace JoburgRunner
                 float height = jumpHeight * (powerUpManager != null ? powerUpManager.JumpMultiplier : 1f);
                 verticalVelocity = Mathf.Sqrt(height * -2f * gravity);
                 playerAnimator?.SetJumping(true);
+                airborne = true;
+                GameEvents.RaisePlayerJumped(transform.position);
             }
         }
 
         public void Slide()
         {
+            bool groundedStable = controller.isGrounded || Time.time - lastGroundedTime < 0.15f;
+            bool droneActive = powerUpManager != null && powerUpManager.DroneActive;
+
+            // Swipe down while high (airborne, not on the drone): dive straight
+            // down into the jump-and-roll animation instead of a ground slide.
+            if (!groundedStable && !droneActive && (rollController == null || !rollController.IsRolling))
+            {
+                verticalVelocity = -Mathf.Abs(diveSpeed);
+                playerAnimator?.PlayAirRoll();
+                return;
+            }
+
             rollController?.TryStartRoll();
+            GameEvents.RaisePlayerRolled(transform);
+        }
+
+        // A touch that never travels far enough to be a swipe counts as a tap;
+        // two of those inside the window spend a hoverboard booster.
+        void RegisterTap()
+        {
+            if (Time.unscaledTime - lastTapTime <= doubleTapMaxDelay)
+            {
+                lastTapTime = float.NegativeInfinity;
+                TryActivateHoverboard();
+            }
+            else
+            {
+                lastTapTime = Time.unscaledTime;
+            }
+        }
+
+        /// <summary>
+        /// Spends one owned hoverboard booster (Boards page inventory) to
+        /// activate the Hoverboard shield mid-run. No-op while a shield is
+        /// already up or when no boosters are owned.
+        /// </summary>
+        public void TryActivateHoverboard()
+        {
+            if (powerUpManager == null || powerUpManager.HasShield)
+            {
+                return;
+            }
+
+            if (!BoardInventory.TryConsume())
+            {
+                return;
+            }
+
+            powerUpManager.Activate(PowerUpType.Hoverboard);
         }
 
         void ReadKeyboardInput()
@@ -138,6 +253,12 @@ namespace JoburgRunner
             if (keyboard.sKey.wasPressedThisFrame || keyboard.downArrowKey.wasPressedThisFrame)
             {
                 Slide();
+            }
+
+            // Keyboard stand-in for the touchscreen double-tap.
+            if (keyboard.hKey.wasPressedThisFrame)
+            {
+                TryActivateHoverboard();
             }
         }
 
@@ -169,6 +290,7 @@ namespace JoburgRunner
 
             if (swipeDelta.magnitude < minimumSwipeDistance)
             {
+                RegisterTap();
                 return;
             }
 
@@ -199,6 +321,12 @@ namespace JoburgRunner
             {
                 // Strong downward stick keeps ground contact steady while
                 // sliding sideways between lanes.
+                if (airborne)
+                {
+                    airborne = false;
+                    GameEvents.RaisePlayerLanded(transform.position);
+                }
+
                 verticalVelocity = -6f;
                 playerAnimator?.SetJumping(false);
             }
@@ -216,7 +344,11 @@ namespace JoburgRunner
             }
 
             float distance = Mathf.Max(0f, transform.position.z - startZ);
-            CurrentForwardSpeed = Mathf.Min(maxForwardSpeed, forwardSpeed + distance / 100f * speedIncreasePer100Meters);
+            float zoneSpeed = EnvironmentDirector.Instance != null
+                ? EnvironmentDirector.Instance.ForwardSpeedMultiplier
+                : 1f;
+            CurrentForwardSpeed = Mathf.Min(maxForwardSpeed * zoneSpeed,
+                (forwardSpeed + distance / 100f * speedIncreasePer100Meters) * zoneSpeed);
             float targetX = laneXPositions[currentLane];
             // SmoothDamp eases in and out of the lane slide; the old
             // exponential lerp jumped ~20% of the gap on the first frame,
@@ -260,6 +392,7 @@ namespace JoburgRunner
             controller.enabled = true;
 
             deathVisual?.Revive();
+            officerChase?.Dismiss();
             playerAnimator?.SetJumping(false);
             playerAnimator?.SetGrounded(true);
             playerAnimator?.SetRunning(true);
@@ -278,15 +411,65 @@ namespace JoburgRunner
                 return;
             }
 
+            // Any contact — crash, roof landing, side scrape, shield absorb —
+            // disqualifies this obstacle from the Perfect Dodge reward.
+            obstacle.DodgeSpent = true;
+
             // Landing on a roof is survivable: the controller stands on the
             // collider like ground. Only side and front impacts crash.
-            if (hit.normal.y > 0.5f)
+            if (hit.normal.y > 0.5f && !obstacle.AlwaysFatalContact)
             {
                 return;
             }
 
             if (powerUpManager != null && powerUpManager.DroneActive)
             {
+                return;
+            }
+
+            MovingObstacle taxi = obstacle.GetComponentInParent<MovingObstacle>();
+            bool frontTaxiImpact = taxi != null && IsFrontTaxiImpact(hit, obstacle.transform);
+
+            // First scrape of a taxi's side never ends the run: the runner
+            // bounces into the neighbouring lane and a traffic officer is
+            // summoned to give chase. Scrape another taxi WHILE he is still
+            // chasing and he catches the runner — that hit is fatal, handled by
+            // falling through to the crash path below (which runs CatchPlayer()
+            // and ends the run). A short grace window stops one sustained
+            // contact from counting as several scrapes. The survivable first
+            // scrape is resolved before the shields so it never wastes an Ubuntu
+            // Pulse or Hoverboard; the fatal second scrape deliberately falls
+            // through so a shield still gets its chance to absorb it.
+            if (taxi != null && !frontTaxiImpact && IsSideTaxiBump(hit))
+            {
+                if (Time.time < sideBumpGraceUntil)
+                {
+                    return;
+                }
+
+                sideBumpGraceUntil = Time.time + 1.2f;
+
+                if (officerChase == null || !officerChase.IsChasing)
+                {
+                    BounceOffTaxiSide(hit.normal.x);
+                    officerChase?.StartChase();
+                    return;
+                }
+
+                // Officer already chasing: fall through to the fatal path.
+            }
+
+            // Otherwise the crash is fatal unless a shield eats it. Ubuntu Pulse
+            // takes priority: while it is active the player cannot die — the hit
+            // simply switches the Pulse off (TryConsumeUbuntuShield ends it) and
+            // the obstacle is absorbed.
+            if (powerUpManager != null && powerUpManager.TryConsumeUbuntuShield())
+            {
+                // Small obstacles dissolve (pool-safe, never destroyed); taxis
+                // fall back to the same Destroy() the Hoverboard shield uses,
+                // since a pooled MovingObstacle has no dissolve component.
+                ubuntuPulseVisual?.PlayShieldImpact(hit.point);
+                AbsorbObstacle(obstacle);
                 return;
             }
 
@@ -297,8 +480,6 @@ namespace JoburgRunner
                 return;
             }
 
-            MovingObstacle taxi = obstacle.GetComponentInParent<MovingObstacle>();
-            bool frontTaxiImpact = taxi != null && IsFrontTaxiImpact(hit, obstacle.transform);
             if (frontTaxiImpact)
             {
                 taxi.StopMoving();
@@ -309,7 +490,42 @@ namespace JoburgRunner
                 deathVisual?.PlayDeath(hit.normal);
             }
 
+            // No-op unless he is already out chasing: the officer sprints up
+            // and stops next to the fallen runner.
+            officerChase?.CatchPlayer();
             gameManager.GameOver();
+        }
+
+        // Prefers a pool-safe dissolve (barrier, pothole); falls back to the
+        // same Destroy() the Hoverboard shield already uses for obstacles
+        // with no dissolve component.
+        static void AbsorbObstacle(RunnerObstacle obstacle)
+        {
+            ObstacleDissolveEffect dissolve = obstacle.GetComponent<ObstacleDissolveEffect>();
+            if (dissolve != null)
+            {
+                dissolve.Dissolve();
+            }
+            else
+            {
+                Destroy(obstacle.gameObject);
+            }
+        }
+
+        static bool IsSideTaxiBump(ControllerColliderHit hit)
+        {
+            return Mathf.Abs(hit.normal.normalized.x) > 0.6f;
+        }
+
+        /// <summary>
+        /// Shoves the runner back toward the lane they came from. The hit
+        /// normal points from the taxi's flank at the player, so its X sign is
+        /// the direction away from the taxi.
+        /// </summary>
+        void BounceOffTaxiSide(float normalX)
+        {
+            TryStepLane(normalX > 0f ? 1 : -1, false);
+            lateralVelocity = 0f;
         }
 
         bool IsFrontTaxiImpact(ControllerColliderHit hit, Transform obstacleTransform)
