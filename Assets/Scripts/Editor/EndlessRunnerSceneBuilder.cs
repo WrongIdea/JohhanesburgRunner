@@ -2839,8 +2839,11 @@ namespace JoburgRunner.Editor
             float armCentreX = sign * 19.625f;
 
             Cube("SideStreetAsphalt", parent,
-                new Vector3(armCentreX, 0.045f, junctionZ),
-                new Vector3(30.75f, 0.13f, 8.8f), Mat("Asphalt"));
+                // Its surface must sit clear of the retained main-road sidewalk
+                // (top Y=0.11). Equal surfaces overlap at the junction mouth and
+                // z-fight on mobile, which reads as the left/right road blinking.
+                new Vector3(armCentreX, 0.06f, junctionZ),
+                new Vector3(30.75f, 0.14f, 8.8f), Mat("Asphalt"));
 
             // Pavements and kerbs follow the two sides of the joining street.
             foreach (float edgeSign in new[] { -1f, 1f })
@@ -2857,10 +2860,10 @@ namespace JoburgRunner.Editor
             // Road-edge lines and a broken centre line make the side arm read as
             // a real street rather than a flat asphalt patch.
             Cube("SideStreetEdgeLineNear", parent,
-                new Vector3(armCentreX, 0.125f, junctionZ - 3.95f),
+                new Vector3(armCentreX, 0.15f, junctionZ - 3.95f),
                 new Vector3(30.75f, 0.025f, 0.11f), Mat("PaintYellow"));
             Cube("SideStreetEdgeLineFar", parent,
-                new Vector3(armCentreX, 0.125f, junctionZ + 3.95f),
+                new Vector3(armCentreX, 0.15f, junctionZ + 3.95f),
                 new Vector3(30.75f, 0.025f, 0.11f), Mat("PaintYellow"));
 
             for (int i = 0; i < 4; i++)
@@ -2868,14 +2871,14 @@ namespace JoburgRunner.Editor
                 float distance = 8f + i * 5f;
                 float x = sign * distance;
                 Cube("SideStreetCentreDash", parent,
-                    new Vector3(x, 0.13f, junctionZ),
+                    new Vector3(x, 0.15f, junctionZ),
                     new Vector3(2.4f, 0.025f, 0.12f), Mat("RoadMarkingWhite"));
             }
 
             // Stop line before entering the runner's street. It is deliberately
             // outside the gameplay road and carries no collider.
             Cube("SideStreetStopLine", parent,
-                new Vector3(sign * 5.6f, 0.135f, junctionZ),
+                new Vector3(sign * 5.6f, 0.155f, junctionZ),
                 new Vector3(0.16f, 0.025f, 7.1f), Mat("RoadMarkingWhite"));
 
             // Low termination geometry prevents the decorative road reading as

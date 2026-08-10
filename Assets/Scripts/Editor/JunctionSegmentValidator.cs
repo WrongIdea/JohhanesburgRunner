@@ -45,6 +45,9 @@ namespace JoburgRunner.Editor
                         if (material == null)
                             errors.Add($"{prefab.name}/{renderer.name}: missing material.");
                     }
+
+                    if (renderer.name == "SideStreetAsphalt" && renderer.bounds.max.y < 0.125f)
+                        errors.Add($"{prefab.name}/{renderer.name}: surface is not raised clear of the base sidewalk; z-fighting may blink.");
                 }
 
                 foreach (JunctionDecorSocket socket in
