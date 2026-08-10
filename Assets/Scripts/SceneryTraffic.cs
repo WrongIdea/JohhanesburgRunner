@@ -12,6 +12,7 @@ namespace JoburgRunner
     /// </summary>
     public class SceneryTraffic : MonoBehaviour
     {
+        public bool IsReady { get; private set; }
         [SerializeField] Transform player;
         [SerializeField] GameObject sameDirectionPrefab;
         [SerializeField] GameObject[] oncomingPrefabs;
@@ -34,6 +35,7 @@ namespace JoburgRunner
         {
             if (player == null || oncomingPrefabs == null || oncomingPrefabs.Length == 0)
             {
+                IsReady = true;
                 return;
             }
 
@@ -48,6 +50,7 @@ namespace JoburgRunner
             }
 
             nextOncomingTime = Time.time + oncomingInterval;
+            IsReady = true;
         }
 
         void Update()

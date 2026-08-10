@@ -10069,6 +10069,56 @@ namespace JoburgRunner.Editor
             Button missionsBackButton = UiButton(missionsPanel.transform, "MissionsBackButton", "BACK", 48, buttonGrey, rounded,
                 new Vector2(0.5f, 0f), new Vector2(0f, 80f), new Vector2(400f, 120f));
 
+            // ---------------- Startup loading gate ----------------
+            // This overlay is active in the saved scene, so it is the first UI
+            // rendered while pools, buildings, traffic and shaders warm up.
+            GameObject loadingPanel = Panel(canvasObject.transform, "StartupLoadingPanel",
+                new Color(0.012f, 0.025f, 0.055f, 1f));
+            Anchor(loadingPanel.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            TextMeshProUGUI loadingTitle = Text(loadingPanel.transform, "LoadingTitle", "JOZI RUNNER", 88, TextAlignmentOptions.Center);
+            loadingTitle.fontStyle = FontStyles.Bold;
+            loadingTitle.color = gold;
+            loadingTitle.characterSpacing = 9f;
+            Anchor(loadingTitle.rectTransform, new Vector2(.5f,.5f), new Vector2(.5f,.5f), new Vector2(0f, 310f), new Vector2(900f, 120f));
+
+            TextMeshProUGUI loadingCity = Text(loadingPanel.transform, "LoadingCity", "JOHANNESBURG", 34, TextAlignmentOptions.Center);
+            loadingCity.color = new Color(.25f,.78f,1f,1f);
+            loadingCity.characterSpacing = 7f;
+            Anchor(loadingCity.rectTransform, new Vector2(.5f,.5f), new Vector2(.5f,.5f), new Vector2(0f, 225f), new Vector2(700f, 60f));
+
+            Image spinnerTrack = new GameObject("SpinnerTrack").AddComponent<Image>();
+            spinnerTrack.transform.SetParent(loadingPanel.transform, false);
+            spinnerTrack.sprite = knob;
+            spinnerTrack.color = new Color(.08f,.12f,.19f,1f);
+            Anchor(spinnerTrack.rectTransform, new Vector2(.5f,.5f), new Vector2(.5f,.5f), new Vector2(0f, 10f), new Vector2(190f,190f));
+
+            Image spinnerFill = new GameObject("SpinnerFill").AddComponent<Image>();
+            spinnerFill.transform.SetParent(loadingPanel.transform, false);
+            spinnerFill.sprite = knob;
+            spinnerFill.color = new Color(.25f,.78f,1f,1f);
+            spinnerFill.type = Image.Type.Filled;
+            spinnerFill.fillMethod = Image.FillMethod.Radial360;
+            spinnerFill.fillOrigin = (int)Image.Origin360.Top;
+            spinnerFill.fillClockwise = true;
+            spinnerFill.fillAmount = .08f;
+            Anchor(spinnerFill.rectTransform, new Vector2(.5f,.5f), new Vector2(.5f,.5f), new Vector2(0f, 10f), new Vector2(190f,190f));
+
+            Image spinnerCore = new GameObject("SpinnerCore").AddComponent<Image>();
+            spinnerCore.transform.SetParent(loadingPanel.transform, false);
+            spinnerCore.sprite = knob;
+            spinnerCore.color = new Color(.012f,.025f,.055f,1f);
+            Anchor(spinnerCore.rectTransform, new Vector2(.5f,.5f), new Vector2(.5f,.5f), new Vector2(0f, 10f), new Vector2(132f,132f));
+
+            TextMeshProUGUI loadingStatus = Text(loadingPanel.transform, "LoadingStatus", "LOADING JOHANNESBURG", 30, TextAlignmentOptions.Center);
+            loadingStatus.color = new Color(.78f,.84f,.92f,1f);
+            loadingStatus.characterSpacing = 3f;
+            Anchor(loadingStatus.rectTransform, new Vector2(.5f,.5f), new Vector2(.5f,.5f), new Vector2(0f, -155f), new Vector2(850f, 60f));
+
+            TextMeshProUGUI loadingTip = Text(loadingPanel.transform, "LoadingTip", "PREPARING THE CITY FOR YOUR RUN", 24, TextAlignmentOptions.Center);
+            loadingTip.color = new Color(.48f,.58f,.7f,1f);
+            Anchor(loadingTip.rectTransform, new Vector2(.5f,.5f), new Vector2(.5f,.5f), new Vector2(0f, -225f), new Vector2(820f, 50f));
+
             // ---------------- Wiring ----------------
             GameManager gameManager = Object.FindAnyObjectByType<GameManager>();
             ScoreManager scoreManager = Object.FindAnyObjectByType<ScoreManager>();
@@ -10130,6 +10180,13 @@ namespace JoburgRunner.Editor
             SetField(menuController, "specialBuyButtons", specialBuyButtons);
             SetField(menuController, "specialBuyLabels", specialBuyLabels);
             SetField(menuController, "collectablesText", collectablesText);
+
+            StartupLoadingController startupLoading = canvasObject.AddComponent<StartupLoadingController>();
+            SetField(startupLoading, "loadingPanel", loadingPanel);
+            SetField(startupLoading, "spinner", spinnerFill.rectTransform);
+            SetField(startupLoading, "progressFill", spinnerFill);
+            SetField(startupLoading, "statusText", loadingStatus);
+            SetField(startupLoading, "menuController", menuController);
 
             gameOverPanel.SetActive(false);
             pausePanel.SetActive(false);

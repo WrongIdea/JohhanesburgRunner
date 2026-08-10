@@ -20,6 +20,7 @@ namespace JoburgRunner
     /// </summary>
     public class ChunkManager : MonoBehaviour
     {
+        public bool IsReady { get; private set; }
         [Header("References")]
         [SerializeField] Transform player;
         [SerializeField] GameManager gameManager;
@@ -63,6 +64,7 @@ namespace JoburgRunner
 
                 pool[prefab] = stack;
             }
+            IsReady = true;
         }
 
         void Update()

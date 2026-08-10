@@ -72,6 +72,7 @@ namespace JoburgRunner.Environment.Decor
         [SerializeField] bool heroBothSides = true;
 
         public bool UseSocketDecoration => useSocketDecoration;
+        public bool IsReady { get; private set; }
 
         // CBD is district index 0 (CBDOfficeStreet building group + District_CBD profile).
         const int CbdDistrictIndex = 0;
@@ -104,6 +105,7 @@ namespace JoburgRunner.Environment.Decor
         void Start()
         {
             BuildPool();
+            IsReady = true;
         }
 
         void BuildPool()

@@ -9,6 +9,7 @@ namespace JoburgRunner
     [DefaultExecutionOrder(100)]
     public class RoadSegmentSpawner : MonoBehaviour
     {
+        public bool IsReady { get; private set; }
         [SerializeField] Transform player;
         [SerializeField] GameObject roadSegmentPrefab;
         [SerializeField] int visibleSegments = 7;
@@ -32,6 +33,7 @@ namespace JoburgRunner
         {
             if (player == null || roadSegmentPrefab == null)
             {
+                IsReady = true;
                 return;
             }
 
@@ -47,6 +49,7 @@ namespace JoburgRunner
             }
 
             EnsureSegmentsAhead();
+            IsReady = true;
         }
 
         void Update()
