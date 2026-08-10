@@ -17,6 +17,7 @@ namespace JoburgRunner
 
         [Header("UI")]
         [SerializeField] TextMeshProUGUI scoreText;
+        [SerializeField] TextMeshProUGUI multiplierText;
         [SerializeField] TextMeshProUGUI coinText;
 
         [Header("Scoring")]
@@ -168,7 +169,11 @@ namespace JoburgRunner
             int score = Mathf.FloorToInt(Score);
             if (scoreText != null && (score != shownScore || Multiplier != shownMultiplier))
             {
-                scoreText.text = $"Score: {score}  x{Multiplier}";
+                scoreText.text = score.ToString("N0");
+                if (multiplierText != null)
+                {
+                    multiplierText.text = $"×{Multiplier}";
+                }
                 shownScore = score;
                 shownMultiplier = Multiplier;
             }

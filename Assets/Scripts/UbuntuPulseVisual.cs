@@ -38,8 +38,8 @@ namespace JoburgRunner
         [SerializeField] Color shieldColor = new Color(0.25f, 0.72f, 1f, 0.32f);
         [SerializeField] Color secondaryColor = Color.white;
         [SerializeField] float shieldScale = 1.12f;
-        [SerializeField] float bloomIntensity = 2.4f;
-        [SerializeField] float shieldOpacity = 0.32f;
+        [SerializeField] float bloomIntensity = 1.8f;
+        [SerializeField] float shieldOpacity = 0.24f;
 
         [Header("Timing")]
         [SerializeField] float fadeInSeconds = 0.35f;
@@ -55,18 +55,18 @@ namespace JoburgRunner
         [SerializeField] float ringVerticalSeparation = 0.14f;
         [SerializeField] float ringRadiusMultiplier = 0.62f;
         [SerializeField] float patternScrollSpeed = 24f;
-        [SerializeField, Range(8, 96)] int particleCount = 42;
-        [SerializeField] float trailWidth = 0.12f;
-        [SerializeField] float lightBaseIntensity = 2.2f;
+        [SerializeField, Range(8, 96)] int particleCount = 28;
+        [SerializeField] float trailWidth = 0.09f;
+        [SerializeField] float lightBaseIntensity = 1.4f;
 
         [Header("Lightning")]
-        [SerializeField, Range(0f, 20f)] float lightningFrequency = 7f;
+        [SerializeField, Range(0f, 20f)] float lightningFrequency = 4f;
         [SerializeField, Range(1, 8)] int lightningArcCount = 4;
         [SerializeField] float lightningArcSeconds = 0.08f;
 
         [Header("Coin Trails")]
         [SerializeField] float coinTrailRadius = 8f;
-        [SerializeField, Range(0, 24)] int maxCoinTrails = 12;
+        [SerializeField, Range(0, 24)] int maxCoinTrails = 8;
         [SerializeField] float coinTrailLength = 1.1f;
 
         [Header("Impact Camera")]
@@ -186,7 +186,7 @@ namespace JoburgRunner
                 SetVisualsActive(true);
                 shieldParticles?.Play();
                 orbitParticles?.Play();
-                activationBurst?.Emit(48);
+                activationBurst?.Emit(32);
                 activationWaveStart = Time.time;
                 if (shieldHum != null)
                 {
@@ -382,7 +382,7 @@ namespace JoburgRunner
             {
                 groundGlow.GetPropertyBlock(glowBlock);
                 Color color = shieldColor * brightBoost;
-                color.a = Mathf.Clamp01(0.38f * blend * pulse * alphaBoost);
+                color.a = Mathf.Clamp01(0.24f * blend * pulse * alphaBoost);
                 glowBlock.SetColor("_BaseColor", color);
                 glowBlock.SetColor("_Color", color);
                 groundGlow.SetPropertyBlock(glowBlock);

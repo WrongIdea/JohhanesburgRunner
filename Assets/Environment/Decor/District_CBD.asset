@@ -15,14 +15,13 @@ MonoBehaviour:
   districtName: Johannesburg CBD
   rules:
   - socketType: 0
-    spawnProbability: 0.8
-    maxCountPerSegment: 3
-    minSpacing: 9
-    maxSpacing: 16
+    spawnProbability: 0.15
+    maxCountPerSegment: 1
+    minSpacing: 15
+    maxSpacing: 30
     allowedPrefabs:
     - {fileID: 1805258652435262161, guid: dcd06803b70cb48788bd2cb98b957b28, type: 3}
     - {fileID: 8137604048660939268, guid: cb0ddf0ad15e44a8d8c5c467306cf68e, type: 3}
-    - {fileID: 6300773995999479063, guid: 91f9e9d9ce5d74fa993f866894539bb5, type: 3}
     sideMatchedPrefabPair: 0
     allowConsecutiveRepetition: 0
     scaleRange: {x: 0.75, y: 0.9}

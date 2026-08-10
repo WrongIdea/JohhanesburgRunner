@@ -40,9 +40,13 @@ namespace JoburgRunner
 
         void Start()
         {
-            // Run at 60fps on mobile instead of the platform default.
-            Application.targetFrameRate = 60;
-            QualitySettings.vSyncCount = 0;
+            // Frame cap: QualityController owns it when present (per-tier target +
+            // 30 FPS battery mode). This is the fallback for scenes without one.
+            if (JoburgRunner.Core.QualityController.Instance == null)
+            {
+                Application.targetFrameRate = 60;
+                QualitySettings.vSyncCount = 0;
+            }
 
             Time.timeScale = 1f;
             if (gameOverPanel != null)

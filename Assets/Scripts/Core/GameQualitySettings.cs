@@ -34,6 +34,11 @@ namespace JoburgRunner.Core
         [Min(0f)] public float shadowDistance = 40f;
         [Min(0)] public int shadowCascades = 2;
 
+        [Header("Frame rate")]
+        [Tooltip("Target FPS for this tier on mobile. The battery-saver mode forces 30 " +
+                 "regardless. Existing assets without this field fall back to 60.")]
+        [Min(0)] public int targetFrameRate = 60;
+
         [Header("Audio")]
         [Min(1)] public int audioVoiceLimit = 12;
 

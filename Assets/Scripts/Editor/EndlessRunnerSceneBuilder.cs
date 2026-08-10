@@ -3665,7 +3665,11 @@ namespace JoburgRunner.Editor
         // the only pigeon component with an Update; it owns the pool and flocks.
         static void CreatePigeonSystem(Transform player)
         {
-            GameObject pigeonPrefab = PigeonBuilder.BuildPigeonPrefab();
+            // The stylized animated pigeon is the production bird. Build it here so
+            // regenerating the scene can never overwrite it with the legacy HD model.
+            PigeonStylizedBuilder.BuildAll();
+            GameObject pigeonPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                PigeonStylizedBuilder.PigeonPrefabPath);
             GameObject flockPrefab = PigeonBuilder.BuildFlockPrefab();
             if (pigeonPrefab == null || flockPrefab == null)
             {
@@ -6072,7 +6076,8 @@ namespace JoburgRunner.Editor
         static GameObject CreateCoinPrefab(GameObject coinPopPrefab)
         {
             GameObject root = new GameObject("GoldCoin");
-            bool spriteCoin = AddSpriteCoinArt(root.transform, 0.6f);
+            // Visual is 25% smaller for near-camera readability; trigger radius stays unchanged.
+            bool spriteCoin = AddSpriteCoinArt(root.transform, 0.45f);
             if (!spriteCoin)
             {
                 if (!TryCreateR1CoinVisual(root.transform))
@@ -6120,7 +6125,7 @@ namespace JoburgRunner.Editor
         static GameObject CreateRareCoinPrefab(GameObject coinPopPrefab)
         {
             GameObject root = new GameObject("RareCoinR5");
-            bool spriteCoin = AddSpriteCoinArt(root.transform, 0.9f);
+            bool spriteCoin = AddSpriteCoinArt(root.transform, 0.70f);
             if (!spriteCoin)
             {
                 if (!TryCreateR1CoinVisual(root.transform))
@@ -6169,6 +6174,9 @@ namespace JoburgRunner.Editor
         static TrackChunk[] CreateTrackChunkPrefabs(GameObject taxi, GameObject coin, GameObject rareCoin, GameObject[] powerUps, GameObject barrier, GameObject pothole)
         {
             Directory.CreateDirectory("Assets/Prefabs/Chunks");
+            GameObject sceneryTaxi = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/SceneryTaxi.prefab");
+            GameObject fruitsStall = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Decor/DecorFruitsStall.prefab");
+            GameObject streetCrate = CreateStreetCrateObstaclePrefab();
             var chunks = new List<TrackChunk>
             {
                 // --- Easy: breathers, single hazards, zig-zag coin trails ---
@@ -6194,6 +6202,23 @@ namespace JoburgRunner.Editor
                     ChunkObstacle(t, taxi, 1, 11f, true);
                     ChunkCoinLine(t, coin, 0, 3f, 4);
                 }),
+                // Johannesburg situation A: a stopped minibus partly occupying
+                // the left lane. Centre/right remain readable escape routes.
+                NewChunkPrefab("Chunk_JoburgTaxiStop", ChunkDifficulty.Easy, 12f, 0b110, 0b110, 22f, t =>
+                {
+                    ChunkObstacle(t, taxi, 0, 13f, false);
+                    ChunkCoinLine(t, coin, 2, 4f, 6);
+                    ChunkScenery(t, fruitsStall, -7.2f, 16f, 0f);
+                }),
+                // Johannesburg situation B: roadworks with a low, jumpable
+                // barricade and restrained cone guidance. Both side lanes stay open.
+                NewChunkPrefab("Chunk_JoburgRoadworks", ChunkDifficulty.Easy, 11f, 0b111, 0b111, 22f, t =>
+                {
+                    ChunkObstacle(t, barrier, 1, 13f, false);
+                    ChunkRoadCone(t, LaneX(1)-1.15f, 10.5f);
+                    ChunkRoadCone(t, LaneX(1)+1.15f, 10.5f);
+                    ChunkCoinLine(t, coin, 0, 4f, 5);
+                }),
 
                 // --- Medium: combinations that steer the player ---
                 NewChunkPrefab("Chunk_TaxiPair", ChunkDifficulty.Medium, 28f, 0b010, 0b010, 18f, t =>
@@ -6218,6 +6243,26 @@ namespace JoburgRunner.Editor
                 {
                     ChunkObstacle(t, taxi, 1, 8f, true);
                     ChunkObstacle(t, taxi, 0, 15f, true);
+                    ChunkCoinLine(t, coin, 2, 4f, 6);
+                }),
+                // Johannesburg situation D: taxi-rank atmosphere stays on the
+                // pavement; one controlled taxi decision enters the road.
+                NewChunkPrefab("Chunk_JoburgTaxiRank", ChunkDifficulty.Medium, 10f, 0b011, 0b011, 28f, t =>
+                {
+                    ChunkObstacle(t, taxi, 2, 17f, false);
+                    ChunkScenery(t, sceneryTaxi, -7.4f, 8f, 0f);
+                    ChunkScenery(t, sceneryTaxi, -7.4f, 20f, 0f);
+                    ChunkScenery(t, fruitsStall, 7.2f, 13f, 180f);
+                    ChunkCoinLine(t, coin, 0, 4f, 7);
+                }),
+                // Johannesburg situation E: everyday street-vendor activity.
+                // The stall is safely off-road; only one small crate enters a lane.
+                NewChunkPrefab("Chunk_JoburgStreetActivity", ChunkDifficulty.Medium, 10f, 0b101, 0b101, 24f, t =>
+                {
+                    ChunkObstacle(t, streetCrate, 1, 14f, false);
+                    ChunkScenery(t, fruitsStall, -7.0f, 13f, 0f);
+                    ChunkScenery(t, streetCrate, -5.8f, 10f, 0f);
+                    ChunkScenery(t, streetCrate, -6.4f, 17f, 18f);
                     ChunkCoinLine(t, coin, 2, 4f, 6);
                 }),
 
@@ -6270,6 +6315,38 @@ namespace JoburgRunner.Editor
             };
 
             return chunks.ToArray();
+        }
+
+        static void ChunkScenery(Transform chunk, GameObject prefab, float x, float z, float yaw)
+        {
+            if (prefab == null) return;
+            GameObject instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, chunk);
+            instance.name = "Scenery_" + prefab.name;
+            instance.transform.localPosition = new Vector3(x, 0f, z);
+            instance.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            foreach (Collider collider in instance.GetComponentsInChildren<Collider>(true)) collider.enabled = false;
+            foreach (RunnerObstacle obstacle in instance.GetComponentsInChildren<RunnerObstacle>(true))
+                Object.DestroyImmediate(obstacle);
+            foreach (MovingObstacle mover in instance.GetComponentsInChildren<MovingObstacle>(true))
+                Object.DestroyImmediate(mover);
+        }
+
+        static void ChunkRoadCone(Transform chunk, float x, float z)
+        {
+            GameObject cone = Cylinder("RoadCone", chunk, new Vector3(x, .22f, z), new Vector3(.24f, .44f, .24f), Mat("ConstructionBarrierOrange"));
+            StripColliders(cone);
+            Cylinder("ConeStripe", cone.transform, new Vector3(0f,.06f,0f), new Vector3(1.06f,.18f,1.06f), Mat("PaintWhite"));
+            StripColliders(cone);
+        }
+
+        static GameObject CreateStreetCrateObstaclePrefab()
+        {
+            const string path = "Assets/Prefabs/StreetCrateObstacle.prefab";
+            GameObject root = new GameObject("StreetCrateObstacle");
+            Cube("Crate", root.transform, new Vector3(0f,.42f,0f), new Vector3(.9f,.84f,.9f), Mat("CrateWood"));
+            BoxCollider trigger = root.AddComponent<BoxCollider>(); trigger.center = new Vector3(0f,.42f,0f); trigger.size = new Vector3(1.05f,.9f,1.05f);
+            root.AddComponent<RunnerObstacle>();
+            return SavePrefab(root, path);
         }
 
         static TrackChunk NewChunkPrefab(string name, ChunkDifficulty difficulty, float weight, int entryLanes, int exitLanes, float length, System.Action<Transform> build)
@@ -6568,7 +6645,7 @@ namespace JoburgRunner.Editor
             float diameter = Mathf.Max(bounds.size.x, bounds.size.y);
             if (diameter > 0.0001f)
             {
-                visual.transform.localScale *= 0.46f / diameter;
+                visual.transform.localScale *= 0.345f / diameter;
             }
 
             if (facesCamera)
@@ -6692,16 +6769,23 @@ namespace JoburgRunner.Editor
         static void CreateLighting()
         {
             Transform lighting = EnvironmentCategory("Lighting");
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.48f, 0.54f, 0.68f);
+            // One coherent daylight rig: tri-light ambient keeps shaded faces
+            // readable while still grounding props better than a flat fill.
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.52f, 0.61f, 0.76f);
+            RenderSettings.ambientEquatorColor = new Color(0.43f, 0.49f, 0.58f);
+            RenderSettings.ambientGroundColor = new Color(0.30f, 0.32f, 0.36f);
 
             GameObject sun = new GameObject("JohannesburgSun");
             sun.transform.SetParent(lighting);
             Light light = sun.AddComponent<Light>();
             light.type = LightType.Directional;
-            light.intensity = 1.3f;
+            light.intensity = 1.18f;
             light.color = new Color(1f, 0.91f, 0.76f);
-            light.shadows = LightShadows.None;
+            light.shadows = LightShadows.Hard;
+            light.shadowStrength = 0.38f;
+            light.shadowBias = 0.08f;
+            light.shadowNormalBias = 0.35f;
             sun.transform.rotation = Quaternion.Euler(50f, -25f, 0f);
 
             Material skybox = AssetDatabase.LoadAssetAtPath<Material>(SkyboxPath);
@@ -8191,12 +8275,12 @@ namespace JoburgRunner.Editor
             rig.transform.localPosition = new Vector3(0f, 1f, 0f);
 
             GameObject shieldSphereObject = Sphere("ShieldSphere", rig.transform, Vector3.zero, Vector3.one,
-                UnlitTransparentMaterial("UbuntuShieldSphere", new Color(0.35f, 0.75f, 1f, 0.35f)));
+                UnlitTransparentMaterial("UbuntuShieldSphere", new Color(0.35f, 0.75f, 1f, 0.26f)));
             StripColliders(shieldSphereObject);
             Renderer shieldRenderer = shieldSphereObject.GetComponent<Renderer>();
             shieldSphereObject.SetActive(false);
 
-            Material groundGlowMaterial = UnlitTransparentMaterial("UbuntuGroundGlow", new Color(0.35f, 0.75f, 1f, 0.5f));
+            Material groundGlowMaterial = UnlitTransparentMaterial("UbuntuGroundGlow", new Color(0.35f, 0.75f, 1f, 0.32f));
             GameObject groundGlowObject = Cylinder("GroundGlow", rig.transform, new Vector3(0f, -0.95f, 0f), new Vector3(1.6f, 0.02f, 1.6f),
                 groundGlowMaterial);
             StripColliders(groundGlowObject);
@@ -8210,12 +8294,12 @@ namespace JoburgRunner.Editor
             particleMain.startLifetime = 1.2f;
             particleMain.startSpeed = 0.15f;
             particleMain.startSize = 0.05f;
-            particleMain.maxParticles = 30;
+            particleMain.maxParticles = 22;
             particleMain.loop = true;
             particleMain.playOnAwake = false;
             particleMain.startColor = new ParticleSystem.MinMaxGradient(new Color(0.5f, 0.85f, 1f), Color.white);
             ParticleSystem.EmissionModule particleEmission = shieldParticles.emission;
-            particleEmission.rateOverTime = 10f;
+            particleEmission.rateOverTime = 6f;
             ParticleSystem.ShapeModule particleShape = shieldParticles.shape;
             particleShape.shapeType = ParticleSystemShapeType.Sphere;
             particleShape.radius = 0.65f;
@@ -8265,14 +8349,16 @@ namespace JoburgRunner.Editor
             SetField(ubuntuVisual, "impactClip", AssetDatabase.LoadAssetAtPath<AudioClip>(UbuntuPulseImpactClipPath));
             SetField(ubuntuVisual, "powerDownClip", AssetDatabase.LoadAssetAtPath<AudioClip>(UbuntuPulsePowerDownClipPath));
             SetField(ubuntuVisual, "shieldScale", 1.12f);
-            SetField(ubuntuVisual, "bloomIntensity", 2.4f);
-            SetField(ubuntuVisual, "shieldOpacity", 0.32f);
+            SetField(ubuntuVisual, "bloomIntensity", 1.8f);
+            SetField(ubuntuVisual, "shieldOpacity", 0.24f);
             SetField(ubuntuVisual, "ringHeight", 0.78f);
             SetField(ubuntuVisual, "ringVerticalSeparation", 0.14f);
             SetField(ubuntuVisual, "ringRadiusMultiplier", 0.62f);
-            SetField(ubuntuVisual, "particleCount", 42);
-            SetField(ubuntuVisual, "trailWidth", 0.12f);
-            SetField(ubuntuVisual, "lightningFrequency", 7f);
+            SetField(ubuntuVisual, "particleCount", 28);
+            SetField(ubuntuVisual, "trailWidth", 0.09f);
+            SetField(ubuntuVisual, "lightningFrequency", 4f);
+            SetField(ubuntuVisual, "maxCoinTrails", 8);
+            SetField(ubuntuVisual, "lightBaseIntensity", 1.4f);
         }
 
         /// <summary>
@@ -9286,6 +9372,9 @@ namespace JoburgRunner.Editor
             SetField(chunkManager, "player", player);
             SetField(chunkManager, "gameManager", gameManager);
             SetField(chunkManager, "chunkPrefabs", chunkPrefabs);
+            // Activate pooled situations well behind the 123 m roadside haze,
+            // giving renderers/animators time to settle before they become visible.
+            SetField(chunkManager, "spawnDistanceAhead", 155f);
 
             CameraFollow cameraFollow = Object.FindAnyObjectByType<CameraFollow>();
             if (cameraFollow != null)
@@ -9325,6 +9414,7 @@ namespace JoburgRunner.Editor
             // All taxis approach from the front: oncoming lane only, no rear-view traffic.
             SetField(traffic, "oncomingPrefabs", new[] { sceneryTaxiPrefab });
             SetField(traffic, "oncomingInterval", 7f);
+            SetField(traffic, "oncomingSpawnDistance", 155f);
         }
 
         static void CreateUi(PlayerController playerController)
@@ -9360,7 +9450,13 @@ namespace JoburgRunner.Editor
             GameObject scorePill = RoundedPanel(safeArea.transform, "ScorePill", new Color(0f, 0f, 0f, 0.45f), rounded, 0.25f);
             Anchor(scorePill.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(32f, -32f), new Vector2(470f, 104f));
 
-            TextMeshProUGUI scoreText = Text(scorePill.transform, "ScoreText", "Score: 0  x1", 48, TextAlignmentOptions.Left);
+            TextMeshProUGUI scoreCaption = Text(scorePill.transform, "ScoreCaption", "SCORE", 20, TextAlignmentOptions.Left);
+            scoreCaption.color = new Color(.72f, .78f, .88f);
+            scoreCaption.characterSpacing = 3f;
+            Anchor(scoreCaption.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(34f, -10f), new Vector2(180f, 30f));
+            scoreCaption.rectTransform.pivot = new Vector2(0f, 1f);
+
+            TextMeshProUGUI scoreText = Text(scorePill.transform, "ScoreText", "0", 50, TextAlignmentOptions.Left);
             scoreText.fontStyle = FontStyles.Bold;
             // Auto-size down for six-figure scores with a double-digit
             // multiplier, which otherwise wrap onto a second line.
@@ -9368,8 +9464,14 @@ namespace JoburgRunner.Editor
             scoreText.fontSizeMax = 48f;
             scoreText.fontSizeMin = 24f;
             Anchor(scoreText.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
-            scoreText.rectTransform.offsetMin = new Vector2(36f, 0f);
-            scoreText.rectTransform.offsetMax = new Vector2(-24f, 0f);
+            scoreText.rectTransform.offsetMin = new Vector2(34f, 4f);
+            scoreText.rectTransform.offsetMax = new Vector2(-122f, -27f);
+
+            GameObject multiplierBadge = RoundedPanel(scorePill.transform, "MultiplierBadge", new Color(1f, .58f, .08f, .95f), rounded, .3f);
+            Anchor(multiplierBadge.GetComponent<RectTransform>(), new Vector2(1f, .5f), new Vector2(1f, .5f), new Vector2(-18f, 0f), new Vector2(88f, 62f));
+            TextMeshProUGUI multiplierText = Text(multiplierBadge.transform, "MultiplierText", "×1", 31, TextAlignmentOptions.Center);
+            multiplierText.fontStyle = FontStyles.Bold;
+            Anchor(multiplierText.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
             GameObject coinPill = RoundedPanel(safeArea.transform, "CoinPill", new Color(0f, 0f, 0f, 0.45f), rounded, 0.25f);
             Anchor(coinPill.GetComponent<RectTransform>(), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-32f, -32f), new Vector2(340f, 104f));
@@ -9515,43 +9617,71 @@ namespace JoburgRunner.Editor
                 new Vector2(0.5f, 0f), new Vector2(0f, 80f), new Vector2(560f, 115f));
             pauseMenuUiButton.gameObject.AddComponent<MenuButton>();
 
-            GameObject gameOverPanel = Panel(canvasObject.transform, "GameOverPanel", new Color(0f, 0f, 0f, 0.8f));
+            // Game-over uses the same visual language as the power-up HUD:
+            // smoky navy glass, electric-cyan progress accents and warm gold
+            // reserved for rewards / primary actions.
+            Color powerCyan = new Color(0.25f, 0.78f, 1f, 1f);
+            Color powerGlass = new Color(0.025f, 0.04f, 0.075f, 0.97f);
+            Color powerRow = new Color(0.065f, 0.09f, 0.14f, 0.98f);
+            GameObject gameOverPanel = Panel(canvasObject.transform, "GameOverPanel", new Color(0.005f, 0.012f, 0.025f, 0.86f));
             Anchor(gameOverPanel.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
-            GameObject cardFrame = RoundedPanel(gameOverPanel.transform, "CardFrame", gold, rounded, 0.3f);
-            Anchor(cardFrame.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(904f, 1224f));
+            GameObject cardFrame = RoundedPanel(gameOverPanel.transform, "CardFrame", new Color(.25f, .78f, 1f, .72f), rounded, 0.3f);
+            Anchor(cardFrame.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(884f, 1164f));
 
-            GameObject card = RoundedPanel(cardFrame.transform, "Card", new Color(0.07f, 0.08f, 0.12f, 0.98f), rounded, 0.3f);
-            Anchor(card.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(880f, 1200f));
+            GameObject card = RoundedPanel(cardFrame.transform, "Card", powerGlass, rounded, 0.3f);
+            Anchor(card.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(866f, 1146f));
 
-            TextMeshProUGUI gameOverTitle = Text(card.transform, "GameOverTitle", "GAME OVER", 92, TextAlignmentOptions.Center);
+            Image headerRing = new GameObject("StatusRing").AddComponent<Image>();
+            headerRing.transform.SetParent(card.transform, false);
+            headerRing.sprite = knob;
+            headerRing.color = powerCyan;
+            headerRing.type = Image.Type.Filled;
+            headerRing.fillMethod = Image.FillMethod.Radial360;
+            headerRing.fillAmount = 0.82f;
+            Anchor(headerRing.rectTransform, new Vector2(.5f, 1f), new Vector2(.5f, 1f), new Vector2(0f, -92f), new Vector2(92f, 92f));
+
+            TextMeshProUGUI statusIcon = Text(headerRing.transform, "StatusIcon", "!", 52, TextAlignmentOptions.Center);
+            statusIcon.fontStyle = FontStyles.Bold;
+            statusIcon.color = Color.white;
+            Anchor(statusIcon.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            TextMeshProUGUI gameOverTitle = Text(card.transform, "GameOverTitle", "RUN COMPLETE", 70, TextAlignmentOptions.Center);
             gameOverTitle.fontStyle = FontStyles.Bold;
-            gameOverTitle.color = gold;
-            gameOverTitle.characterSpacing = 8f;
-            Anchor(gameOverTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(780f, 120f));
+            gameOverTitle.color = Color.white;
+            gameOverTitle.characterSpacing = 6f;
+            Anchor(gameOverTitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -180f), new Vector2(720f, 90f));
 
-            Button closeGameOverButton = UiButton(card.transform, "CloseButton", "×", 64,
-                new Color(0.25f, 0.28f, 0.35f, 1f), rounded,
-                new Vector2(1f, 1f), new Vector2(-28f, -28f), new Vector2(112f, 112f));
+            Image titleUnderline = new GameObject("CyanAccent").AddComponent<Image>();
+            titleUnderline.transform.SetParent(card.transform, false);
+            titleUnderline.sprite = rounded;
+            titleUnderline.color = powerCyan;
+            Anchor(titleUnderline.rectTransform, new Vector2(.5f, 1f), new Vector2(.5f, 1f), new Vector2(0f, -280f), new Vector2(190f, 8f));
+
+            Button closeGameOverButton = UiButton(card.transform, "CloseButton", "×", 54,
+                powerRow, rounded, new Vector2(1f, 1f), new Vector2(-26f, -26f), new Vector2(96f, 96f));
             closeGameOverButton.GetComponentInChildren<TextMeshProUGUI>().fontStyle = FontStyles.Bold;
+            closeGameOverButton.GetComponentInChildren<TextMeshProUGUI>().color = powerCyan;
             closeGameOverButton.gameObject.AddComponent<GameOverCloseButton>();
 
-            TextMeshProUGUI finalScore = Text(card.transform, "FinalScoreText", "Final score: 0", 46, TextAlignmentOptions.Center);
-            Anchor(finalScore.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -230f), new Vector2(780f, 420f));
+            GameObject scoreCard = RoundedPanel(card.transform, "ScoreCard", powerRow, rounded, 0.25f);
+            Anchor(scoreCard.GetComponent<RectTransform>(), new Vector2(.5f, 1f), new Vector2(.5f, 1f), new Vector2(0f, -445f), new Vector2(726f, 380f));
+            TextMeshProUGUI finalScore = Text(scoreCard.transform, "FinalScoreText", "Final score: 0", 44, TextAlignmentOptions.Center);
+            Anchor(finalScore.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
-            // Buttons sit below every line of text, sized for thumbs.
-            Button continueUiButton = UiButton(card.transform, "ContinueButton", "CONTINUE · 1 R5", 54, gold, rounded,
-                new Vector2(0.5f, 0f), new Vector2(0f, 400f), new Vector2(620f, 150f));
+            Button continueUiButton = UiButton(card.transform, "ContinueButton", "CONTINUE  ·  1 R5", 50, gold, rounded,
+                new Vector2(0.5f, 0f), new Vector2(0f, 190f), new Vector2(650f, 126f));
             TextMeshProUGUI continueLabel = continueUiButton.GetComponentInChildren<TextMeshProUGUI>();
             continueLabel.color = new Color(0.16f, 0.12f, 0.03f);
             ContinueButton continueButton = continueUiButton.gameObject.AddComponent<ContinueButton>();
 
-            Button restartUiButton = UiButton(card.transform, "RestartButton", "RESTART", 60, new Color(1f, 0.6f, 0.05f, 1f), rounded,
-                new Vector2(0.5f, 0f), new Vector2(0f, 230f), new Vector2(620f, 140f));
+            Button restartUiButton = UiButton(card.transform, "RestartButton", "RESTART", 52, powerCyan, rounded,
+                new Vector2(0.5f, 0f), new Vector2(-167f, 42f), new Vector2(316f, 104f));
+            restartUiButton.GetComponentInChildren<TextMeshProUGUI>().color = new Color(.02f, .08f, .13f, 1f);
             RestartButton restartButton = restartUiButton.gameObject.AddComponent<RestartButton>();
 
-            Button menuUiButton = UiButton(card.transform, "MenuButton", "MENU", 50, new Color(0.25f, 0.28f, 0.35f, 1f), rounded,
-                new Vector2(0.5f, 0f), new Vector2(0f, 65f), new Vector2(620f, 115f));
+            Button menuUiButton = UiButton(card.transform, "MenuButton", "MENU", 46, powerRow, rounded,
+                new Vector2(0.5f, 0f), new Vector2(167f, 42f), new Vector2(316f, 104f));
             MenuButton menuButton = menuUiButton.gameObject.AddComponent<MenuButton>();
 
             Color panelDark = new Color(0.05f, 0.06f, 0.09f, 0.97f);
@@ -9589,16 +9719,23 @@ namespace JoburgRunner.Editor
             menuSubtitle.characterSpacing = 6f;
             Anchor(menuSubtitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -440f), new Vector2(900f, 60f));
 
-            // Showcase strip: all seven power-ups plus the rare R5 coin. Eight
-            // chips need tighter spacing than the original six-plus-one to
-            // stay within the 1080-wide canvas.
+            // Showcase strip mirrors the in-run HUD language: compact dark
+            // tiles, circular cyan timer rings and centred recognisable icons.
             Sprite[] showcase = { pickupIcons[0], pickupIcons[1], pickupIcons[2], pickupIcons[3], pickupIcons[4], pickupIcons[5], pickupIcons[6], r5Icon };
             for (int i = 0; i < showcase.Length; i++)
             {
-                GameObject chip = RoundedPanel(menuPanel.transform, $"ShowcaseChip{i}", rowDark, rounded, 0.25f);
+                GameObject chip = RoundedPanel(menuPanel.transform, $"ShowcaseChip{i}", new Color(.025f,.04f,.075f,.88f), rounded, 0.25f);
                 Anchor(chip.GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                    new Vector2((i - (showcase.Length - 1) * 0.5f) * 130f, -590f), new Vector2(118f, 118f));
-                IconImage(chip.transform, "Icon", showcase[i], new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(104f, 104f));
+                    new Vector2((i - (showcase.Length - 1) * 0.5f) * 118f, -590f), new Vector2(104f, 96f));
+                Image ring = new GameObject("PowerRing").AddComponent<Image>();
+                ring.transform.SetParent(chip.transform, false);
+                ring.sprite = knob;
+                ring.color = i == showcase.Length - 1 ? gold : new Color(.25f,.78f,1f,.8f);
+                ring.type = Image.Type.Filled;
+                ring.fillMethod = Image.FillMethod.Radial360;
+                ring.fillAmount = 0.82f;
+                Anchor(ring.rectTransform, new Vector2(.5f,.5f), new Vector2(.5f,.5f), Vector2.zero, new Vector2(82f,82f));
+                IconImage(chip.transform, "Icon", showcase[i], new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(62f, 62f));
             }
 
             Button playButton = UiButton(menuPanel.transform, "PlayButton", "PLAY", 74, buttonOrange, rounded,
@@ -9924,8 +10061,11 @@ namespace JoburgRunner.Editor
             SetField(gameManager, "pausePanel", pausePanel);
             SetField(gameManager, "finalScoreText", finalScore);
             SetField(scoreManager, "scoreText", scoreText);
+            SetField(scoreManager, "multiplierText", multiplierText);
             SetField(scoreManager, "coinText", coinText);
-            SetField(powerUpManager, "statusText", powerUpStatus);
+            powerUpStatus.gameObject.SetActive(false);
+            PowerUpHudController compactPowerHud = safeArea.AddComponent<PowerUpHudController>();
+            compactPowerHud.Configure(powerUpManager, pickupIcons, rounded);
             SetField(powerUpManager, "coinAttractionClip", AssetDatabase.LoadAssetAtPath<AudioClip>(UbuntuPulseCoinAttractionClipPath));
             SetField(ubuntuPulseUi, "powerUpManager", powerUpManager);
             SetField(restartButton, "gameManager", gameManager);

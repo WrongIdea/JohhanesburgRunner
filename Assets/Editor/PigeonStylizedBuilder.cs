@@ -31,9 +31,8 @@ namespace JoburgRunner.Editor
         // PigeonSpawner.pigeonPrefab auto-use the new bird (no scene surgery).
         public const string PigeonPrefabPath = "Assets/Prefabs/Pigeons/Pigeon.prefab";
 
-        // The asset's native units are unknown; scale so its longest dimension is
-        // this many metres (~0.5 m reads well in motion at running speed on a phone).
-        const float TargetLongestMetres = 0.5f;
+        // Approved real-world standing height for the replacement pigeon.
+        const float TargetHeightMetres = 0.30f;
 
         // FBX take suffix (the part after "PigeonALL_") -> the canonical Unity clip
         // name the flock plays. Only these six are wired; the rest (Left/Right/
@@ -236,22 +235,20 @@ namespace JoburgRunner.Editor
             animator.applyRootMotion = false;
             animator.cullingMode = AnimatorCullingMode.CullCompletely;
 
-            // Auto-scale by the mesh's longest dimension (native units unknown), so
-            // the bird ends up ~0.5 m regardless of how the FBX was authored.
-            float maxDim = 0f;
+            // Enforce the approved standing height even if the FBX import scale changes.
+            float meshHeight = 0f;
             foreach (SkinnedMeshRenderer r in renderers)
             {
                 if (r.sharedMesh != null)
                 {
-                    Vector3 s = r.sharedMesh.bounds.size;
-                    maxDim = Mathf.Max(maxDim, s.x, s.y, s.z);
+                    meshHeight = Mathf.Max(meshHeight, r.sharedMesh.bounds.size.y);
                 }
             }
             Vector3 ls = visual.transform.localScale;
-            maxDim *= Mathf.Max(ls.x, ls.y, ls.z);
-            float scale = maxDim > 1e-4f ? TargetLongestMetres / maxDim : 1f;
+            meshHeight *= Mathf.Abs(ls.y);
+            float scale = meshHeight > 1e-4f ? TargetHeightMetres / meshHeight : 1f;
             root.transform.localScale = Vector3.one * scale;
-            Debug.Log($"[PigeonStylized] mesh longest dim={maxDim:F3} m -> root scale={scale:F3}");
+            Debug.Log($"[PigeonStylized] mesh height={meshHeight:F3} m -> 0.300 m, root scale={scale:F3}");
 
             // Single-LOD group purely for the far-cull distance (626-tri bird needs
             // no decimation LODs). Screen-relative, so it culls correctly at any scale.

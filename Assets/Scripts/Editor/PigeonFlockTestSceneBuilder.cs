@@ -22,8 +22,10 @@ namespace JoburgRunner.Editor
         public static void Build()
         {
             // Make sure the prefabs + settings exist first.
-            PigeonBuilder.BuildAll();
-            GameObject pigeonPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PigeonBuilder.PigeonPrefabPath);
+            PigeonStylizedBuilder.BuildAll();
+            PigeonBuilder.BuildFlockSettings();
+            PigeonBuilder.BuildFlockPrefab();
+            GameObject pigeonPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PigeonStylizedBuilder.PigeonPrefabPath);
             GameObject flockPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PigeonBuilder.FlockPrefabPath);
 
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
